@@ -39,15 +39,44 @@ namespace Wake.Net.Parser
         }
     }
 
+    public class ClassInfo
+    {
+        public string Name { get; set; } = "";
+        public string? BaseClass { get; set; }
+        public List<PropertyDeclaration> Fields { get; set; } = new();
+        public List<MethodDeclaration> Methods { get; set; } = new();
+        public List<MethodDeclaration> Constructors { get; set; } = new();
+        public bool IsPublic { get; set; }
+        public SourceLocation? DeclarationLocation { get; set; }
+
+        public bool HasField(string fieldName)
+        {
+            return Fields.Any(f => f.Name == fieldName);
+        }
+
+        public bool HasMethod(string methodName)
+        {
+            return Methods.Any(m => m.Name == methodName);
+        }
+
+        public MethodDeclaration? GetMethod(string methodName)
+        {
+            return Methods.FirstOrDefault(m => m.Name == methodName);
+        }
+    }
+
     public class MethodChecker
     {
+        private readonly DiagnosticsReporter _diagnostics;
+        private readonly ReflectionMethodResolver _reflectionResolver;
         private readonly Dictionary<string, List<MethodSignature>> _methods = new();
         private readonly Dictionary<string, List<MethodSignature>> _classMethods = new();
-        private readonly DiagnosticsReporter _diagnostics;
+        private readonly Dictionary<string, ClassInfo> _classes = new();
 
         public MethodChecker(DiagnosticsReporter diagnostics)
         {
             _diagnostics = diagnostics;
+            _reflectionResolver = new ReflectionMethodResolver(diagnostics);
             RegisterBuiltInMethods();
         }
 
@@ -116,6 +145,16 @@ namespace Wake.Net.Parser
 
         public void RegisterMethod(FunctionDeclaration func, SourceLocation? location = null)
         {
+            // Check if function has dotnetfunc attribute - skip validation for these
+            var hasDotNetFuncAttribute = func.Attributes.Any(attr => 
+                attr.Name.Equals("dotnetfunc", StringComparison.OrdinalIgnoreCase));
+
+            if (hasDotNetFuncAttribute)
+            {
+                _diagnostics.ReportInfo($"Skipping method validation for .NET function: {func.Name}");
+                return;
+            }
+
             var signature = new MethodSignature
             {
                 Name = func.Name,
@@ -134,6 +173,16 @@ namespace Wake.Net.Parser
 
         public void RegisterMethod(MethodDeclaration method, string className, SourceLocation? location = null)
         {
+            // Check if method has dotnetfunc attribute - skip validation for these
+            var hasDotNetFuncAttribute = method.Attributes?.Any(attr => 
+                attr.Name.Equals("dotnetfunc", StringComparison.OrdinalIgnoreCase)) ?? false;
+
+            if (hasDotNetFuncAttribute)
+            {
+                _diagnostics.ReportInfo($"Skipping method validation for .NET method: {className}.{method.Name}");
+                return;
+            }
+
             var signature = new MethodSignature
             {
                 Name = method.Name,
@@ -153,33 +202,216 @@ namespace Wake.Net.Parser
             _classMethods[key].Add(signature);
         }
 
-        public bool ValidateCall(string methodName, List<Expression> arguments, Token callToken)
+        public void RegisterClass(ClassDeclaration classDecl, SourceLocation? location = null)
         {
-            // Check global methods first
-            if (_methods.ContainsKey(methodName))
+            var classInfo = new ClassInfo
             {
-                var signatures = _methods[methodName];
-                var matchingSignature = signatures.FirstOrDefault(s => s.MatchesCall(methodName, arguments));
+                Name = classDecl.Name,
+                BaseClass = classDecl.BaseClass,
+                IsPublic = classDecl.IsPublic,
+                DeclarationLocation = location
+            };
+
+            // Register fields and methods
+            foreach (var member in classDecl.Members)
+            {
+                switch (member)
+                {
+                    case PropertyDeclaration prop:
+                        classInfo.Fields.Add(prop);
+                        break;
+                    case MethodDeclaration method:
+                        if (method.IsConstructor)
+                            classInfo.Constructors.Add(method);
+                        else
+                            classInfo.Methods.Add(method);
+                        RegisterMethod(method, classDecl.Name, location);
+                        break;
+                }
+            }
+
+            _classes[classDecl.Name] = classInfo;
+            _diagnostics.ReportInfo($"Registered class: {classDecl.Name} with {classInfo.Fields.Count} fields, {classInfo.Methods.Count} methods, and {classInfo.Constructors.Count} constructors");
+        }
+
+        public bool ValidateConstructorCall(string className, List<Expression> arguments, Token callToken)
+        {
+            if (!_classes.ContainsKey(className))
+            {
+                // More detailed logging for debugging
+                _diagnostics.ReportInfo($"Available classes: {string.Join(", ", _classes.Keys)}");
+                _diagnostics.ReportError(
+                    $"Class '{className}' is not defined",
+                    callToken.Line, callToken.Column, "UH205");
+                return false;
+            }
+
+            var classInfo = _classes[className];
+            
+            // If no explicit constructors, allow parameterless constructor
+            if (!classInfo.Constructors.Any())
+            {
+                if (arguments.Count == 0)
+                {
+                    _diagnostics.ReportInfo($"Allowing default constructor for class '{className}'");
+                    return true;
+                }
                 
+                _diagnostics.ReportError(
+                    $"Class '{className}' has no constructor that takes {arguments.Count} parameter(s)",
+                    callToken.Line, callToken.Column, "UH206");
+                return false;
+            }
+
+            // Check if any constructor matches
+            foreach (var constructor in classInfo.Constructors)
+            {
+                if (constructor.Parameters.Count == arguments.Count)
+                {
+                    _diagnostics.ReportInfo($"Found matching constructor for '{className}' with {arguments.Count} parameters");
+                    return true;
+                }
+            }
+
+            var expectedCounts = classInfo.Constructors.Select(c => c.Parameters.Count).Distinct();
+            _diagnostics.ReportError(
+                $"Class '{className}' constructor expects {string.Join(" or ", expectedCounts)} parameter(s), but {arguments.Count} were provided",
+                callToken.Line, callToken.Column, "UH207");
+            return false;
+        }
+
+        public bool ValidateMemberAccess(string className, string memberName, Token accessToken)
+        {
+            if (!_classes.ContainsKey(className))
+            {
+                _diagnostics.ReportError(
+                    $"Class '{className}' is not defined",
+                    accessToken.Line, accessToken.Column, "UH208");
+                return false;
+            }
+
+            var classInfo = _classes[className];
+            
+            if (classInfo.HasField(memberName) || classInfo.HasMethod(memberName))
+                return true;
+
+            _diagnostics.ReportError(
+                $"Class '{className}' does not have a member named '{memberName}'",
+                accessToken.Line, accessToken.Column, "UH209");
+            
+            // Suggest similar members
+            var allMembers = classInfo.Fields.Select(f => f.Name)
+                .Concat(classInfo.Methods.Select(m => m.Name))
+                .ToList();
+            
+            var suggestions = allMembers
+                .Where(name => LevenshteinDistance(memberName, name) <= 2)
+                .Take(3)
+                .ToList();
+
+            if (suggestions.Any())
+            {
+                _diagnostics.ReportWarning(
+                    $"Did you mean: {string.Join(", ", suggestions)}?",
+                    accessToken.Line, accessToken.Column, "UH210");
+            }
+
+            return false;
+        }
+
+        public bool ValidateCall(string functionName, List<Expression> arguments, Token location)
+        {
+            // Check if this is actually a constructor call (capitalized name)
+            if (char.IsUpper(functionName[0]) && !functionName.Contains('.'))
+            {
+                return ValidateConstructorCall(functionName, arguments, location);
+            }
+
+            // First check user-defined functions
+            if (_methods.ContainsKey(functionName))
+            {
+                var signatures = _methods[functionName];
+                var matchingSignature = signatures.FirstOrDefault(s => s.MatchesCall(functionName, arguments));
+
                 if (matchingSignature != null)
                     return true;
 
                 // Report parameter count mismatch
                 var expectedCounts = signatures.Select(s => s.Parameters.Count).Distinct();
                 _diagnostics.ReportError(
-                    $"Method '{methodName}' expects {string.Join(" or ", expectedCounts)} parameter(s), but {arguments.Count} were provided",
-                    callToken.Line, callToken.Column, "UH200");
+                    $"Method '{functionName}' expects {string.Join(" or ", expectedCounts)} parameter(s), but {arguments.Count} were provided",
+                    location.Line, location.Column, "UH200");
                 return false;
             }
 
-            // Method not found
-            _diagnostics.ReportError(
-                $"Method '{methodName}' is not defined",
-                callToken.Line, callToken.Column, "UH201");
-            
-            // Suggest similar method names
-            SuggestSimilarMethods(methodName, callToken);
+            // Then check .NET methods using reflection
+            if (_reflectionResolver.TryResolveStaticMethod(functionName, arguments, out var method))
+            {
+                _diagnostics.ReportInfo($"Resolved .NET method: {functionName}");
+                return true;
+            }
+
+            // Check if it's a known type method
+            var dotIndex = functionName.LastIndexOf('.');
+            if (dotIndex > 0)
+            {
+                var typeName = functionName.Substring(0, dotIndex);
+                var methodName = functionName.Substring(dotIndex + 1);
+
+                if (_reflectionResolver.TryResolveMethod(typeName, methodName, arguments, out method))
+                {
+                    _diagnostics.ReportInfo($"Resolved .NET method: {typeName}.{methodName}");
+                    return true;
+                }
+            }
+
+            _diagnostics.ReportError($"Unknown function: {functionName}", location.Line, location.Column, "UH004");
             return false;
+        }
+
+        private bool ValidateQualifiedCall(string qualifiedName, List<Expression> arguments, Token callToken)
+        {
+            var parts = qualifiedName.Split('.');
+            if (parts.Length < 2)
+            {
+                return ValidateCall(qualifiedName, arguments, callToken);
+            }
+
+            var className = string.Join(".", parts.Take(parts.Length - 1));
+            var methodName = parts.Last();
+
+            // Check if this is a known .NET method (like Console.WriteLine)
+            if (IsKnownDotNetMethod(qualifiedName))
+            {
+                _diagnostics.ReportInfo($"Validated .NET method call: {qualifiedName}");
+                return true;
+            }
+
+            // Check class methods
+            return ValidateMethodCall(className, methodName, arguments, callToken);
+        }
+
+        private bool IsKnownDotNetMethod(string qualifiedName)
+        {
+            // List of known .NET methods that we want to allow
+            var knownMethods = new HashSet<string>
+            {
+                "Console.WriteLine",
+                "Console.Write", 
+                "Console.ReadLine",
+                "Math.Abs",
+                "Math.Sqrt",
+                "Math.Pow",
+                "Math.Min",
+                "Math.Max",
+                "String.IsNullOrEmpty",
+                "String.IsNullOrWhiteSpace",
+                "Convert.ToInt32",
+                "Convert.ToDouble",
+                "Convert.ToString"
+            };
+
+            return knownMethods.Contains(qualifiedName);
         }
 
         public bool ValidateMethodCall(string className, string methodName, List<Expression> arguments, Token callToken)
@@ -252,8 +484,19 @@ namespace Wake.Net.Parser
 
         public void PrintMethodSummary()
         {
+            _diagnostics.ReportInfo($"Registered {_classes.Count} classes");
             _diagnostics.ReportInfo($"Registered {_methods.Values.Sum(list => list.Count)} global methods");
             _diagnostics.ReportInfo($"Registered {_classMethods.Values.Sum(list => list.Count)} class methods");
+        }
+
+        public ClassInfo? GetClassInfo(string className)
+        {
+            return _classes.GetValueOrDefault(className);
+        }
+
+        public List<string> GetAllClassNames()
+        {
+            return _classes.Keys.ToList();
         }
 
         public List<string> GetAllMethodNames()

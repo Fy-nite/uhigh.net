@@ -60,10 +60,51 @@ namespace Wake.Net.Parser
             {
                 try
                 {
+                    // Check for attributes first
+                    var attributes = new List<AttributeDeclaration>();
+                    while (Check(TokenType.LeftBracket))
+                    {
+                        attributes.Add(ParseAttribute());
+                    }
+
                     if (Check(TokenType.Func))
                     {
                         var funcToken = Advance();
                         var nameToken = Consume(TokenType.Identifier, "Expected function name");
+                        
+                        // Handle dotted function names (e.g., Console.WriteLine)
+                        var functionName = nameToken.Value;
+                        while (Match(TokenType.Dot))
+                        {
+                            functionName += "." + Consume(TokenType.Identifier, "Expected identifier after '.'").Value;
+                        }
+                        
+                        // Check if this has dotnetfunc attribute - skip registration if it does
+                        var hasDotNetFuncAttribute = attributes.Any(attr => 
+                            attr.Name.Equals("dotnetfunc", StringComparison.OrdinalIgnoreCase));
+
+                        if (hasDotNetFuncAttribute)
+                        {
+                            _diagnostics.ReportInfo($"Skipping registration for .NET function: {functionName}");
+                            // Skip to end of function declaration
+                            while (!Check(TokenType.LeftBrace) && !IsAtEnd())
+                            {
+                                Advance();
+                            }
+                            if (Check(TokenType.LeftBrace))
+                            {
+                                Advance(); // Skip opening brace
+                                // Skip function body
+                                var braceCount = 1;
+                                while (braceCount > 0 && !IsAtEnd())
+                                {
+                                    if (Check(TokenType.LeftBrace)) braceCount++;
+                                    else if (Check(TokenType.RightBrace)) braceCount--;
+                                    Advance();
+                                }
+                            }
+                            continue;
+                        }
                         
                         // Parse parameters properly
                         var parameters = new List<Parameter>();
@@ -150,21 +191,42 @@ namespace Wake.Net.Parser
                         // Create function declaration for registration
                         var func = new FunctionDeclaration 
                         { 
-                            Name = nameToken.Value, 
+                            Name = functionName, 
                             Parameters = parameters,
-                            ReturnType = returnType 
+                            ReturnType = returnType,
+                            Attributes = attributes
                         };
                         var location = new SourceLocation(nameToken.Line, nameToken.Column);
                         _methodChecker.RegisterMethod(func, location);
                         
-                        _diagnostics.ReportInfo($"Registered function: {nameToken.Value} with {parameters.Count} parameters");
+                        _diagnostics.ReportInfo($"Registered function: {functionName} with {parameters.Count} parameters");
                     }
                     else if (Check(TokenType.Class))
                     {
                         Advance(); // Skip 'class'
+                        
+                        // Parse modifiers before class name
+                        var modifiers = new List<string>();
+                        while (IsModifierToken(Previous()))
+                        {
+                            modifiers.Add(Previous().Value);
+                            if (!IsAtEnd()) Advance();
+                        }
+                        
                         var classNameToken = Consume(TokenType.Identifier, "Expected class name");
                         
-                        // Skip to class body
+                        // Create a temporary class declaration for registration
+                        var tempClassDecl = new ClassDeclaration 
+                        { 
+                            Name = classNameToken.Value,
+                            Modifiers = modifiers,
+                            Members = new List<Statement>()
+                        };
+                        
+                        var location = new SourceLocation(classNameToken.Line, classNameToken.Column);
+                        _methodChecker.RegisterClass(tempClassDecl, location);
+                        
+                        // Skip to class body and register methods
                         while (!Check(TokenType.LeftBrace) && !IsAtEnd())
                         {
                             Advance();
@@ -183,8 +245,8 @@ namespace Wake.Net.Parser
                                     var methodNameToken = Consume(TokenType.Identifier, "Expected method name");
                                     
                                     var method = new MethodDeclaration { Name = methodNameToken.Value };
-                                    var location = new SourceLocation(methodNameToken.Line, methodNameToken.Column);
-                                    _methodChecker.RegisterMethod(method, classNameToken.Value, location);
+                                    var methodLocation = new SourceLocation(methodNameToken.Line, methodNameToken.Column);
+                                    _methodChecker.RegisterMethod(method, classNameToken.Value, methodLocation);
                                 }
                                 else
                                 {
@@ -211,12 +273,43 @@ namespace Wake.Net.Parser
         {
             try
             {
+                // Check for attributes
+                var attributes = new List<AttributeDeclaration>();
+                while (Check(TokenType.LeftBracket))
+                {
+                    attributes.Add(ParseAttribute());
+                }
+
+                // Parse modifiers for top-level declarations
+                var modifiers = new List<string>();
+                while (IsModifierToken(Peek()))
+                {
+                    modifiers.Add(Advance().Value);
+                }
+
                 if (Match(TokenType.Import)) return ParseImportStatement();
                 if (Match(TokenType.Namespace)) return ParseNamespaceDeclaration();
-                if (Match(TokenType.Class)) return ParseClassDeclaration();
+                if (Match(TokenType.Class)) 
+                {
+                    var classDecl = ParseClassDeclaration() as ClassDeclaration;
+                    if (classDecl != null)
+                    {
+                        classDecl.Modifiers.AddRange(modifiers);
+                    }
+                    return classDecl;
+                }
                 if (Match(TokenType.Const)) return ParseConstDeclaration();
                 if (Match(TokenType.Var)) return ParseVariableDeclaration();
-                if (Match(TokenType.Func)) return ParseFunctionDeclaration();
+                if (Match(TokenType.Func)) 
+                {
+                    var funcDecl = ParseFunctionDeclaration() as FunctionDeclaration;
+                    if (funcDecl != null)
+                    {
+                        funcDecl.Attributes = attributes;
+                        funcDecl.Modifiers = modifiers;
+                    }
+                    return funcDecl;
+                }
                 if (Match(TokenType.If)) return ParseIfStatement();
                 if (Match(TokenType.While)) return ParseWhileStatement();
                 if (Match(TokenType.For)) return ParseForStatement();
@@ -232,6 +325,29 @@ namespace Wake.Net.Parser
                 Synchronize();
                 return null;
             }
+        }
+
+        private AttributeDeclaration ParseAttribute()
+        {
+            Consume(TokenType.LeftBracket, "Expected '[' for attribute");
+            var name = Consume(TokenType.Identifier, "Expected attribute name").Value;
+            
+            var arguments = new List<Expression>();
+            if (Match(TokenType.LeftParen))
+            {
+                if (!Check(TokenType.RightParen))
+                {
+                    do
+                    {
+                        arguments.Add(ParseExpression());
+                    } while (Match(TokenType.Comma));
+                }
+                Consume(TokenType.RightParen, "Expected ')' after attribute arguments");
+            }
+            
+            Consume(TokenType.RightBracket, "Expected ']' after attribute");
+            
+            return new AttributeDeclaration { Name = name, Arguments = arguments };
         }
 
         private Statement ParseImportStatement()
@@ -273,6 +389,14 @@ namespace Wake.Net.Parser
 
         private Statement ParseClassDeclaration()
         {
+            var modifiers = new List<string>();
+            
+            // Parse modifiers before 'class' keyword
+            while (IsModifierToken(Peek()))
+            {
+                modifiers.Add(Previous().Value);
+            }
+            
             var name = Consume(TokenType.Identifier, "Expected class name").Value;
             
             string? baseClass = null;
@@ -292,17 +416,113 @@ namespace Wake.Net.Parser
             
             Consume(TokenType.RightBrace, "Expected '}' after class body");
             
-            return new ClassDeclaration { Name = name, BaseClass = baseClass, Members = members };
+            var classDecl = new ClassDeclaration { Name = name, BaseClass = baseClass, Members = members, Modifiers = modifiers };
+            
+            // Register the class with MethodChecker
+            var location = new SourceLocation(Peek().Line, Peek().Column);
+            _methodChecker.RegisterClass(classDecl, location);
+            
+            return classDecl;
         }
 
         private Statement? ParseClassMember()
         {
-            if (Match(TokenType.Var)) return ParsePropertyDeclaration();
-            if (Match(TokenType.Func)) return ParseMethodDeclaration();
+            // Check for attributes first
+            var attributes = new List<AttributeDeclaration>();
+            while (Check(TokenType.LeftBracket))
+            {
+                attributes.Add(ParseAttribute());
+            }
+
+            // Parse modifiers
+            var modifiers = new List<string>();
+            while (IsModifierToken(Peek()))
+            {
+                modifiers.Add(Advance().Value);
+            }
+
+            if (Match(TokenType.Field))
+            {
+                var fieldDecl = ParseFieldDeclaration() as FieldDeclaration;
+                if (fieldDecl != null)
+                {
+                    fieldDecl.Modifiers = modifiers;
+                }
+                return fieldDecl;
+            }
+
+            if (Match(TokenType.Var))
+            {
+                var propDecl = ParsePropertyDeclaration() as PropertyDeclaration;
+                if (propDecl != null)
+                {
+                    // Properties can have modifiers too
+                    // Add modifier support to PropertyDeclaration if needed
+                }
+                return propDecl;
+            }
             
-            // Skip unknown tokens in class body
-            Advance();
+            if (Match(TokenType.Func)) 
+            {
+                var methodDecl = ParseMethodDeclaration() as MethodDeclaration;
+                if (methodDecl != null)
+                {
+                    methodDecl.Modifiers = modifiers;
+                    methodDecl.Attributes = attributes;
+                }
+                return methodDecl;
+            }
+            
+            if (!IsAtEnd())
+            {
+                _diagnostics.ReportParseError("Expected class member", Peek());
+                Advance();
+            }
+            
             return null;
+        }
+
+        private Statement ParseFieldDeclaration()
+        {
+            var name = Consume(TokenType.Identifier, "Expected field name").Value;
+            string? type = null;
+            Expression? initializer = null;
+
+            if (Match(TokenType.Colon))
+            {
+                // Handle type tokens properly
+                if (Check(TokenType.StringType))
+                {
+                    type = "string";
+                    Advance();
+                }
+                else if (Check(TokenType.Int))
+                {
+                    type = "int";
+                    Advance();
+                }
+                else if (Check(TokenType.Float))
+                {
+                    type = "float";
+                    Advance();
+                }
+                else if (Check(TokenType.Bool))
+                {
+                    type = "bool";
+                    Advance();
+                }
+                else
+                {
+                    type = Consume(TokenType.Identifier, "Expected field type").Value;
+                }
+            }
+
+            if (Match(TokenType.Assign))
+            {
+                initializer = ParseExpression();
+            }
+
+            return new FieldDeclaration { Name = name, Type = type, Initializer = initializer };
         }
 
         private Statement ParsePropertyDeclaration()
@@ -313,7 +533,31 @@ namespace Wake.Net.Parser
 
             if (Match(TokenType.Colon))
             {
-                type = Consume(TokenType.Identifier, "Expected property type").Value;
+                // Handle type tokens properly
+                if (Check(TokenType.StringType))
+                {
+                    type = "string";
+                    Advance();
+                }
+                else if (Check(TokenType.Int))
+                {
+                    type = "int";
+                    Advance();
+                }
+                else if (Check(TokenType.Float))
+                {
+                    type = "float";
+                    Advance();
+                }
+                else if (Check(TokenType.Bool))
+                {
+                    type = "bool";
+                    Advance();
+                }
+                else
+                {
+                    type = Consume(TokenType.Identifier, "Expected property type").Value;
+                }
             }
 
             if (Match(TokenType.Assign))
@@ -454,7 +698,14 @@ namespace Wake.Net.Parser
 
         private Statement ParseFunctionDeclaration()
         {
-            var name = Consume(TokenType.Identifier, "Expected function name").Value;
+            var nameToken = Consume(TokenType.Identifier, "Expected function name");
+            var functionName = nameToken.Value;
+            
+            // Handle qualified function names (e.g., Console.WriteLine)
+            while (Match(TokenType.Dot))
+            {
+                functionName += "." + Consume(TokenType.Identifier, "Expected identifier after '.'").Value;
+            }
             
             Consume(TokenType.LeftParen, "Expected '(' after function name");
             var parameters = new List<Parameter>();
@@ -544,7 +795,7 @@ namespace Wake.Net.Parser
             
             return new FunctionDeclaration 
             { 
-                Name = name, 
+                Name = functionName, 
                 Parameters = parameters, 
                 Body = body, 
                 ReturnType = returnType 
@@ -851,10 +1102,24 @@ namespace Wake.Net.Parser
             
             var rightParen = Consume(TokenType.RightParen, "Expected ')' after arguments");
             
-            // Validate method call
-            if (callee is IdentifierExpression identExpr)
+            // Check if this is a constructor call (capitalized identifier without dots)
+            if (callee is IdentifierExpression identExpr && 
+                char.IsUpper(identExpr.Name[0]) && 
+                !identExpr.Name.Contains('.'))
             {
-                _methodChecker.ValidateCall(identExpr.Name, arguments, rightParen);
+                // This is a constructor call - convert to ConstructorCallExpression
+                _methodChecker.ValidateConstructorCall(identExpr.Name, arguments, rightParen);
+                return new ConstructorCallExpression 
+                { 
+                    ClassName = identExpr.Name, 
+                    Arguments = arguments 
+                };
+            }
+            
+            // Validate regular method calls
+            if (callee is IdentifierExpression identExpr2)
+            {
+                _methodChecker.ValidateCall(identExpr2.Name, arguments, rightParen);
             }
             else if (callee is MemberAccessExpression memberExpr && 
                      memberExpr.Object is IdentifierExpression objIdent)
@@ -881,15 +1146,14 @@ namespace Wake.Net.Parser
                 var value = Previous().Value;
                 try
                 {
-                    return new LiteralExpression 
-                    { 
-                        Value = value.Contains('.') ? double.Parse(value) : int.Parse(value), 
-                        Type = TokenType.Number 
-                    };
+                    if (value.Contains('.'))
+                        return new LiteralExpression { Value = double.Parse(value), Type = TokenType.Number };
+                    else
+                        return new LiteralExpression { Value = int.Parse(value), Type = TokenType.Number };
                 }
                 catch (FormatException)
                 {
-                    _diagnostics.ReportInvalidNumber(value, Previous().Line, Previous().Column);
+                    _diagnostics.ReportError($"Invalid number format: {value}", Previous().Line, Previous().Column, "UH006");
                     return new LiteralExpression { Value = 0, Type = TokenType.Number };
                 }
             }
@@ -897,8 +1161,57 @@ namespace Wake.Net.Parser
             if (Match(TokenType.String))
                 return new LiteralExpression { Value = Previous().Value, Type = TokenType.String };
             
+            // Handle 'new' keyword for constructor calls
+            if (Match(TokenType.New))
+            {
+                var className = Consume(TokenType.Identifier, "Expected class name after 'new'").Value;
+                
+                if (!Check(TokenType.LeftParen))
+                {
+                    _diagnostics.ReportError("Expected '(' after class name in constructor call", Peek().Line, Peek().Column, "UH007");
+                    // Try to recover by assuming empty parentheses
+                    return new ConstructorCallExpression 
+                    { 
+                        ClassName = className, 
+                        Arguments = new List<Expression>() 
+                    };
+                }
+                
+                Consume(TokenType.LeftParen, "Expected '(' after class name");
+                
+                var arguments = new List<Expression>();
+                if (!Check(TokenType.RightParen))
+                {
+                    do
+                    {
+                        arguments.Add(ParseExpression());
+                    } while (Match(TokenType.Comma));
+                }
+                
+                var rightParen = Consume(TokenType.RightParen, "Expected ')' after constructor arguments");
+                
+                // Validate constructor call
+                _methodChecker.ValidateConstructorCall(className, arguments, rightParen);
+                
+                return new ConstructorCallExpression 
+                { 
+                    ClassName = className, 
+                    Arguments = arguments 
+                };
+            }
+            
             if (Match(TokenType.Identifier))
-                return new IdentifierExpression { Name = Previous().Value };
+            {
+                var identifier = Previous().Value;
+                
+                // Check if this is a qualified identifier (contains dots)
+                if (identifier.Contains('.'))
+                {
+                    return new QualifiedIdentifierExpression { Name = identifier };
+                }
+                
+                return new IdentifierExpression { Name = identifier };
+            }
             
             if (Match(TokenType.LeftParen))
             {
@@ -1026,6 +1339,17 @@ namespace Wake.Net.Parser
                 
                 Advance();
             }
+        }
+
+        private bool IsModifierToken(Token token)
+        {
+            return token.Type switch
+            {
+                TokenType.Public or TokenType.Private or TokenType.Protected or TokenType.Internal or
+                TokenType.Static or TokenType.Abstract or TokenType.Virtual or TokenType.Override or
+                TokenType.Sealed or TokenType.Readonly or TokenType.Async => true,
+                _ => false
+            };
         }
     }
 }

@@ -13,8 +13,9 @@ namespace Wake.Net.CodeGen
         private readonly Dictionary<string, string> _importMappings = new();
         private DiagnosticsReporter _diagnostics = new();
         private string _rootNamespace = "Generated";
+        private string _className = "Program";
 
-        public string Generate(Program program, DiagnosticsReporter? diagnostics = null, string? rootNamespace = null)
+        public string Generate(Program program, DiagnosticsReporter? diagnostics = null, string? rootNamespace = null, string? className = null)
         {
             _diagnostics = diagnostics ?? new DiagnosticsReporter();
             _output.Clear();
@@ -22,6 +23,7 @@ namespace Wake.Net.CodeGen
             _usings.Clear();
             _importMappings.Clear();
             _rootNamespace = rootNamespace ?? "Generated";
+            _className = className ?? "Program";
 
             _diagnostics.ReportInfo("Starting C# code generation");
 
@@ -81,10 +83,21 @@ namespace Wake.Net.CodeGen
             if (program.Statements == null) return;
 
             var hasNamespace = program.Statements.Any(s => s is NamespaceDeclaration);
+            var hasClass = program.Statements.Any(s => s is ClassDeclaration);
+            var hasMainFunction = program.Statements.OfType<FunctionDeclaration>().Any(f => f.Name == "main");
             
-            if (!hasNamespace)
+            // If source has its own namespace/class structure, use it as-is
+            if (hasNamespace || hasClass)
             {
-                // Generate namespace using project root namespace
+                // Generate the source structure directly without wrapping
+                foreach (var statement in program.Statements.Where(s => !(s is ImportStatement)))
+                {
+                    GenerateStatement(statement);
+                }
+            }
+            else
+            {
+                // Generate default wrapper namespace and class for loose statements/functions
                 _output.AppendLine($"namespace {_rootNamespace}");
                 _output.AppendLine("{");
                 _indentLevel++;
@@ -92,25 +105,17 @@ namespace Wake.Net.CodeGen
                 _indentLevel--;
                 _output.AppendLine("}");
             }
-            else
-            {
-                // Generate namespaces and top-level statements
-                foreach (var statement in program.Statements.Where(s => !(s is ImportStatement)))
-                {
-                    GenerateStatement(statement);
-                }
-            }
         }
 
         private void GenerateDefaultProgram(Program program)
         {
             Indent();
-            _output.AppendLine("public class Program");
+            _output.AppendLine($"public class {_className}");
             Indent();
             _output.AppendLine("{");
             _indentLevel++;
 
-            GenerateBuiltInFunctions();
+            //GenerateBuiltInFunctions(); // dont 
 
             var statements = program.Statements?.Where(s => !(s is ImportStatement) && !(s is NamespaceDeclaration)).ToList();
             var mainFunction = statements?.OfType<FunctionDeclaration>().FirstOrDefault(f => f.Name == "main");
@@ -150,47 +155,10 @@ namespace Wake.Net.CodeGen
 
         private void GenerateBuiltInFunctions()
         {
-            // Math functions
-            Indent();
-            _output.AppendLine("public static double abs(double x) => Math.Abs(x);");
-            Indent();
-            _output.AppendLine("public static double sqrt(double x) => Math.Sqrt(x);");
-            Indent();
-            _output.AppendLine("public static double pow(double x, double y) => Math.Pow(x, y);");
-            Indent();
-            _output.AppendLine("public static double min(double x, double y) => Math.Min(x, y);");
-            Indent();
-            _output.AppendLine("public static double max(double x, double y) => Math.Max(x, y);");
-            Indent();
-            _output.AppendLine("private static Random _random = new Random();");
-            Indent();
-            _output.AppendLine("public static double random() => _random.NextDouble();");
+            // Reduce built-in functions since we'll rely more on reflection
+            // Keep only the most essential ones that need special handling
             
-            // String functions
-            Indent();
-            _output.AppendLine("public static int len(string s) => s.Length;");
-            Indent();
-            _output.AppendLine("public static int len<T>(T[] array) => array.Length;");
-            Indent();
-            _output.AppendLine("public static int len<T>(List<T> list) => list.Count;");
-            Indent();
-            _output.AppendLine("public static string uppercase(string s) => s.ToUpper();");
-            Indent();
-            _output.AppendLine("public static string lowercase(string s) => s.ToLower();");
-            Indent();
-            _output.AppendLine("public static string substring(string s, int start, int length) => s.Substring(start, length);");
-            
-            // Array functions
-            Indent();
-            _output.AppendLine("public static void append<T>(List<T> list, T item) => list.Add(item);");
-            Indent();
-            _output.AppendLine("public static T pop<T>(List<T> list, int index) { var item = list[index]; list.RemoveAt(index); return item; }");
-            Indent();
-            _output.AppendLine("public static void sort<T>(List<T> list) where T : IComparable<T> => list.Sort();");
-            Indent();
-            _output.AppendLine("public static void reverse<T>(List<T> list) => list.Reverse();");
-            
-            // Type conversion functions
+            // Type conversion functions that need special naming
             Indent();
             _output.AppendLine("public static int @int(string s) => int.Parse(s);");
             Indent();
@@ -204,19 +172,11 @@ namespace Wake.Net.CodeGen
             Indent();
             _output.AppendLine("public static bool @bool(object obj) => obj != null && !obj.Equals(0) && !obj.Equals(\"\");");
             
-            // Range function
-            Indent();
-            _output.AppendLine("public static IEnumerable<int> range(int count) => Enumerable.Range(0, count);");
-            Indent();
-            _output.AppendLine("public static IEnumerable<int> range(int start, int count) => Enumerable.Range(start, count);");
-            
-            // IO functions
+            // Special functions that don't map directly to .NET
             Indent();
             _output.AppendLine("public static void print(object value) => Console.WriteLine(value);");
             Indent();
             _output.AppendLine("public static string input() => Console.ReadLine() ?? \"\";");
-            Indent();
-            _output.AppendLine("public static void input(out string value) => value = Console.ReadLine() ?? \"\";");
             
             _output.AppendLine();
         }
@@ -278,6 +238,9 @@ namespace Wake.Net.CodeGen
                 case MethodDeclaration methodDecl:
                     GenerateMethodDeclaration(methodDecl);
                     break;
+                case FieldDeclaration fieldDecl:
+                    GenerateFieldDeclaration(fieldDecl);
+                    break;
                 case PropertyDeclaration propDecl:
                     GeneratePropertyDeclaration(propDecl);
                     break;
@@ -321,9 +284,8 @@ namespace Wake.Net.CodeGen
         private void GenerateNamespaceDeclaration(NamespaceDeclaration nsDecl)
         {
             Indent();
-            // Use fully qualified namespace with root namespace prefix
-            var fullNamespace = $"{_rootNamespace}.{nsDecl.Name}";
-            _output.AppendLine($"namespace {fullNamespace}");
+            // Use the namespace name as-is, don't prefix with root namespace
+            _output.AppendLine($"namespace {nsDecl.Name}");
             Indent();
             _output.AppendLine("{");
             _indentLevel++;
@@ -342,7 +304,18 @@ namespace Wake.Net.CodeGen
         private void GenerateClassDeclaration(ClassDeclaration classDecl)
         {
             Indent();
-            _output.Append("public class ");
+            
+            // Generate modifiers
+            if (classDecl.Modifiers.Count > 0)
+            {
+                _output.Append(string.Join(" ", classDecl.Modifiers) + " ");
+            }
+            else
+            {
+                _output.Append("public "); // Default to public
+            }
+            
+            _output.Append("class ");
             _output.Append(classDecl.Name);
             
             if (classDecl.BaseClass != null)
@@ -368,12 +341,30 @@ namespace Wake.Net.CodeGen
 
         private void GenerateMethodDeclaration(MethodDeclaration methodDecl)
         {
+            // Check if method has dotnetfunc attribute - don't generate implementation
+            var hasDotNetFuncAttribute = methodDecl.Attributes.Any(attr => 
+                attr.Name.Equals("dotnetfunc", StringComparison.OrdinalIgnoreCase));
+
+            if (hasDotNetFuncAttribute)
+            {
+                _diagnostics.ReportInfo($"Skipping code generation for .NET method: {methodDecl.Name}");
+                return;
+            }
+
             Indent();
-            _output.Append("public ");
+            
+            // Generate modifiers
+            if (methodDecl.Modifiers.Count > 0)
+            {
+                _output.Append(string.Join(" ", methodDecl.Modifiers) + " ");
+            }
+            else
+            {
+                _output.Append("public "); // Default to public
+            }
             
             if (methodDecl.IsConstructor)
             {
-                // Constructor doesn't have return type
                 _output.Append($"{GetCurrentClassName()}(");
             }
             else
@@ -425,6 +416,32 @@ namespace Wake.Net.CodeGen
             _output.AppendLine(";");
         }
 
+        private void GenerateFieldDeclaration(FieldDeclaration fieldDecl)
+        {
+            Indent();
+            
+            // Generate modifiers
+            if (fieldDecl.Modifiers.Count > 0)
+            {
+                _output.Append(string.Join(" ", fieldDecl.Modifiers) + " ");
+            }
+            else
+            {
+                _output.Append("private "); // Default to private for fields
+            }
+            
+            var fieldType = fieldDecl.Type != null ? ConvertType(fieldDecl.Type) : "object";
+            _output.Append($"{fieldType} {fieldDecl.Name}");
+            
+            if (fieldDecl.Initializer != null)
+            {
+                _output.Append(" = ");
+                GenerateExpression(fieldDecl.Initializer);
+            }
+            
+            _output.AppendLine(";");
+        }
+
         private string GetCurrentClassName()
         {
             // This would need to track current class context
@@ -458,8 +475,34 @@ namespace Wake.Net.CodeGen
 
         private void GenerateFunctionDeclaration(FunctionDeclaration funcDecl)
         {
+            // Check if function has dotnetfunc attribute - completely skip generation
+            var hasDotNetFuncAttribute = funcDecl.Attributes.Any(attr => 
+                attr.Name.Equals("dotnetfunc", StringComparison.OrdinalIgnoreCase));
+
+            if (hasDotNetFuncAttribute)
+            {
+                _diagnostics.ReportInfo($"Skipping code generation for .NET function: {funcDecl.Name}");
+                return; // Completely skip generating this function
+            }
+
+            // Handle qualified function names - these should use [dotnetfunc] attribute
+            if (funcDecl.Name.Contains('.'))
+            {
+                _diagnostics.ReportWarning($"Qualified function name '{funcDecl.Name}' should use [dotnetfunc] attribute for .NET methods");
+                return; // Skip generating this as well
+            }
+
             Indent();
-            _output.Append("public static ");
+            
+            // Generate modifiers
+            if (funcDecl.Modifiers.Count > 0)
+            {
+                _output.Append(string.Join(" ", funcDecl.Modifiers) + " ");
+            }
+            else
+            {
+                _output.Append("public static "); // Default to public static for functions
+            }
             
             // Return type
             if (funcDecl.ReturnType != null)
@@ -613,6 +656,9 @@ namespace Wake.Net.CodeGen
                     GenerateExpression(memberExpr.Object);
                     _output.Append($".{memberExpr.MemberName}");
                     break;
+                case QualifiedIdentifierExpression qualifiedExpr:
+                    _output.Append(qualifiedExpr.Name);
+                    break;
                 case BinaryExpression binExpr:
                     GenerateExpression(binExpr.Left);
                     _output.Append($" {ConvertOperator(binExpr.Operator)} ");
@@ -633,37 +679,41 @@ namespace Wake.Net.CodeGen
                     _output.Append($" {ConvertOperator(assignExpr.Operator)} ");
                     GenerateExpression(assignExpr.Value);
                     break;
+                case ConstructorCallExpression constructorExpr:
+                    // Add "new" keyword for constructor calls in C#
+                    _output.Append($"new {constructorExpr.ClassName}(");
+                    for (int i = 0; i < constructorExpr.Arguments.Count; i++)
+                    {
+                        if (i > 0) _output.Append(", ");
+                        GenerateExpression(constructorExpr.Arguments[i]);
+                    }
+                    _output.Append(")");
+                    break;
                 case CallExpression callExpr:
                     if (callExpr.Function is IdentifierExpression funcIdExpr)
                     {
-                        // Handle special function names that are C# keywords
                         var functionName = funcIdExpr.Name;
-                        if (functionName == "println")
-                        {
-                            functionName = "print"; // Map println to our built-in print function
-                        }
                         
-                        // Handle constructor calls
-                        if (char.IsUpper(functionName[0]))
-                        {
-                            _output.Append($"new {functionName}");
-                        }
-                        else
-                        {
-                            _output.Append(functionName);
-                        }
+                        // If this is a capitalized name, it should have been converted to ConstructorCallExpression
+                        // If we reach here, treat it as a regular function call
+                        GenerateFunctionCall(functionName, callExpr.Arguments);
+                    }
+                    else if (callExpr.Function is QualifiedIdentifierExpression qualifiedFuncExpr)
+                    {
+                        var functionName = qualifiedFuncExpr.Name;
+                        GenerateFunctionCall(functionName, callExpr.Arguments);
                     }
                     else
                     {
                         GenerateExpression(callExpr.Function);
+                        _output.Append("(");
+                        for (int i = 0; i < callExpr.Arguments.Count; i++)
+                        {
+                            if (i > 0) _output.Append(", ");
+                            GenerateExpression(callExpr.Arguments[i]);
+                        }
+                        _output.Append(")");
                     }
-                    _output.Append("(");
-                    for (int i = 0; i < callExpr.Arguments.Count; i++)
-                    {
-                        if (i > 0) _output.Append(", ");
-                        GenerateExpression(callExpr.Arguments[i]);
-                    }
-                    _output.Append(")");
                     break;
                 case ArrayExpression arrayExpr:
                     _output.Append("new object[] { ");
@@ -681,6 +731,33 @@ namespace Wake.Net.CodeGen
                     _output.Append("]");
                     break;
             }
+        }
+
+        private void GenerateFunctionCall(string functionName, List<Expression> arguments)
+        {
+            // Handle special function names that are C# keywords
+            if (functionName == "println")
+            {
+                functionName = "Console.WriteLine"; // Map println to Console.WriteLine
+            }
+            
+            // Handle qualified method calls (e.g., Console.WriteLine)
+            if (functionName.Contains('.'))
+            {
+                _output.Append(functionName);
+            }
+            else
+            {
+                _output.Append(functionName);
+            }
+            
+            _output.Append("(");
+            for (int i = 0; i < arguments.Count; i++)
+            {
+                if (i > 0) _output.Append(", ");
+                GenerateExpression(arguments[i]);
+            }
+            _output.Append(")");
         }
 
         private void GenerateLiteral(LiteralExpression literal)

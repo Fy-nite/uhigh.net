@@ -1,0 +1,15 @@
+namespace testing
+{
+    public class Program
+    {
+        private field meow: string = "Hello, World!"
+        
+        func Main()
+        {
+            var program = Program()
+            Console.WriteLine(program.meow)
+        }
+    }
+}
+
+

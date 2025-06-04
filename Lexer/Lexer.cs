@@ -15,6 +15,7 @@ namespace Wake.Net.Lexer
         {
             { "const", TokenType.Const },
             { "var", TokenType.Var },
+            { "field", TokenType.Field }, // Added field keyword
             { "if", TokenType.If },
             { "else", TokenType.Else },
             { "while", TokenType.While },
@@ -40,7 +41,21 @@ namespace Wake.Net.Lexer
             { "namespace", TokenType.Namespace },
             { "import", TokenType.Import },
             { "from", TokenType.From },
-            { "this", TokenType.This }
+            { "this", TokenType.This },
+            
+            // Access Modifiers and Keywords
+            { "public", TokenType.Public },
+            { "private", TokenType.Private },
+            { "protected", TokenType.Protected },
+            { "internal", TokenType.Internal },
+            { "static", TokenType.Static },
+            { "abstract", TokenType.Abstract },
+            { "virtual", TokenType.Virtual },
+            { "override", TokenType.Override },
+            { "sealed", TokenType.Sealed },
+            { "readonly", TokenType.Readonly },
+            { "async", TokenType.Async },
+            { "await", TokenType.Await }
         };
 
         public Lexer(string source, DiagnosticsReporter? diagnostics = null)
@@ -284,7 +299,32 @@ namespace Wake.Net.Lexer
                 _column++;
             }
             
+            // Check if this is a dotted identifier (namespace.class or class.method)
             var value = _source.Substring(start, _position - start);
+            
+            // Look ahead for dots followed by identifiers
+            var tempPos = _position;
+            var tempCol = _column;
+            
+            while (tempPos < _source.Length && _source[tempPos] == '.' && 
+                   tempPos + 1 < _source.Length && (char.IsLetter(_source[tempPos + 1]) || _source[tempPos + 1] == '_'))
+            {
+                tempPos++; // Skip dot
+                tempCol++;
+                
+                // Read the next identifier part
+                while (tempPos < _source.Length && (char.IsLetterOrDigit(_source[tempPos]) || _source[tempPos] == '_'))
+                {
+                    tempPos++;
+                    tempCol++;
+                }
+                
+                // Update the value to include the dotted part
+                value = _source.Substring(start, tempPos - start);
+                _position = tempPos;
+                _column = tempCol;
+            }
+            
             var tokenType = Keywords.ContainsKey(value) ? Keywords[value] : TokenType.Identifier;
             
             return new Token(tokenType, value, line, column);

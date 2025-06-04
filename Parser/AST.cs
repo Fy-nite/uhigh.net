@@ -18,6 +18,28 @@ namespace Wake.Net.Parser
         public string Name { get; set; } = "";
     }
     
+    public class QualifiedIdentifierExpression : Expression 
+    {
+        public string Name { get; set; } = "";
+        
+        public string[] GetParts()
+        {
+            return Name.Split('.');
+        }
+        
+        public string GetNamespace()
+        {
+            var parts = GetParts();
+            return parts.Length > 1 ? string.Join(".", parts.Take(parts.Length - 1)) : "";
+        }
+        
+        public string GetMethodName()
+        {
+            var parts = GetParts();
+            return parts.Last();
+        }
+    }
+    
     public class BinaryExpression : Expression 
     {
         public Expression Left { get; set; } = null!;
@@ -34,6 +56,12 @@ namespace Wake.Net.Parser
     public class CallExpression : Expression 
     {
         public Expression Function { get; set; } = null!;
+        public List<Expression> Arguments { get; set; } = new();
+    }
+    
+    public class ConstructorCallExpression : Expression 
+    {
+        public string ClassName { get; set; } = "";
         public List<Expression> Arguments { get; set; } = new();
     }
 
@@ -114,6 +142,9 @@ namespace Wake.Net.Parser
         public string Name { get; set; } = "";
         public string? BaseClass { get; set; }
         public List<Statement> Members { get; set; } = new();
+        public List<string> Modifiers { get; set; } = new(); // New: access modifiers
+        
+        public bool IsPublic => Modifiers.Contains("public");
     }
     
     public class NamespaceDeclaration : Statement
@@ -137,6 +168,8 @@ namespace Wake.Net.Parser
         public string? ReturnType { get; set; }
         public bool IsStatic { get; set; }
         public bool IsConstructor { get; set; }
+        public List<AttributeDeclaration> Attributes { get; set; } = new();
+        public List<string> Modifiers { get; set; } = new(); // New: access modifiers
     }
     
     public class PropertyDeclaration : Statement
@@ -147,6 +180,16 @@ namespace Wake.Net.Parser
         public bool IsStatic { get; set; }
     }
     
+    public class FieldDeclaration : Statement
+    {
+        public string Name { get; set; } = "";
+        public string? Type { get; set; }
+        public Expression? Initializer { get; set; }
+        public bool IsStatic { get; set; }
+        public bool IsReadonly { get; set; }
+        public List<string> Modifiers { get; set; } = new();
+    }
+    
     // Top-level
     public class FunctionDeclaration : Statement 
     {
@@ -154,6 +197,14 @@ namespace Wake.Net.Parser
         public List<Parameter> Parameters { get; set; } = new();
         public List<Statement> Body { get; set; } = new();
         public string? ReturnType { get; set; }
+        public List<AttributeDeclaration> Attributes { get; set; } = new();
+        public List<string> Modifiers { get; set; } = new(); // New: access modifiers
+    }
+    
+    public class AttributeDeclaration : ASTNode
+    {
+        public string Name { get; set; } = "";
+        public List<Expression> Arguments { get; set; } = new();
     }
     
     public class Parameter : ASTNode 

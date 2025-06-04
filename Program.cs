@@ -31,6 +31,11 @@ public class EntryPoint
             Console.WriteLine("  --author <name>                   # Project author");
             Console.WriteLine("  --dir <path>                      # Project directory (default: current)");
             Console.WriteLine();
+            Console.WriteLine("Syntax examples:");
+            Console.WriteLine("  var obj = Program()               # Constructor call (no 'new' needed)");
+            Console.WriteLine("  Console.WriteLine(\"Hello\")        # Static method call");
+            Console.WriteLine("  [dotnetfunc] func Console.WriteLine(s: string) {} # .NET method declaration");
+            Console.WriteLine();
             Console.WriteLine("Global options:");
             Console.WriteLine("  --verbose                         # Enable verbose output");
             return;
@@ -78,10 +83,16 @@ public class EntryPoint
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error: {ex.Message}");
+            var originalColor = Console.ForegroundColor;
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.Write("error");
+            Console.ForegroundColor = ConsoleColor.White;
+            Console.WriteLine($": {ex.Message}");
+            Console.ForegroundColor = originalColor;
+            
             if (verboseMode)
             {
-                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                Console.WriteLine($"\nStack trace:\n{ex.StackTrace}");
             }
             success = false;
         }

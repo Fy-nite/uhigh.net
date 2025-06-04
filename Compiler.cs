@@ -120,13 +120,16 @@ namespace Wake.Net
             }
         }
 
-        public string CompileToCS(string source, DiagnosticsReporter? diagnostics = null, string? rootNamespace = null)
+        public string CompileToCS(string source, DiagnosticsReporter? diagnostics = null, string? rootNamespace = null, string? className = null)
         {
             diagnostics ??= new DiagnosticsReporter(_verboseMode);
             
             try
             {
-                diagnostics.ReportInfo("Starting Wake.Net compilation");
+                if (_verboseMode)
+                {
+                    diagnostics.ReportInfo("Starting μHigh compilation pipeline");
+                }
                 
                 // Tokenize
                 var lexer = new Lexer.Lexer(source, diagnostics);
@@ -134,7 +137,7 @@ namespace Wake.Net
                 
                 if (diagnostics.HasErrors)
                 {
-                    throw new Exception("Tokenization failed with errors");
+                    throw new Exception("Tokenization failed");
                 }
                 
                 // Parse
@@ -143,14 +146,17 @@ namespace Wake.Net
                 
                 if (diagnostics.HasErrors)
                 {
-                    throw new Exception("Parsing failed with errors");
+                    throw new Exception("Parsing failed");
                 }
                 
-                // Generate C# with root namespace
+                // Generate C# with root namespace and class name
                 var generator = new CSharpGenerator();
-                var result = generator.Generate(ast, diagnostics, rootNamespace);
+                var result = generator.Generate(ast, diagnostics, rootNamespace, className);
                 
-                diagnostics.ReportInfo("Wake.Net compilation completed successfully");
+                if (_verboseMode)
+                {
+                    diagnostics.ReportInfo("μHigh compilation pipeline completed successfully");
+                }
                 return result;
             }
             catch (Exception ex)
@@ -280,6 +286,7 @@ namespace Wake.Net
                 var allCSharpCode = new List<string>();
                 var hasMainMethod = false;
                 var projectRootNamespace = project.RootNamespace ?? project.Name;
+                var projectClassName = project.ClassName ?? "Program";
 
                 foreach (var sourceFile in project.SourceFiles)
                 {
@@ -290,7 +297,7 @@ namespace Wake.Net
                     }
 
                     var source = await File.ReadAllTextAsync(sourceFile);
-                    var csharpCode = CompileToCS(source, diagnostics, projectRootNamespace);
+                    var csharpCode = CompileToCS(source, diagnostics, projectRootNamespace, projectClassName);
                     
                     if (diagnostics.HasErrors)
                     {
@@ -317,18 +324,18 @@ namespace Wake.Net
                 // Combine all C# code
                 var combinedCode = string.Join("\n\n", allCSharpCode);
 
-                // Use in-memory compiler with project root namespace
+                // Use in-memory compiler with project root namespace and class name
                 var inMemoryCompiler = new InMemoryCompiler();
                 
                 if (outputFile != null)
                 {
-                    var success = await inMemoryCompiler.CompileToExecutable(combinedCode, outputFile, projectRootNamespace);
+                    var success = await inMemoryCompiler.CompileToExecutable(combinedCode, outputFile, projectRootNamespace, projectClassName);
                     diagnostics.PrintSummary();
                     return success;
                 }
                 else
                 {
-                    var success = await inMemoryCompiler.CompileAndRun(combinedCode, null, projectRootNamespace);
+                    var success = await inMemoryCompiler.CompileAndRun(combinedCode, null, projectRootNamespace, projectClassName);
                     diagnostics.PrintSummary();
                     return success;
                 }
@@ -438,9 +445,14 @@ namespace Wake.Net
 
             var projectPath = Path.Combine(outputFolder, $"{wakeProject.Name}.csproj");
             await File.WriteAllTextAsync(projectPath, projectContent);
+            if (_verboseMode)
+            {
+                Console.WriteLine("Generated project file:");
             Console.WriteLine($"Project file created: {projectPath}");
             Console.WriteLine($"Build with: dotnet build \"{projectPath}\"");
             Console.WriteLine($"Run with: dotnet run --project \"{projectPath}\"");
+                Console.WriteLine(projectContent);
+            }
         }
 
         public async Task<bool> CreateProject(string projectName, string? projectDir = null, string? description = null, string? author = null, string outputType = "Exe", string target = "net9.0")

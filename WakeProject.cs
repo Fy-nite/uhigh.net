@@ -38,6 +38,9 @@ namespace Wake.Net
         [XmlElement("RootNamespace")]
         public string? RootNamespace { get; set; }
 
+        [XmlElement("ClassName")]
+        public string? ClassName { get; set; }
+
         [XmlElement("Nullable")]
         public bool Nullable { get; set; } = true;
 
@@ -51,6 +54,7 @@ namespace Wake.Net
                 OutputType = "Exe",
                 SourceFiles = new List<string> { "main.wake" },
                 RootNamespace = projectName,
+                ClassName = "Program",
                 Nullable = true
             };
         }

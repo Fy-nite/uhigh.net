@@ -18,6 +18,8 @@
 - **Class definitions** with methods and properties
 - **Namespace organization** for better code structure
 - **Import system** for using C# libraries and custom classes
+- **Dot notation support** for qualified method calls (e.g., `Console.WriteLine()`)
+- **Static method calls** using qualified names
 - Basic arithmetic operations (+, -, *, /, %)
 - Increment and decrement operators (++, --)
 - Compound assignment operators (+=, -=, *=, /=)

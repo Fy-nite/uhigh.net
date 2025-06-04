@@ -370,94 +370,44 @@ func main() {
 
 ### Classes
 
-Define custom types with properties and methods:
+Define custom types with properties, fields, and methods:
 
 ```go
-class Person {
-    var name: string
-    var age: int
+public class Person {
+    private field name: string     // Field - direct storage
+    private field age: int = 0     // Field with default value
     
-    func constructor(name: string, age: int) {
+    public var Name: string {      // Property - can have logic
+        get { return this.name }
+        set { this.name = value }
+    }
+    
+    public func constructor(name: string, age: int) {
         this.name = name
         this.age = age
     }
     
-    func greet() {
-        print("Hello, I'm " + this.name + " and I'm " + string(this.age) + " years old")
-    }
-    
-    func getAge(): int {
-        return this.age
-    }
-}
-
-func main() {
-    var person = Person("Alice", 30)
-    person.greet()
-    var age = person.getAge()
-    print("Age: " + string(age))
-}
-```
-
-### Namespaces
-
-Organize code using namespaces:
-
-```go
-namespace MyApp.Utils {
-    class Calculator {
-        func add(a: int, b: int): int {
-            return a + b
-        }
-    }
-}
-
-namespace MyApp {
-    func main() {
-        var calc = MyApp.Utils.Calculator()
-        var result = calc.add(5, 3)
-        print("Result: " + string(result))
+    public func greet() {
+        Console.WriteLine("Hello, I'm " + this.name)
     }
 }
 ```
 
-### Import System
+### Fields vs Properties
 
-Import C# classes and custom libraries:
-
-```go
-// Import system classes
-import System.Math from "System"
-import System.Console from "System"
-
-// Import custom libraries
-import MyLibrary.Calculator from "MyLibrary.dll"
-import MyProject.Utilities from "MyProject.dll"
-
-func main() {
-    var result = System.Math.Sqrt(16)
-    System.Console.WriteLine("Square root of 16: " + string(result))
-    
-    var calc = MyLibrary.Calculator()
-    var sum = calc.Add(10, 20)
-    print("Sum: " + string(sum))
-}
-```
-
-### Function-based Variable Assignments
-
-Assign variables from function calls:
+- **Fields** (`field`) - Direct storage, compiled to C# fields
+- **Properties** (`var`) - Can have getters/setters, compiled to C# properties
 
 ```go
-func main() {
-    var name = input()  // Read user input
-    var length = len(name)  // Get string length
-    var upper = uppercase(name)  // Convert to uppercase
-    var number = int("42")  // Parse string to int
+public class Example {
+    private field _data: string           // Private field
+    public field MaxCount: int = 100      // Public field with default
+    readonly field Id: string             // Readonly field
+    static field Counter: int = 0         // Static field
     
-    print("Name: " + name)
-    print("Length: " + string(length))
-    print("Uppercase: " + upper)
-    print("Number: " + string(number))
+    public var Data: string {             // Property with logic
+        get { return this._data }
+        set { this._data = value?.ToUpper() }
+    }
 }
 ```

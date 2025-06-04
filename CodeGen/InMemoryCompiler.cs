@@ -9,7 +9,7 @@ namespace Wake.Net.CodeGen
 {
     public class InMemoryCompiler
     {
-        public async Task<bool> CompileAndRun(string csharpCode, string? outputPath = null, string? rootNamespace = null)
+        public async Task<bool> CompileAndRun(string csharpCode, string? outputPath = null, string? rootNamespace = null, string? className = null)
         {
             try
             {
@@ -19,9 +19,10 @@ namespace Wake.Net.CodeGen
                 // Get references to required assemblies
                 var references = GetAssemblyReferences();
                 
-                // Use provided root namespace or default
+                // Use provided root namespace and class name or defaults
                 var actualRootNamespace = rootNamespace ?? "Generated";
-                var mainTypeName = $"{actualRootNamespace}.Program";
+                var actualClassName = className ?? "Program";
+                var mainTypeName = $"{actualRootNamespace}.{actualClassName}";
                 
                 // Create compilation for executable
                 var compilation = CSharpCompilation.Create(
@@ -187,7 +188,7 @@ namespace Wake.Net.CodeGen
             }
         }
         
-        public async Task<bool> CompileToExecutable(string csharpCode, string outputPath, string? rootNamespace = null)
+        public async Task<bool> CompileToExecutable(string csharpCode, string outputPath, string? rootNamespace = null, string? className = null)
         {
             try
             {
@@ -195,9 +196,10 @@ namespace Wake.Net.CodeGen
                 
                 var references = GetAssemblyReferences();
                 
-                // Use provided root namespace or default
+                // Use provided root namespace and class name or defaults
                 var actualRootNamespace = rootNamespace ?? "Generated";
-                var mainTypeName = $"{actualRootNamespace}.Program";
+                var actualClassName = className ?? "Program";
+                var mainTypeName = $"{actualRootNamespace}.{actualClassName}";
                 
                 // Create build directory
                 var buildDir = Path.Combine(Path.GetDirectoryName(outputPath)!, "build");
