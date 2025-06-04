@@ -80,7 +80,7 @@ namespace Wake.Net
                     Console.WriteLine();
                 }
                 
-                var success = await inMemoryCompiler.CompileToExecutable(csharpCode, outputFile);
+                var success = await inMemoryCompiler.CompileToExecutable(csharpCode, outputFile, "Generated");
                 diagnostics.PrintSummary();
                 return success;
             }
@@ -108,7 +108,7 @@ namespace Wake.Net
                 }
                 
                 var inMemoryCompiler = new InMemoryCompiler();
-                var success = await inMemoryCompiler.CompileAndRun(csharpCode);
+                var success = await inMemoryCompiler.CompileAndRun(csharpCode, null, "Generated");
                 diagnostics.PrintSummary();
                 return success;
             }
@@ -120,7 +120,7 @@ namespace Wake.Net
             }
         }
 
-        public string CompileToCS(string source, DiagnosticsReporter? diagnostics = null)
+        public string CompileToCS(string source, DiagnosticsReporter? diagnostics = null, string? rootNamespace = null)
         {
             diagnostics ??= new DiagnosticsReporter(_verboseMode);
             
@@ -146,9 +146,9 @@ namespace Wake.Net
                     throw new Exception("Parsing failed with errors");
                 }
                 
-                // Generate C#
+                // Generate C# with root namespace
                 var generator = new CSharpGenerator();
-                var result = generator.Generate(ast, diagnostics);
+                var result = generator.Generate(ast, diagnostics, rootNamespace);
                 
                 diagnostics.ReportInfo("Wake.Net compilation completed successfully");
                 return result;
@@ -279,6 +279,7 @@ namespace Wake.Net
                 // Compile all source files and combine
                 var allCSharpCode = new List<string>();
                 var hasMainMethod = false;
+                var projectRootNamespace = project.RootNamespace ?? project.Name;
 
                 foreach (var sourceFile in project.SourceFiles)
                 {
@@ -289,7 +290,7 @@ namespace Wake.Net
                     }
 
                     var source = await File.ReadAllTextAsync(sourceFile);
-                    var csharpCode = CompileToCS(source, diagnostics);
+                    var csharpCode = CompileToCS(source, diagnostics, projectRootNamespace);
                     
                     if (diagnostics.HasErrors)
                     {
@@ -316,18 +317,18 @@ namespace Wake.Net
                 // Combine all C# code
                 var combinedCode = string.Join("\n\n", allCSharpCode);
 
-                // Use in-memory compiler
+                // Use in-memory compiler with project root namespace
                 var inMemoryCompiler = new InMemoryCompiler();
                 
                 if (outputFile != null)
                 {
-                    var success = await inMemoryCompiler.CompileToExecutable(combinedCode, outputFile);
+                    var success = await inMemoryCompiler.CompileToExecutable(combinedCode, outputFile, projectRootNamespace);
                     diagnostics.PrintSummary();
                     return success;
                 }
                 else
                 {
-                    var success = await inMemoryCompiler.CompileAndRun(combinedCode);
+                    var success = await inMemoryCompiler.CompileAndRun(combinedCode, null, projectRootNamespace);
                     diagnostics.PrintSummary();
                     return success;
                 }
@@ -371,7 +372,7 @@ namespace Wake.Net
                     }
 
                     var source = await File.ReadAllTextAsync(sourceFile);
-                    var csharpCode = CompileToCS(source, diagnostics);
+                    var csharpCode = CompileToCS(source, diagnostics, project.RootNamespace ?? project.Name);
                     
                     if (diagnostics.HasErrors)
                     {

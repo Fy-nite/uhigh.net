@@ -9,7 +9,7 @@ namespace Wake.Net.CodeGen
 {
     public class InMemoryCompiler
     {
-        public async Task<bool> CompileAndRun(string csharpCode, string? outputPath = null)
+        public async Task<bool> CompileAndRun(string csharpCode, string? outputPath = null, string? rootNamespace = null)
         {
             try
             {
@@ -19,6 +19,10 @@ namespace Wake.Net.CodeGen
                 // Get references to required assemblies
                 var references = GetAssemblyReferences();
                 
+                // Use provided root namespace or default
+                var actualRootNamespace = rootNamespace ?? "Generated";
+                var mainTypeName = $"{actualRootNamespace}.Program";
+                
                 // Create compilation for executable
                 var compilation = CSharpCompilation.Create(
                     Path.GetFileNameWithoutExtension(outputPath ?? "GeneratedProgram"),
@@ -26,7 +30,7 @@ namespace Wake.Net.CodeGen
                     references,
                     new CSharpCompilationOptions(
                         OutputKind.ConsoleApplication,
-                        mainTypeName: "Generated.Program"));
+                        mainTypeName: mainTypeName));
                 
                 // Compile to memory stream
                 using var memoryStream = new MemoryStream();
@@ -65,11 +69,11 @@ namespace Wake.Net.CodeGen
                 memoryStream.Seek(0, SeekOrigin.Begin);
                 var assembly = AssemblyLoadContext.Default.LoadFromStream(memoryStream);
                 
-                // Find and invoke the Main method
-                var programType = assembly.GetType("Generated.Program");
+                // Find and invoke the Main method using the correct type name
+                var programType = assembly.GetType(mainTypeName);
                 if (programType == null)
                 {
-                    Console.WriteLine("Could not find Generated.Program type");
+                    Console.WriteLine($"Could not find {mainTypeName} type");
                     return false;
                 }
                 
@@ -183,13 +187,17 @@ namespace Wake.Net.CodeGen
             }
         }
         
-        public async Task<bool> CompileToExecutable(string csharpCode, string outputPath)
+        public async Task<bool> CompileToExecutable(string csharpCode, string outputPath, string? rootNamespace = null)
         {
             try
             {
                 var syntaxTree = CSharpSyntaxTree.ParseText(csharpCode);
                 
                 var references = GetAssemblyReferences();
+                
+                // Use provided root namespace or default
+                var actualRootNamespace = rootNamespace ?? "Generated";
+                var mainTypeName = $"{actualRootNamespace}.Program";
                 
                 // Create build directory
                 var buildDir = Path.Combine(Path.GetDirectoryName(outputPath)!, "build");
@@ -203,7 +211,7 @@ namespace Wake.Net.CodeGen
                     references,
                     new CSharpCompilationOptions(
                         OutputKind.ConsoleApplication,
-                        mainTypeName: "Generated.Program"));
+                        mainTypeName: mainTypeName));
                 
                 var emitResult = compilation.Emit(executablePath);
                 

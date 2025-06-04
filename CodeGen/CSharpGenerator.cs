@@ -12,14 +12,16 @@ namespace Wake.Net.CodeGen
         private readonly HashSet<string> _usings = new();
         private readonly Dictionary<string, string> _importMappings = new();
         private DiagnosticsReporter _diagnostics = new();
+        private string _rootNamespace = "Generated";
 
-        public string Generate(Program program, DiagnosticsReporter? diagnostics = null)
+        public string Generate(Program program, DiagnosticsReporter? diagnostics = null, string? rootNamespace = null)
         {
             _diagnostics = diagnostics ?? new DiagnosticsReporter();
             _output.Clear();
             _indentLevel = 0;
             _usings.Clear();
             _importMappings.Clear();
+            _rootNamespace = rootNamespace ?? "Generated";
 
             _diagnostics.ReportInfo("Starting C# code generation");
 
@@ -82,8 +84,8 @@ namespace Wake.Net.CodeGen
             
             if (!hasNamespace)
             {
-                // Generate default namespace
-                _output.AppendLine("namespace Generated");
+                // Generate namespace using project root namespace
+                _output.AppendLine($"namespace {_rootNamespace}");
                 _output.AppendLine("{");
                 _indentLevel++;
                 GenerateDefaultProgram(program);
@@ -319,7 +321,9 @@ namespace Wake.Net.CodeGen
         private void GenerateNamespaceDeclaration(NamespaceDeclaration nsDecl)
         {
             Indent();
-            _output.AppendLine($"namespace {nsDecl.Name}");
+            // Use fully qualified namespace with root namespace prefix
+            var fullNamespace = $"{_rootNamespace}.{nsDecl.Name}";
+            _output.AppendLine($"namespace {fullNamespace}");
             Indent();
             _output.AppendLine("{");
             _indentLevel++;
