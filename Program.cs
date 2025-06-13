@@ -79,6 +79,10 @@ public class EntryPoint
                     success = await HandleAddPackageCommand(args, compiler);
                     break;
                     
+                case "test":
+                    success = await HandleTestCommand(args, compiler);
+                    break;
+                    
                 default:
                     // Treat as source file compilation
                     success = await HandleFileCompilation(args, compiler);
@@ -251,6 +255,19 @@ public class EntryPoint
         }
 
         return await compiler.AddPackageToProject(projectFile, packageName, version);
+    }
+
+    private static async Task<bool> HandleTestCommand(string[] args, Compiler compiler)
+    {
+        Console.WriteLine("Running μHigh Compiler Tests");
+        Console.WriteLine("============================");
+        Console.WriteLine();
+
+        var testSuites = Wake.Net.Testing.TestRunner.RunAllTests();
+        Wake.Net.Testing.TestRunner.PrintResults(testSuites);
+
+        var totalFailed = testSuites.Sum(s => s.FailedCount);
+        return totalFailed == 0;
     }
 
     private static async Task<bool> HandleFileCompilation(string[] args, Compiler compiler)

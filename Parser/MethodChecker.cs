@@ -23,19 +23,100 @@ namespace Wake.Net.Parser
         {
             if (Name != name) return false;
             
-            // Check parameter count first
-            if (Parameters.Count != arguments.Count) return false;
-            
-            // For built-in methods with overloads, we need stricter matching
+            // Use enhanced type matching for built-in methods
             if (IsBuiltIn)
             {
-                // Built-in methods already have proper type checking in RegisterBuiltIn
+                return Parameters.Count == arguments.Count; // Let reflection handle the details
+            }
+            
+            // Enhanced parameter matching for user-defined methods
+            if (Parameters.Count != arguments.Count)
+            {
+                // Check for optional parameters
+                var requiredParams = Parameters.Count(p => p.Type != null && !p.Type.EndsWith("?"));
+                return arguments.Count >= requiredParams && arguments.Count <= Parameters.Count;
+            }
+            
+            // Type compatibility checking
+            for (int i = 0; i < Math.Min(Parameters.Count, arguments.Count); i++)
+            {
+                var paramType = Parameters[i].Type;
+                var argType = InferArgumentType(arguments[i]);
+                
+                if (!IsTypeCompatible(paramType, argType))
+                {
+                    return false;
+                }
+            }
+            
+            return true;
+        }
+
+        private string InferArgumentType(Expression argument)
+        {
+            return argument switch
+            {
+                LiteralExpression lit => InferLiteralType(lit),
+                IdentifierExpression => "object", // Unknown at compile time
+                CallExpression => "object", // Would need more sophisticated analysis
+                BinaryExpression binExpr when IsArithmeticOperator(binExpr.Operator) => "number",
+                BinaryExpression binExpr when IsComparisonOperator(binExpr.Operator) => "bool",
+                _ => "object"
+            };
+        }
+
+        private string InferLiteralType(LiteralExpression literal)
+        {
+            return literal.Value switch
+            {
+                string => "string",
+                int => "int",
+                long => "long",
+                float => "float",
+                double => "double",
+                bool => "bool",
+                null => "null",
+                _ => "object"
+            };
+        }
+
+        private bool IsTypeCompatible(string? paramType, string argType)
+        {
+            if (paramType == null || paramType == "object") return true;
+            if (paramType == argType) return true;
+            
+            // Handle nullable types
+            if (paramType.EndsWith("?"))
+            {
+                var baseType = paramType.TrimEnd('?');
+                return baseType == argType || argType == "null";
+            }
+            
+            // Handle numeric conversions
+            var numericTypes = new[] { "int", "long", "float", "double", "number" };
+            if (numericTypes.Contains(paramType) && numericTypes.Contains(argType))
+            {
                 return true;
             }
             
-            // For user-defined methods, accept parameter count match for now
-            // In the future, we could add type checking based on argument expressions
-            return true;
+            // Handle string conversions
+            if (paramType == "string" && argType != "null")
+            {
+                return true; // Most types can be converted to string
+            }
+            
+            return false;
+        }
+
+        private bool IsArithmeticOperator(TokenType op)
+        {
+            return op is TokenType.Plus or TokenType.Minus or TokenType.Multiply or TokenType.Divide or TokenType.Modulo;
+        }
+
+        private bool IsComparisonOperator(TokenType op)
+        {
+            return op is TokenType.Equal or TokenType.NotEqual or TokenType.Less or TokenType.Greater 
+                or TokenType.LessEqual or TokenType.GreaterEqual;
         }
     }
 

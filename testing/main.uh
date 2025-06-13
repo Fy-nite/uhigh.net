@@ -1,17 +1,34 @@
 namespace testing
 {
+    public static class StringExtensions
+    {
+        public static func toInt(value: string): int {
+            return int.Parse(value)
+        }
+    }
+
     public class Program
     {
-        private static field meow: string = "Hello, World!"
+        private field meow: string = "Hello, World!"
         private field name: string
         private field age: int
 
-        
+        public static func print(message: string): void {
+            Console.WriteLine(message)
+        }
+
+        public static func input(prompt: string): string {
+            Console.Write(prompt)
+            return Console.ReadLine()
+        }
+      
         public static func Main(args: StringArray): void {
-          
-            Console.WriteLine(meow) // this works because meow is a field of the class
+            var program = Program()
+            program.name = input("Enter your name: ")
+            program.age = int.Parse(input("Enter your age: "))
+            print(program.meow)
+            print("Name: " + program.name)
+            print("Age: " + program.age.ToString())
         }
     }
 }
-
-

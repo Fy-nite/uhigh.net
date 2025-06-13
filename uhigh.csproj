@@ -15,8 +15,8 @@
     <PackageVersion>1.1.0</PackageVersion>
     <Authors>charlie-san</Authors>
     <Description>Micro-High on dotnet</Description>
-    <PackageProjectUrl>https://github.com/yourusername/uhigh</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/yourusername/uhigh</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/fy-nite/uhigh.net</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/fy-nite/uhigh.net</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>

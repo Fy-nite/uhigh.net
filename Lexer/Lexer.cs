@@ -42,6 +42,12 @@ namespace Wake.Net.Lexer
             { "import", TokenType.Import },
             { "from", TokenType.From },
             { "this", TokenType.This },
+            { "enum", TokenType.Enum },
+            { "interface", TokenType.Interface },
+            { "extension", TokenType.Extension },
+            { "record", TokenType.Record },
+            { "get", TokenType.Get },
+            { "set", TokenType.Set },
             
             // Access Modifiers and Keywords
             { "public", TokenType.Public },
@@ -346,8 +352,67 @@ namespace Wake.Net.Lexer
                 "-=" => new Token(TokenType.MinusAssign, twoChar, line, column),
                 "*=" => new Token(TokenType.MultiplyAssign, twoChar, line, column),
                 "/=" => new Token(TokenType.DivideAssign, twoChar, line, column),
+                "??" => new Token(TokenType.QuestionQuestion, twoChar, line, column),
+                "?." => new Token(TokenType.QuestionDot, twoChar, line, column),
+                ".." => new Token(TokenType.DotDot, twoChar, line, column),
+                "$\"" => new Token(TokenType.InterpolatedStringStart, twoChar, line, column),
                 _ => null
             };
+        }
+
+        private Token ReadInterpolatedString(int line, int column)
+        {
+            _position += 2; // Skip $"
+            _column += 2;
+            var parts = new List<string>();
+            var expressions = new List<string>();
+            
+            while (_position < _source.Length && _source[_position] != '"')
+            {
+                if (_source[_position] == '{')
+                {
+                    // Read interpolation expression
+                    _position++; // Skip {
+                    _column++;
+                    var exprStart = _position;
+                    var braceCount = 1;
+                    
+                    while (_position < _source.Length && braceCount > 0)
+                    {
+                        if (_source[_position] == '{') braceCount++;
+                        else if (_source[_position] == '}') braceCount--;
+                        _position++;
+                        _column++;
+                    }
+                    
+                    var expression = _source.Substring(exprStart, _position - exprStart - 1);
+                    expressions.Add(expression);
+                }
+                else
+                {
+                    var textStart = _position;
+                    while (_position < _source.Length && _source[_position] != '{' && _source[_position] != '"')
+                    {
+                        _position++;
+                        _column++;
+                    }
+                    
+                    if (_position > textStart)
+                    {
+                        parts.Add(_source.Substring(textStart, _position - textStart));
+                    }
+                }
+            }
+            
+            if (_position < _source.Length)
+            {
+                _position++; // Skip closing "
+                _column++;
+            }
+            
+            // For now, return as a string with special marker
+            var value = string.Join("", parts.Zip(expressions, (p, e) => p + "{" + e + "}"));
+            return new Token(TokenType.String, "$\"" + value + "\"", line, column);
         }
 
         private Token? GetSingleCharToken(char c, int line, int column)

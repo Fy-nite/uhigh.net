@@ -222,6 +222,44 @@ namespace Wake.Net.CodeGen
             _output.AppendLine();
         }
 
+        private void GenerateClassDeclaration(ClassDeclaration classDecl)
+        {
+            Indent();
+            
+            // Generate modifiers
+            if (classDecl.Modifiers.Count > 0)
+            {
+                _output.Append(string.Join(" ", classDecl.Modifiers) + " ");
+            }
+            else
+            {
+                _output.Append("public "); // Default to public
+            }
+            
+            _output.Append("class ");
+            _output.Append(classDecl.Name);
+            
+            if (classDecl.BaseClass != null)
+            {
+                _output.Append($" : {classDecl.BaseClass}");
+            }
+            
+            _output.AppendLine();
+            Indent();
+            _output.AppendLine("{");
+            _indentLevel++;
+
+            foreach (var member in classDecl.Members)
+            {
+                GenerateStatement(member);
+            }
+
+            _indentLevel--;
+            Indent();
+            _output.AppendLine("}");
+            _output.AppendLine();
+        }
+
         private void GenerateStatement(ASTNode statement)
         {
             switch (statement)
@@ -291,44 +329,6 @@ namespace Wake.Net.CodeGen
             _indentLevel++;
 
             foreach (var member in nsDecl.Members)
-            {
-                GenerateStatement(member);
-            }
-
-            _indentLevel--;
-            Indent();
-            _output.AppendLine("}");
-            _output.AppendLine();
-        }
-
-        private void GenerateClassDeclaration(ClassDeclaration classDecl)
-        {
-            Indent();
-            
-            // Generate modifiers
-            if (classDecl.Modifiers.Count > 0)
-            {
-                _output.Append(string.Join(" ", classDecl.Modifiers) + " ");
-            }
-            else
-            {
-                _output.Append("public "); // Default to public
-            }
-            
-            _output.Append("class ");
-            _output.Append(classDecl.Name);
-            
-            if (classDecl.BaseClass != null)
-            {
-                _output.Append($" : {classDecl.BaseClass}");
-            }
-            
-            _output.AppendLine();
-            Indent();
-            _output.AppendLine("{");
-            _indentLevel++;
-
-            foreach (var member in classDecl.Members)
             {
                 GenerateStatement(member);
             }

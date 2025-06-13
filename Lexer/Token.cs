@@ -15,10 +15,28 @@ namespace Wake.Net.Lexer
         Break, Continue, // Add break and continue support
         Class, Namespace, Import, From, This, // New keywords
         Get, Set, // Add getter/setter keywords
+        Enum, Interface, Extension, Record, // New feature keywords
         
         // Access Modifiers and Keywords
         Public, Private, Protected, Internal, Static, Abstract, Virtual, Override, Sealed,
         Readonly, Async, Await,
+        
+        // Nullable and null operators
+        Question, // ? for nullable types
+        QuestionQuestion, // ?? null coalescing
+        QuestionDot, // ?. null conditional
+        ExclamationMark, // ! null forgiving
+        
+        // String interpolation
+        InterpolatedStringStart, // $"
+        InterpolatedStringMid,   // middle part
+        InterpolatedStringEnd,   // end part
+        InterpolationStart,      // {
+        InterpolationEnd,        // }
+        
+        // Range operators
+        DotDot,          // ..
+        DotDotLess,      // ..<
         
         // Operators
         Plus, Minus, Multiply, Divide, Modulo, Assign,
@@ -29,7 +47,7 @@ namespace Wake.Net.Lexer
         // Punctuation
         LeftParen, RightParen, LeftBrace, RightBrace,
         LeftBracket, RightBracket, Comma, Semicolon, Colon,
-        Question, Dot,
+        As, Dot,
         
         // Special
         Comment, Newline, EOF, Boolean,

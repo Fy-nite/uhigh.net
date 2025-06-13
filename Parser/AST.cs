@@ -200,6 +200,65 @@ namespace Wake.Net.Parser
         public List<string> Modifiers { get; set; } = new();
     }
     
+    public class EnumDeclaration : Statement
+    {
+        public string Name { get; set; } = "";
+        public List<EnumMember> Members { get; set; } = new();
+        public string? BaseType { get; set; } // int, string, etc.
+        public List<string> Modifiers { get; set; } = new();
+    }
+
+    public class EnumMember : ASTNode
+    {
+        public string Name { get; set; } = "";
+        public Expression? Value { get; set; }
+    }
+
+    public class InterfaceDeclaration : Statement
+    {
+        public string Name { get; set; } = "";
+        public List<string> BaseInterfaces { get; set; } = new();
+        public List<Statement> Members { get; set; } = new();
+        public List<string> Modifiers { get; set; } = new();
+        public List<string> GenericParameters { get; set; } = new();
+    }
+
+    public class NullableTypeExpression : Expression
+    {
+        public Expression BaseType { get; set; } = null!;
+    }
+
+    public class NullCoalescingExpression : Expression
+    {
+        public Expression Left { get; set; } = null!;
+        public Expression Right { get; set; } = null!;
+    }
+
+    public class NullConditionalExpression : Expression
+    {
+        public Expression Object { get; set; } = null!;
+        public Expression Member { get; set; } = null!;
+    }
+
+    public class InterpolatedStringExpression : Expression
+    {
+        public List<InterpolationPart> Parts { get; set; } = new();
+    }
+
+    public class InterpolationPart : ASTNode
+    {
+        public string? Text { get; set; }
+        public Expression? Expression { get; set; }
+        public string? FormatSpecifier { get; set; }
+    }
+
+    public class RangeExpression : Expression
+    {
+        public Expression? Start { get; set; }
+        public Expression? End { get; set; }
+        public bool IsExclusive { get; set; } // true for ..<, false for ..
+    }
+
     // Top-level
     public class FunctionDeclaration : Statement 
     {
@@ -226,5 +285,11 @@ namespace Wake.Net.Parser
     public class Program : ASTNode 
     {
         public List<Statement> Statements { get; set; } = new();
+    }
+
+    public class ParseException : Exception
+    {
+        public ParseException(string message) : base(message) { }
+        public ParseException(string message, Exception innerException) : base(message, innerException) { }
     }
 }
