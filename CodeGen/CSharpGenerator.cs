@@ -407,13 +407,65 @@ namespace Wake.Net.CodeGen
             var propType = propDecl.Type != null ? ConvertType(propDecl.Type) : "object";
             _output.Append($"{propType} {propDecl.Name}");
             
-            if (propDecl.Initializer != null)
+            if (propDecl.Accessors.Count > 0)
             {
+                _output.AppendLine();
+                Indent();
+                _output.AppendLine("{");
+                _indentLevel++;
+                
+                foreach (var accessor in propDecl.Accessors)
+                {
+                    Indent();
+                    _output.Append(accessor.Type);
+                    
+                    if (accessor.Body != null)
+                    {
+                        // Expression-bodied accessor: get => expression;
+                        _output.Append(" => ");
+                        GenerateExpression(accessor.Body);
+                        _output.AppendLine(";");
+                    }
+                    else if (accessor.Statements.Count > 0)
+                    {
+                        // Block-bodied accessor: get { ... }
+                        _output.AppendLine();
+                        Indent();
+                        _output.AppendLine("{");
+                        _indentLevel++;
+                        
+                        foreach (var stmt in accessor.Statements)
+                        {
+                            GenerateStatement(stmt);
+                        }
+                        
+                        _indentLevel--;
+                        Indent();
+                        _output.AppendLine("}");
+                    }
+                    else
+                    {
+                        // Auto-implemented accessor
+                        _output.AppendLine(";");
+                    }
+                }
+                
+                _indentLevel--;
+                Indent();
+                _output.AppendLine("}");
+            }
+            else if (propDecl.Initializer != null)
+            {
+                // Property with initializer
                 _output.Append(" = ");
                 GenerateExpression(propDecl.Initializer);
+                _output.AppendLine(";");
             }
-            
-            _output.AppendLine(";");
+            else
+            {
+                // Simple auto property
+                _output.AppendLine(" { get; set; }");
+            }
         }
 
         private void GenerateFieldDeclaration(FieldDeclaration fieldDecl)
@@ -813,6 +865,24 @@ namespace Wake.Net.CodeGen
                 "float" => "double",
                 "string" => "string",
                 "bool" => "bool",
+                "void" => "void",
+                "object" => "object",
+                "any" => "object",
+                "number" => "double",
+                "integer" => "int",
+                "double" => "double",
+                "char" => "char",
+                "list" => "List<object>",
+                "array" => "object[]",
+                "StringArray" => "string[]",
+                "map" => "Dictionary<object, object>",
+                "function" => "Func<object[], object>", // Generic function type
+                "promise" => "Task<object>", // Async promise type
+                "set" => "HashSet<object>",
+                "tuple" => "Tuple<object, object>", // Simple tuple type
+                "date" => "DateTime",
+                "json" => "string", // JSON is typically represented as a string
+                "stream" => "Stream", // Stream type for file operations
                 _ => "object"
             };
 

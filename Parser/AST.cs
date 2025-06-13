@@ -172,12 +172,22 @@ namespace Wake.Net.Parser
         public List<string> Modifiers { get; set; } = new(); // New: access modifiers
     }
     
+    public class PropertyAccessor : ASTNode
+    {
+        public string Type { get; set; } = ""; // "get" or "set"
+        public Expression? Body { get; set; } // null for auto-implemented
+        public List<Statement> Statements { get; set; } = new(); // for block body
+    }
+    
     public class PropertyDeclaration : Statement
     {
         public string Name { get; set; } = "";
         public string? Type { get; set; }
         public Expression? Initializer { get; set; }
         public bool IsStatic { get; set; }
+        public List<PropertyAccessor> Accessors { get; set; } = new(); // New: getter/setter
+        public bool HasAutoImplementedAccessors => Accessors.Any() && Accessors.All(a => a.Body == null && a.Statements.Count == 0);
+        public bool HasCustomAccessors => Accessors.Any(a => a.Body != null || a.Statements.Count > 0);
     }
     
     public class FieldDeclaration : Statement

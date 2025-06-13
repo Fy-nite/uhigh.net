@@ -1,5 +1,6 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Emit;
 using System.Reflection;
 using System.Runtime.Loader;
@@ -9,6 +10,14 @@ namespace Wake.Net.CodeGen
 {
     public class InMemoryCompiler
     {
+        private class SourceInfo
+        {
+            public string? Namespace { get; set; }
+            public string? MainClassName { get; set; }
+            public List<string> AllClasses { get; set; } = new();
+            public bool HasMainMethod { get; set; }
+        }
+
         public async Task<bool> CompileAndRun(string csharpCode, string? outputPath = null, string? rootNamespace = null, string? className = null, string outputType = "Exe")
         {
             try
@@ -16,13 +25,18 @@ namespace Wake.Net.CodeGen
                 // Parse the C# code
                 var syntaxTree = CSharpSyntaxTree.ParseText(csharpCode);
                 
+                // Extract source information
+                var sourceInfo = ExtractSourceInfo(syntaxTree);
+                
                 // Get references to required assemblies
                 var references = GetAssemblyReferences();
                 
-                // Use provided root namespace and class name or defaults
-                var actualRootNamespace = rootNamespace ?? "Generated";
-                var actualClassName = className ?? "Program";
-                var mainTypeName = $"{actualRootNamespace}.{actualClassName}";
+                // Use extracted info or provided parameters or defaults
+                var actualRootNamespace = rootNamespace ?? sourceInfo.Namespace;
+                var actualClassName = className ?? sourceInfo.MainClassName ?? "Program";
+                var mainTypeName = actualRootNamespace != null 
+                    ? $"{actualRootNamespace}.{actualClassName}"
+                    : actualClassName;
                 
                 // Determine output kind based on outputType
                 var outputKind = outputType.Equals("Library", StringComparison.OrdinalIgnoreCase) 
@@ -36,7 +50,7 @@ namespace Wake.Net.CodeGen
                     references,
                     new CSharpCompilationOptions(
                         outputKind,
-                        mainTypeName: outputKind == OutputKind.ConsoleApplication ? mainTypeName : null));
+                        mainTypeName: outputKind == OutputKind.ConsoleApplication && sourceInfo.HasMainMethod ? mainTypeName : null));
                 
                 // Compile to memory stream
                 using var memoryStream = new MemoryStream();
@@ -75,8 +89,8 @@ namespace Wake.Net.CodeGen
                     }
                 }
                 
-                // Only try to execute if it's an executable
-                if (outputKind == OutputKind.ConsoleApplication)
+                // Only try to execute if it's an executable and has a Main method
+                if (outputKind == OutputKind.ConsoleApplication && sourceInfo.HasMainMethod)
                 {
                     // Load and execute the assembly
                     memoryStream.Seek(0, SeekOrigin.Begin);
@@ -86,7 +100,21 @@ namespace Wake.Net.CodeGen
                     var programType = assembly.GetType(mainTypeName);
                     if (programType == null)
                     {
-                        Console.WriteLine($"Could not find {mainTypeName} type");
+                        // Try to find any class with a Main method
+                        foreach (var type in assembly.GetTypes())
+                        {
+                            var mainMethodz = type.GetMethod("Main", BindingFlags.Public | BindingFlags.Static);
+                            if (mainMethodz != null)
+                            {
+                                programType = type;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (programType == null)
+                    {
+                        Console.WriteLine($"Could not find {mainTypeName} type or any type with Main method");
                         return false;
                     }
                     
@@ -96,10 +124,15 @@ namespace Wake.Net.CodeGen
                         Console.WriteLine("Could not find Main method");
                         return false;
                     }
-                    
-                    Console.WriteLine("Executing compiled program:");
-                    Console.WriteLine("------------------------");
-                    
+                    // should never need this, but just in case
+                    if (!mainMethod.IsStatic)
+                    {
+                        Console.WriteLine("Main method must be static, cannot execute.");
+                        return false;
+                    }
+                    //Console.WriteLine("Executing compiled program:");
+                    //Console.WriteLine("------------------------");
+
                     // Execute the Main method
                     var parameters = mainMethod.GetParameters();
                     if (parameters.Length == 0)
@@ -116,12 +149,14 @@ namespace Wake.Net.CodeGen
                         return false;
                     }
                     
-                    Console.WriteLine("------------------------");
-                    Console.WriteLine("Program execution completed");
+                    //Console.WriteLine("------------------------");
+                    //Console.WriteLine("Program execution completed");
                 }
                 else
                 {
-                    Console.WriteLine("Library compiled successfully");
+                    Console.WriteLine(outputKind == OutputKind.DynamicallyLinkedLibrary 
+                        ? "Library compiled successfully" 
+                        : "Executable compiled successfully (no Main method found)");
                 }
                 
                 return true;
@@ -131,6 +166,58 @@ namespace Wake.Net.CodeGen
                 Console.WriteLine($"Runtime error: {ex.Message}");
                 return false;
             }
+        }
+
+        private SourceInfo ExtractSourceInfo(SyntaxTree syntaxTree)
+        {
+            var sourceInfo = new SourceInfo();
+            var root = syntaxTree.GetCompilationUnitRoot();
+
+            // Find namespace declarations
+            var namespaceDecl = root.DescendantNodes()
+                .OfType<NamespaceDeclarationSyntax>()
+                .FirstOrDefault();
+
+            if (namespaceDecl != null)
+            {
+                sourceInfo.Namespace = namespaceDecl.Name.ToString();
+            }
+
+            // Find all class declarations
+            var classDeclarations = root.DescendantNodes()
+                .OfType<ClassDeclarationSyntax>()
+                .ToList();
+
+            foreach (var classDecl in classDeclarations)
+            {
+                var className = classDecl.Identifier.ValueText;
+                sourceInfo.AllClasses.Add(className);
+
+                // Check if this class has a Main method
+                var hasMainMethod = classDecl.Members
+                    .OfType<MethodDeclarationSyntax>()
+                    .Any(m => m.Identifier.ValueText == "Main" && 
+                             m.Modifiers.Any(mod => mod.IsKind(SyntaxKind.StaticKeyword)));
+
+                if (hasMainMethod)
+                {
+                    sourceInfo.MainClassName = className;
+                    sourceInfo.HasMainMethod = true;
+                }
+            }
+
+            // If no class with Main method found, use the first class as default
+            if (sourceInfo.MainClassName == null && sourceInfo.AllClasses.Count > 0)
+            {
+                sourceInfo.MainClassName = sourceInfo.AllClasses.First();
+            }
+            // if (_verboseMode)
+            // {
+            //     Console.WriteLine($"Found {sourceInfo.AllClasses.Count} classes: {string.Join(", ", sourceInfo.AllClasses)}");
+            // Console.WriteLine($"Extracted source info: Namespace='{sourceInfo.Namespace}', MainClass='{sourceInfo.MainClassName}', HasMain={sourceInfo.HasMainMethod}");
+            // }
+            
+            return sourceInfo;
         }
         
         private static MetadataReference[] GetAssemblyReferences()
@@ -211,11 +298,14 @@ namespace Wake.Net.CodeGen
             {
                 var syntaxTree = CSharpSyntaxTree.ParseText(csharpCode);
                 
+                // Extract source information
+                var sourceInfo = ExtractSourceInfo(syntaxTree);
+                
                 var references = GetAssemblyReferences();
                 
-                // Use provided root namespace and class name or defaults
-                var actualRootNamespace = rootNamespace ?? "Generated";
-                var actualClassName = className ?? "Program";
+                // Use extracted info or provided parameters or defaults
+                var actualRootNamespace = rootNamespace ?? sourceInfo.Namespace ?? "Generated";
+                var actualClassName = className ?? sourceInfo.MainClassName ?? "Program";
                 var mainTypeName = $"{actualRootNamespace}.{actualClassName}";
                 
                 // Determine output kind and file extension
@@ -245,7 +335,7 @@ namespace Wake.Net.CodeGen
                     references,
                     new CSharpCompilationOptions(
                         outputKind,
-                        mainTypeName: outputKind == OutputKind.ConsoleApplication ? mainTypeName : null));
+                        mainTypeName: outputKind == OutputKind.ConsoleApplication && sourceInfo.HasMainMethod ? mainTypeName : null));
                 
                 var emitResult = compilation.Emit(finalPath);
                 

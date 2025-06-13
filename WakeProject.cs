@@ -68,6 +68,9 @@ namespace Wake.Net
 
         [XmlAttribute("Version")]
         public string Version { get; set; } = "";
+        
+        [XmlAttribute("RequiredFor")]
+        public string? RequiredFor { get; set; } // New: track what feature requires this package
     }
 
     public class ProjectProperty
@@ -77,5 +80,8 @@ namespace Wake.Net
 
         [XmlAttribute("Value")]
         public string Value { get; set; } = "";
+        
+        [XmlAttribute("Category")]
+        public string? Category { get; set; } // New: categorize properties
     }
 }

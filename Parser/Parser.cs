@@ -530,6 +530,7 @@ namespace Wake.Net.Parser
             var name = Consume(TokenType.Identifier, "Expected property name").Value;
             string? type = null;
             Expression? initializer = null;
+            var accessors = new List<PropertyAccessor>();
 
             if (Match(TokenType.Colon))
             {
@@ -560,12 +561,85 @@ namespace Wake.Net.Parser
                 }
             }
 
-            if (Match(TokenType.Assign))
+            // Check for property accessors { get; set; } or { get = ...; set = ...; }
+            if (Match(TokenType.LeftBrace))
             {
+                while (!Check(TokenType.RightBrace) && !IsAtEnd())
+                {
+                    if (Match(TokenType.Get))
+                    {
+                        var getter = new PropertyAccessor { Type = "get" };
+                        
+                        if (Match(TokenType.Assign))
+                        {
+                            // Custom getter: get = expression
+                            getter.Body = ParseExpression();
+                        }
+                        else if (Match(TokenType.LeftBrace))
+                        {
+                            // Block getter: get { ... }
+                            while (!Check(TokenType.RightBrace) && !IsAtEnd())
+                            {
+                                var stmt = ParseStatement();
+                                if (stmt != null) getter.Statements.Add(stmt);
+                            }
+                            Consume(TokenType.RightBrace, "Expected '}' after getter body");
+                        }
+                        // else auto-implemented getter
+                        
+                        accessors.Add(getter);
+                    }
+                    else if (Match(TokenType.Set))
+                    {
+                        var setter = new PropertyAccessor { Type = "set" };
+                        
+                        if (Match(TokenType.Assign))
+                        {
+                            // Custom setter: set = expression
+                            setter.Body = ParseExpression();
+                        }
+                        else if (Match(TokenType.LeftBrace))
+                        {
+                            // Block setter: set { ... }
+                            while (!Check(TokenType.RightBrace) && !IsAtEnd())
+                            {
+                                var stmt = ParseStatement();
+                                if (stmt != null) setter.Statements.Add(stmt);
+                            }
+                            Consume(TokenType.RightBrace, "Expected '}' after setter body");
+                        }
+                        // else auto-implemented setter
+                        
+                        accessors.Add(setter);
+                    }
+                    else
+                    {
+                        _diagnostics.ReportParseError("Expected 'get' or 'set' in property accessor", Peek());
+                        break;
+                    }
+                    
+                    // Optional semicolon after accessor
+                    if (Check(TokenType.Semicolon))
+                    {
+                        Advance();
+                    }
+                }
+                
+                Consume(TokenType.RightBrace, "Expected '}' after property accessors");
+            }
+            else if (Match(TokenType.Assign))
+            {
+                // Traditional property with initializer
                 initializer = ParseExpression();
             }
 
-            return new PropertyDeclaration { Name = name, Type = type, Initializer = initializer };
+            return new PropertyDeclaration 
+            { 
+                Name = name, 
+                Type = type, 
+                Initializer = initializer,
+                Accessors = accessors
+            };
         }
 
         private Statement ParseMethodDeclaration()

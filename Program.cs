@@ -109,7 +109,7 @@ public class EntryPoint
         if (args.Length < 2)
         {
             Console.WriteLine("Error: Project name is required");
-            Console.WriteLine("Usage: wake.net create <project-name> [options]");
+            Console.WriteLine("Usage: uhigh create <project-name> [options]");
             return false;
         }
 
@@ -154,7 +154,7 @@ public class EntryPoint
         if (args.Length < 2)
         {
             Console.WriteLine("Error: Project file is required");
-            Console.WriteLine("Usage: wake.net build <project-file> [output-file]");
+            Console.WriteLine("Usage: uhigh build <project-file> [output-file]");
             return false;
         }
 
@@ -175,7 +175,7 @@ public class EntryPoint
         if (args.Length < 2)
         {
             Console.WriteLine("Error: Project file is required");
-            Console.WriteLine("Usage: wake.net run <project-file>");
+            Console.WriteLine("Usage: uhigh run <project-file>");
             return false;
         }
 
@@ -195,7 +195,7 @@ public class EntryPoint
         if (args.Length < 2)
         {
             Console.WriteLine("Error: Project file is required");
-            Console.WriteLine("Usage: wake.net info <project-file>");
+            Console.WriteLine("Usage: uhigh info <project-file>");
             return false;
         }
 
@@ -215,7 +215,7 @@ public class EntryPoint
         if (args.Length < 3)
         {
             Console.WriteLine("Error: Project file and source file name are required");
-            Console.WriteLine("Usage: wake.net add-file <project-file> <source-file>");
+            Console.WriteLine("Usage: uhigh add-file <project-file> <source-file>");
             return false;
         }
 
@@ -276,7 +276,7 @@ public class EntryPoint
         else if (args.Length == 1 || (args.Length == 2 && args[1] == "--run"))
         {
             // Run in memory
-            Console.WriteLine("Compiling and running in memory...");
+          //  Console.WriteLine("Compiling and running in memory...");
             success = await compiler.CompileAndRunInMemory(sourceFile);
         }
         else if (args.Length >= 2 && !args[1].StartsWith("--"))
@@ -289,7 +289,7 @@ public class EntryPoint
         else
         {
             // Default: run in memory
-            Console.WriteLine("Compiling and running in memory...");
+            //Console.WriteLine("Compiling and running in memory...");
             success = await compiler.CompileAndRunInMemory(sourceFile);
         }
 

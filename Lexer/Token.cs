@@ -14,6 +14,7 @@ namespace Wake.Net.Lexer
         True, False, Int, Float, StringType, Bool, Asm, Range,
         Break, Continue, // Add break and continue support
         Class, Namespace, Import, From, This, // New keywords
+        Get, Set, // Add getter/setter keywords
         
         // Access Modifiers and Keywords
         Public, Private, Protected, Internal, Static, Abstract, Virtual, Override, Sealed,

@@ -44,6 +44,7 @@ namespace Wake.Net.Parser
         public string Name { get; set; } = "";
         public string? BaseClass { get; set; }
         public List<PropertyDeclaration> Fields { get; set; } = new();
+        public List<PropertyDeclaration> Properties { get; set; } = new(); // Separate properties from fields
         public List<MethodDeclaration> Methods { get; set; } = new();
         public List<MethodDeclaration> Constructors { get; set; } = new();
         public bool IsPublic { get; set; }
@@ -51,7 +52,7 @@ namespace Wake.Net.Parser
 
         public bool HasField(string fieldName)
         {
-            return Fields.Any(f => f.Name == fieldName);
+            return Fields.Any(f => f.Name == fieldName) || Properties.Any(p => p.Name == fieldName);
         }
 
         public bool HasMethod(string methodName)

@@ -108,8 +108,15 @@ namespace Wake.Net
                 }
                 
                 var inMemoryCompiler = new InMemoryCompiler();
-                var success = await inMemoryCompiler.CompileAndRun(csharpCode, null, "Generated");
-                diagnostics.PrintSummary();
+                var success = await inMemoryCompiler.CompileAndRun(csharpCode, null,null);
+                // Print the generated C# code if in verbose mode plus diagnostics summary
+                if (_verboseMode)
+                {
+                    Console.WriteLine("Generated C# code:");
+                    Console.WriteLine(csharpCode);
+                    Console.WriteLine();
+                    diagnostics.PrintSummary();
+                }
                 return success;
             }
             catch (Exception ex)

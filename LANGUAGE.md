@@ -405,9 +405,59 @@ public class Example {
     readonly field Id: string             // Readonly field
     static field Counter: int = 0         // Static field
     
-    public var Data: string {             // Property with logic
-        get { return this._data }
-        set { this._data = value?.ToUpper() }
+    // Auto-implemented properties
+    public var Name: string { get; set; }
+    public var ReadOnlyProp: string { get; }
+    
+    // Expression-bodied properties
+    public var FullName: string {
+        get = this.FirstName + " " + this.LastName
+    }
+    
+    // Block-bodied properties
+    public var Data: string {
+        get {
+            return this._data?.ToUpper()
+        }
+        set {
+            this._data = value?.Trim()
+        }
+    }
+    
+    // Property with initializer
+    public var Status: string = "Active"
+}
+```
+
+### Property Accessor Syntax
+
+μHigh supports several property accessor patterns:
+
+```go
+// Auto-implemented properties
+var Name: string { get; set; }          // Read-write
+var ReadOnly: string { get; }           // Read-only
+
+// Expression-bodied accessors
+var FullName: string {
+    get = FirstName + " " + LastName    // Computed property
+}
+
+// Block-bodied accessors
+var Value: int {
+    get {
+        return this._value * 2
+    }
+    set {
+        this._value = value / 2
+    }
+}
+
+// Mixed accessor styles
+var Mixed: string {
+    get = this._data?.ToUpper()         // Expression-bodied getter
+    set {                               // Block-bodied setter
+        this._data = value?.Trim()
     }
 }
 ```

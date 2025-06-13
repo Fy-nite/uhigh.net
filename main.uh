@@ -2,12 +2,14 @@ namespace testing
 {
     public class Program
     {
-        private field meow: string = "Hello, World!"
+        private static field meow: string = "Hello, World!"
+        private field name: string
+        private field age: int
+
         
-        func Main()
-        {
-            var program = Program()
-            Console.WriteLine(program.meow)
+        public static func Main(args: StringArray): void {
+          
+            Console.WriteLine(meow) // this works because meow is a field of the class
         }
     }
 }
