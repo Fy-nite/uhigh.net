@@ -6,14 +6,14 @@ public class EntryPoint
     {
         if (args.Length == 0)
         {
-            Console.WriteLine("uhigh.Net Compiler");
+            Console.WriteLine("μHigh.Net Compiler");
             Console.WriteLine("Usage: uhigh.net <command> [options]");
             Console.WriteLine();
             Console.WriteLine("Commands:");
-            Console.WriteLine("  <source-file>                     # Compile and run uhigh.Net file");
-            Console.WriteLine("  create <project-name> [options]   # Create new uhigh.Net project");
-            Console.WriteLine("  build <project-file>              # Build uhigh.Net project");
-            Console.WriteLine("  run <project-file>                # Run uhigh.Net project");
+            Console.WriteLine("  <source-file>                     # Compile and run μHigh.Net file");
+            Console.WriteLine("  create <project-name> [options]   # Create new μHigh.Net project");
+            Console.WriteLine("  build <project-file>              # Build μHigh.Net project");
+            Console.WriteLine("  run <project-file>                # Run μHigh.Net project");
             Console.WriteLine("  info <project-file>               # Show project information");
             Console.WriteLine("  add-file <project-file> <file>    # Add source file to project");
             Console.WriteLine("  add-package <project-file> <name> <version> # Add package to project");
@@ -30,6 +30,10 @@ public class EntryPoint
             Console.WriteLine("  --description <text>              # Project description");
             Console.WriteLine("  --author <name>                   # Project author");
             Console.WriteLine("  --dir <path>                      # Project directory (default: current)");
+            Console.WriteLine();
+            Console.WriteLine("Examples:");
+            Console.WriteLine("  uhigh.net create MyLibrary --type Library");
+            Console.WriteLine("  uhigh.net build MyProject.wakeproj MyProject.dll");
             Console.WriteLine();
             Console.WriteLine("Syntax examples:");
             Console.WriteLine("  var obj = Program()               # Constructor call (no 'new' needed)");

@@ -280,7 +280,7 @@ namespace Wake.Net
                     return false;
                 }
 
-                diagnostics.ReportInfo($"Compiling project: {project.Name}");
+                diagnostics.ReportInfo($"Compiling project: {project.Name} (OutputType: {project.OutputType})");
 
                 // Compile all source files and combine
                 var allCSharpCode = new List<string>();
@@ -324,18 +324,18 @@ namespace Wake.Net
                 // Combine all C# code
                 var combinedCode = string.Join("\n\n", allCSharpCode);
 
-                // Use in-memory compiler with project root namespace and class name
+                // Use in-memory compiler with project configuration
                 var inMemoryCompiler = new InMemoryCompiler();
                 
                 if (outputFile != null)
                 {
-                    var success = await inMemoryCompiler.CompileToExecutable(combinedCode, outputFile, projectRootNamespace, projectClassName);
+                    var success = await inMemoryCompiler.CompileToExecutable(combinedCode, outputFile, projectRootNamespace, projectClassName, project.OutputType);
                     diagnostics.PrintSummary();
                     return success;
                 }
                 else
                 {
-                    var success = await inMemoryCompiler.CompileAndRun(combinedCode, null, projectRootNamespace, projectClassName);
+                    var success = await inMemoryCompiler.CompileAndRun(combinedCode, null, projectRootNamespace, projectClassName, project.OutputType);
                     diagnostics.PrintSummary();
                     return success;
                 }
@@ -483,7 +483,8 @@ namespace Wake.Net
                 {
                     Console.WriteLine($"Created project '{projectName}' in '{fullProjectDir}'");
                     Console.WriteLine($"Project file: {Path.Combine(fullProjectDir, $"{projectName}.wakeproj")}");
-                    Console.WriteLine($"Main file: {Path.Combine(fullProjectDir, "main.wake")}");
+                    Console.WriteLine($"Main file: {Path.Combine(fullProjectDir, "main.uh")}");
+                    Console.WriteLine($"Output type: {outputType}");
                 }
                 
                 diagnostics.PrintSummary();

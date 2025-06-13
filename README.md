@@ -1,18 +1,20 @@
 # μHigh Programming Language
 
-μHigh is a simple high-level programming language that compiles to C# and then to .NET executables.
+μHigh is a simple high-level programming language that compiles to C# and then to .NET executables or libraries.
 
 ## Table of Contents
 - [Features](#features)
 - [Getting Started](#getting-started)
 - [Usage](#usage)
 - [Language Reference](#language-reference)
+- [Syntax Highlighting](#syntax-highlighting)
 - [μHigh vs C#](#μhigh-vs-c)
 - [Roadmap](#roadmap)
 
 ## Features
 
 ### Current Features
+- **Project system** with support for executables and libraries
 - Variable declarations (var) and constants (const)
 - **Function-based variable assignments** (e.g., `var x = input()`)
 - **Class definitions** with methods and properties
@@ -32,7 +34,7 @@
 - Basic functions
 - Expression grouping with parentheses
 - Include other .uh files
-- Compiles to C# and then to .NET executables
+- Compiles to C# and then to .NET executables or libraries
 
 ### Planned Features
 - **Arrays and Collections**: Support for array data structures
@@ -54,8 +56,8 @@
 
 1. Clone the repository:
      ```bash
-     git clone https://github.com/your-username/wake.net
-     cd wake.net
+     git clone https://github.com/your-username/uhigh.net
+     cd uhigh.net
      ```
 
 2. Make sure you have .NET 6.0 or later installed:
@@ -86,6 +88,19 @@ dotnet run hello.uh
 ./hello.exe
 ```
 
+### Create a Project
+
+```bash
+# Create an executable project
+dotnet run create MyApp --type Exe
+
+# Create a library project
+dotnet run create MyLibrary --type Library
+
+# Build the project
+dotnet run build MyApp/MyApp.wakeproj
+```
+
 ## Usage
 
 ### Compile a single file
@@ -104,9 +119,78 @@ dotnet run source.uh output.exe
 
 This will compile `source.uh` and create `output.exe`.
 
+### Create and build projects
+
+```bash
+# Create a new project
+dotnet run create MyProject --type Exe --author "Your Name"
+
+# Build the project
+dotnet run build MyProject/MyProject.wakeproj
+
+# Build to specific output
+dotnet run build MyProject/MyProject.wakeproj MyProject.exe
+```
+
 ## Language Reference
 
 For detailed syntax documentation and examples, see [LANGUAGE.md](LANGUAGE.md).
+
+## Syntax Highlighting
+
+### Visual Studio Code
+
+1. Copy the `Syntax/uhigh.tmLanguage.json` file to your VS Code extensions folder
+2. Create a `package.json` file to register the language:
+
+```json
+{
+  "name": "uhigh-syntax",
+  "displayName": "μHigh Language Support",
+  "description": "Syntax highlighting for μHigh programming language",
+  "version": "1.0.0",
+  "engines": {
+    "vscode": "^1.0.0"
+  },
+  "categories": ["Programming Languages"],
+  "contributes": {
+    "languages": [{
+      "id": "uhigh",
+      "aliases": ["μHigh", "uhigh"],
+      "extensions": [".uh"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "uhigh",
+      "scopeName": "source.uhigh",
+      "path": "./uhigh.tmLanguage.json"
+    }]
+  }
+}
+```
+
+### Visual Studio 2022
+
+For Visual Studio 2022, you can use the TextMate grammar through extensions or create a custom language service. The grammar file can be integrated using:
+
+1. **VSIX Extension**: Create a Visual Studio extension that includes the TextMate grammar
+2. **Language Server Protocol**: Implement an LSP server that uses the grammar
+3. **Third-party Extensions**: Use extensions like "TextMate Grammars" for VS 2022
+
+### Supported Features
+
+The syntax highlighting includes:
+- **Keywords**: `func`, `var`, `const`, `class`, `namespace`, `if`, `else`, `while`, `for`, etc.
+- **Modifiers**: `public`, `private`, `protected`, `static`, `readonly`, etc.
+- **Types**: `int`, `float`, `string`, `bool`, and custom types
+- **Comments**: Single-line (`//`) and multi-line (`/* */`)
+- **Strings**: Double-quoted strings with escape sequences
+- **Numbers**: Integers and floating-point numbers
+- **Operators**: Arithmetic, comparison, logical, and assignment operators
+- **Attributes**: `[AttributeName]` syntax
+- **Functions**: Function declarations and calls
+- **Classes**: Class declarations with inheritance
+- **Namespaces**: Namespace declarations with dotted names
 
 ## μHigh vs C#
 

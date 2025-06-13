@@ -115,7 +115,7 @@ namespace Wake.Net.CodeGen
             _output.AppendLine("{");
             _indentLevel++;
 
-            //GenerateBuiltInFunctions(); // dont 
+            GenerateBuiltInFunctions();
 
             var statements = program.Statements?.Where(s => !(s is ImportStatement) && !(s is NamespaceDeclaration)).ToList();
             var mainFunction = statements?.OfType<FunctionDeclaration>().FirstOrDefault(f => f.Name == "main");

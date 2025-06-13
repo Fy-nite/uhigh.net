@@ -9,7 +9,7 @@ namespace Wake.Net.CodeGen
 {
     public class InMemoryCompiler
     {
-        public async Task<bool> CompileAndRun(string csharpCode, string? outputPath = null, string? rootNamespace = null, string? className = null)
+        public async Task<bool> CompileAndRun(string csharpCode, string? outputPath = null, string? rootNamespace = null, string? className = null, string outputType = "Exe")
         {
             try
             {
@@ -24,14 +24,19 @@ namespace Wake.Net.CodeGen
                 var actualClassName = className ?? "Program";
                 var mainTypeName = $"{actualRootNamespace}.{actualClassName}";
                 
-                // Create compilation for executable
+                // Determine output kind based on outputType
+                var outputKind = outputType.Equals("Library", StringComparison.OrdinalIgnoreCase) 
+                    ? OutputKind.DynamicallyLinkedLibrary 
+                    : OutputKind.ConsoleApplication;
+                
+                // Create compilation
                 var compilation = CSharpCompilation.Create(
                     Path.GetFileNameWithoutExtension(outputPath ?? "GeneratedProgram"),
                     new[] { syntaxTree },
                     references,
                     new CSharpCompilationOptions(
-                        OutputKind.ConsoleApplication,
-                        mainTypeName: mainTypeName));
+                        outputKind,
+                        mainTypeName: outputKind == OutputKind.ConsoleApplication ? mainTypeName : null));
                 
                 // Compile to memory stream
                 using var memoryStream = new MemoryStream();
@@ -54,58 +59,70 @@ namespace Wake.Net.CodeGen
                 if (outputPath != null)
                 {
                     await File.WriteAllBytesAsync(outputPath, memoryStream.ToArray());
-                    Console.WriteLine($"Executable saved to: {outputPath}");
+                    var fileType = outputType.Equals("Library", StringComparison.OrdinalIgnoreCase) ? "Library" : "Executable";
+                    Console.WriteLine($"{fileType} saved to: {outputPath}");
                     
-                    // Create runtime configuration file
-                    await CreateRuntimeConfigAsync(outputPath);
+                    // Create runtime configuration file only for executables
+                    if (outputKind == OutputKind.ConsoleApplication)
+                    {
+                        await CreateRuntimeConfigAsync(outputPath);
+                    }
                     
-                    // Make the file executable on Unix systems
-                    if (!OperatingSystem.IsWindows())
+                    // Make the file executable on Unix systems (only for executables)
+                    if (!OperatingSystem.IsWindows() && outputKind == OutputKind.ConsoleApplication)
                     {
                         File.SetUnixFileMode(outputPath, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
                     }
                 }
                 
-                // Load and execute the assembly
-                memoryStream.Seek(0, SeekOrigin.Begin);
-                var assembly = AssemblyLoadContext.Default.LoadFromStream(memoryStream);
-                
-                // Find and invoke the Main method using the correct type name
-                var programType = assembly.GetType(mainTypeName);
-                if (programType == null)
+                // Only try to execute if it's an executable
+                if (outputKind == OutputKind.ConsoleApplication)
                 {
-                    Console.WriteLine($"Could not find {mainTypeName} type");
-                    return false;
-                }
-                
-                var mainMethod = programType.GetMethod("Main", BindingFlags.Public | BindingFlags.Static);
-                if (mainMethod == null)
-                {
-                    Console.WriteLine("Could not find Main method");
-                    return false;
-                }
-                
-                Console.WriteLine("Executing compiled program:");
-                Console.WriteLine("------------------------");
-                
-                // Execute the Main method
-                var parameters = mainMethod.GetParameters();
-                if (parameters.Length == 0)
-                {
-                    mainMethod.Invoke(null, null);
-                }
-                else if (parameters.Length == 1 && parameters[0].ParameterType == typeof(string[]))
-                {
-                    mainMethod.Invoke(null, new object[] { new string[0] });
+                    // Load and execute the assembly
+                    memoryStream.Seek(0, SeekOrigin.Begin);
+                    var assembly = AssemblyLoadContext.Default.LoadFromStream(memoryStream);
+                    
+                    // Find and invoke the Main method using the correct type name
+                    var programType = assembly.GetType(mainTypeName);
+                    if (programType == null)
+                    {
+                        Console.WriteLine($"Could not find {mainTypeName} type");
+                        return false;
+                    }
+                    
+                    var mainMethod = programType.GetMethod("Main", BindingFlags.Public | BindingFlags.Static);
+                    if (mainMethod == null)
+                    {
+                        Console.WriteLine("Could not find Main method");
+                        return false;
+                    }
+                    
+                    Console.WriteLine("Executing compiled program:");
+                    Console.WriteLine("------------------------");
+                    
+                    // Execute the Main method
+                    var parameters = mainMethod.GetParameters();
+                    if (parameters.Length == 0)
+                    {
+                        mainMethod.Invoke(null, null);
+                    }
+                    else if (parameters.Length == 1 && parameters[0].ParameterType == typeof(string[]))
+                    {
+                        mainMethod.Invoke(null, new object[] { new string[0] });
+                    }
+                    else
+                    {
+                        Console.WriteLine("Unsupported Main method signature");
+                        return false;
+                    }
+                    
+                    Console.WriteLine("------------------------");
+                    Console.WriteLine("Program execution completed");
                 }
                 else
                 {
-                    Console.WriteLine("Unsupported Main method signature");
-                    return false;
+                    Console.WriteLine("Library compiled successfully");
                 }
-                
-                Console.WriteLine("------------------------");
-                Console.WriteLine("Program execution completed");
                 
                 return true;
             }
@@ -188,7 +205,7 @@ namespace Wake.Net.CodeGen
             }
         }
         
-        public async Task<bool> CompileToExecutable(string csharpCode, string outputPath, string? rootNamespace = null, string? className = null)
+        public async Task<bool> CompileToExecutable(string csharpCode, string outputPath, string? rootNamespace = null, string? className = null, string outputType = "Exe")
         {
             try
             {
@@ -201,21 +218,36 @@ namespace Wake.Net.CodeGen
                 var actualClassName = className ?? "Program";
                 var mainTypeName = $"{actualRootNamespace}.{actualClassName}";
                 
+                // Determine output kind and file extension
+                var outputKind = outputType.Equals("Library", StringComparison.OrdinalIgnoreCase) 
+                    ? OutputKind.DynamicallyLinkedLibrary 
+                    : OutputKind.ConsoleApplication;
+                
+                // Adjust output path extension based on output type
+                if (outputType.Equals("Library", StringComparison.OrdinalIgnoreCase))
+                {
+                    outputPath = Path.ChangeExtension(outputPath, ".dll");
+                }
+                else
+                {
+                    outputPath = Path.ChangeExtension(outputPath, ".exe");
+                }
+                
                 // Create build directory
                 var buildDir = Path.Combine(Path.GetDirectoryName(outputPath)!, "build");
                 Directory.CreateDirectory(buildDir);
                 
-                var executablePath = Path.Combine(buildDir, Path.GetFileName(outputPath));
+                var finalPath = Path.Combine(buildDir, Path.GetFileName(outputPath));
                 
                 var compilation = CSharpCompilation.Create(
                     Path.GetFileNameWithoutExtension(outputPath),
                     new[] { syntaxTree },
                     references,
                     new CSharpCompilationOptions(
-                        OutputKind.ConsoleApplication,
-                        mainTypeName: mainTypeName));
+                        outputKind,
+                        mainTypeName: outputKind == OutputKind.ConsoleApplication ? mainTypeName : null));
                 
-                var emitResult = compilation.Emit(executablePath);
+                var emitResult = compilation.Emit(finalPath);
                 
                 if (!emitResult.Success)
                 {
@@ -233,12 +265,19 @@ namespace Wake.Net.CodeGen
                 // Copy required assemblies to build directory
                 await CopyRequiredAssemblies(buildDir);
                 
-                // Create runtime configuration file
-                await CreateRuntimeConfigAsync(executablePath);
+                // Create runtime configuration file only for executables
+                if (outputKind == OutputKind.ConsoleApplication)
+                {
+                    await CreateRuntimeConfigAsync(finalPath);
+                    Console.WriteLine($"Executable created: {finalPath}");
+                    Console.WriteLine($"Run with: dotnet \"{finalPath}\"");
+                }
+                else
+                {
+                    Console.WriteLine($"Library created: {finalPath}");
+                }
                 
-                Console.WriteLine($"Executable created: {executablePath}");
                 Console.WriteLine($"Build directory: {buildDir}");
-                Console.WriteLine($"Run with: dotnet \"{executablePath}\"");
                 
                 return true;
             }

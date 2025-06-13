@@ -12,7 +12,7 @@
     
     <!-- Package Metadata -->
     <PackageId>uhigh</PackageId>
-    <PackageVersion>1.0.0</PackageVersion>
+    <PackageVersion>1.1.0</PackageVersion>
     <Authors>charlie-san</Authors>
     <Description>Micro-High on dotnet</Description>
     <PackageProjectUrl>https://github.com/yourusername/uhigh</PackageProjectUrl>
