@@ -224,6 +224,16 @@ namespace Wake.Net.CodeGen
 
         private void GenerateClassDeclaration(ClassDeclaration classDecl)
         {
+            // Check for external attribute on class
+            var hasExternalAttribute = classDecl.Members.OfType<AttributeDeclaration>()
+                .Any(attr => attr.IsExternal);
+
+            if (hasExternalAttribute)
+            {
+                _diagnostics.ReportInfo($"Skipping code generation for external class: {classDecl.Name}");
+                return;
+            }
+
             Indent();
             
             // Generate modifiers
@@ -308,6 +318,9 @@ namespace Wake.Net.CodeGen
                     Indent();
                     _output.AppendLine("continue;");
                     break;
+                case SharpBlock sharpBlock:
+                    GenerateSharpBlock(sharpBlock);
+                    break;
                 case ExpressionStatement exprStmt:
                     Indent();
                     GenerateExpression(exprStmt.Expression);
@@ -316,6 +329,23 @@ namespace Wake.Net.CodeGen
                 default:
                     _diagnostics.ReportCodeGenWarning($"Unknown statement type: {statement.GetType().Name}");
                     break;
+            }
+        }
+
+        private void GenerateSharpBlock(SharpBlock sharpBlock)
+        {
+            if (string.IsNullOrWhiteSpace(sharpBlock.Code))
+            {
+                _diagnostics.ReportCodeGenWarning("Empty sharp block found");
+                return;
+            }
+            
+            // Split the code into lines and indent each line properly
+            var lines = sharpBlock.Code.Split('\n');
+            foreach (var line in lines)
+            {
+                Indent();
+                _output.AppendLine(line.TrimEnd());
             }
         }
 
@@ -341,13 +371,13 @@ namespace Wake.Net.CodeGen
 
         private void GenerateMethodDeclaration(MethodDeclaration methodDecl)
         {
-            // Check if method has dotnetfunc attribute - don't generate implementation
-            var hasDotNetFuncAttribute = methodDecl.Attributes.Any(attr => 
-                attr.Name.Equals("dotnetfunc", StringComparison.OrdinalIgnoreCase));
+            // Check if method has external or dotnetfunc attribute - don't generate implementation
+            var hasExternalAttribute = methodDecl.Attributes.Any(attr => attr.IsExternal);
+            var hasDotNetFuncAttribute = methodDecl.Attributes.Any(attr => attr.IsDotNetFunc);
 
-            if (hasDotNetFuncAttribute)
+            if (hasDotNetFuncAttribute || hasExternalAttribute)
             {
-                _diagnostics.ReportInfo($"Skipping code generation for .NET method: {methodDecl.Name}");
+                _diagnostics.ReportInfo($"Skipping code generation for external method: {methodDecl.Name}");
                 return;
             }
 
@@ -527,13 +557,13 @@ namespace Wake.Net.CodeGen
 
         private void GenerateFunctionDeclaration(FunctionDeclaration funcDecl)
         {
-            // Check if function has dotnetfunc attribute - completely skip generation
-            var hasDotNetFuncAttribute = funcDecl.Attributes.Any(attr => 
-                attr.Name.Equals("dotnetfunc", StringComparison.OrdinalIgnoreCase));
+            // Check if function has external or dotnetfunc attribute - completely skip generation
+            var hasExternalAttribute = funcDecl.Attributes.Any(attr => attr.IsExternal);
+            var hasDotNetFuncAttribute = funcDecl.Attributes.Any(attr => attr.IsDotNetFunc);
 
-            if (hasDotNetFuncAttribute)
+            if (hasDotNetFuncAttribute || hasExternalAttribute)
             {
-                _diagnostics.ReportInfo($"Skipping code generation for .NET function: {funcDecl.Name}");
+                _diagnostics.ReportInfo($"Skipping code generation for external function: {funcDecl.Name}");
                 return; // Completely skip generating this function
             }
 
@@ -782,7 +812,55 @@ namespace Wake.Net.CodeGen
                     GenerateExpression(indexExpr.Index);
                     _output.Append("]");
                     break;
+                case MatchExpression matchExpr:
+                    GenerateMatchExpression(matchExpr);
+                    break;
             }
+        }
+
+        private void GenerateMatchExpression(MatchExpression matchExpr)
+        {
+            GenerateExpression(matchExpr.Value);
+            _output.Append(" switch {");
+            
+            bool isFirst = true;
+            foreach (var arm in matchExpr.Arms)
+            {
+                if (!isFirst)
+                {
+                    _output.Append(",");
+                }
+                _output.AppendLine();
+                
+                // Increase indent for arms
+                var originalIndent = _indentLevel;
+                _indentLevel = originalIndent + 1;
+                Indent();
+                
+                if (arm.IsDefault)
+                {
+                    _output.Append("_");
+                }
+                else
+                {
+                    // Handle multiple patterns (e.g., 1 or 2 or 3)
+                    for (int i = 0; i < arm.Patterns.Count; i++)
+                    {
+                        if (i > 0) _output.Append(" or ");
+                        GenerateExpression(arm.Patterns[i]);
+                    }
+                }
+                
+                _output.Append(" => ");
+                GenerateExpression(arm.Result);
+                
+                _indentLevel = originalIndent;
+                isFirst = false;
+            }
+            
+            _output.AppendLine();
+            Indent();
+            _output.Append("}");
         }
 
         private void GenerateFunctionCall(string functionName, List<Expression> arguments)

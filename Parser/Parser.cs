@@ -1,5 +1,6 @@
 using Wake.Net.Lexer;
 using Wake.Net.Diagnostics;
+using System.Text;
 
 namespace Wake.Net.Parser
 {
@@ -79,6 +80,9 @@ namespace Wake.Net.Parser
                         attributes.Add(ParseAttribute());
                     }
 
+                    // Check for external attribute - skip registration if found
+                    var hasExternalAttribute = attributes.Any(attr => attr.IsExternal);
+
                     if (Check(TokenType.Func))
                     {
                         var funcToken = Advance();
@@ -91,13 +95,12 @@ namespace Wake.Net.Parser
                             functionName += "." + Consume(TokenType.Identifier, "Expected identifier after '.'").Value;
                         }
 
-                        // Check if this has dotnetfunc attribute - skip registration if it does
-                        var hasDotNetFuncAttribute = attributes.Any(attr =>
-                            attr.Name.Equals("dotnetfunc", StringComparison.OrdinalIgnoreCase));
+                        // Check if this has dotnetfunc or external attribute - skip registration if it does
+                        var hasDotNetFuncAttribute = attributes.Any(attr => attr.IsDotNetFunc);
 
-                        if (hasDotNetFuncAttribute)
+                        if (hasDotNetFuncAttribute || hasExternalAttribute)
                         {
-                            _diagnostics.ReportInfo($"Skipping registration for .NET function: {functionName}");
+                            _diagnostics.ReportInfo($"Skipping registration for external/dotnet function: {functionName}");
                             // Skip to end of function declaration
                             while (!Check(TokenType.LeftBrace) && !IsAtEnd())
                             {
@@ -227,6 +230,29 @@ namespace Wake.Net.Parser
 
                         var classNameToken = Consume(TokenType.Identifier, "Expected class name");
 
+                        // Skip external classes
+                        if (hasExternalAttribute)
+                        {
+                            _diagnostics.ReportInfo($"Skipping registration for external class: {classNameToken.Value}");
+                            // Skip to end of class declaration
+                            while (!Check(TokenType.LeftBrace) && !IsAtEnd())
+                            {
+                                Advance();
+                            }
+                            if (Check(TokenType.LeftBrace))
+                            {
+                                Advance(); // Skip opening brace
+                                var braceCount = 1;
+                                while (braceCount > 0 && !IsAtEnd())
+                                {
+                                    if (Check(TokenType.LeftBrace)) braceCount++;
+                                    else if (Check(TokenType.RightBrace)) braceCount--;
+                                    Advance();
+                                }
+                            }
+                            continue;
+                        }
+
                         // Create a temporary class declaration for registration
                         var tempClassDecl = new ClassDeclaration
                         {
@@ -330,6 +356,7 @@ namespace Wake.Net.Parser
                 if (Match(TokenType.Return)) return ParseReturnStatement();
                 if (Match(TokenType.Break)) return ParseBreakStatement();
                 if (Match(TokenType.Continue)) return ParseContinueStatement();
+                if (Match(TokenType.Sharp)) return ParseSharpBlock();
 
                 return ParseExpressionStatement();
             }
@@ -1021,6 +1048,58 @@ namespace Wake.Net.Parser
             return new ContinueStatement();
         }
 
+        private Statement ParseSharpBlock()
+        {
+            Consume(TokenType.LeftBrace, "Expected '{' after 'sharp'");
+
+            var code = new StringBuilder();
+            var braceCount = 1;
+
+            while (!IsAtEnd() && braceCount > 0)
+            {
+                var token = Advance();
+
+                if (token.Type == TokenType.LeftBrace)
+                {
+                    braceCount++;
+                    code.Append("{");
+                }
+                else if (token.Type == TokenType.RightBrace)
+                {
+                    braceCount--;
+                    if (braceCount > 0)
+                    {
+                        code.Append("}");
+                    }
+                }
+                else if (token.Type == TokenType.EOF)
+                {
+                    _diagnostics.ReportError("Unterminated sharp block", token.Line, token.Column, "UH008");
+                    break;
+                }
+                else
+                {
+                    // Reconstruct the original text from tokens
+                    code.Append(token.Value);
+
+                    // Add space after most tokens for readability
+                    if (token.Type != TokenType.Dot &&
+                        token.Type != TokenType.LeftParen &&
+                        token.Type != TokenType.LeftBracket &&
+                        !IsAtEnd() && Peek().Type != TokenType.Dot &&
+                        Peek().Type != TokenType.RightParen &&
+                        Peek().Type != TokenType.RightBracket &&
+                        Peek().Type != TokenType.Semicolon &&
+                        Peek().Type != TokenType.Comma)
+                    {
+                        code.Append(" ");
+                    }
+                }
+            }
+
+            return new SharpBlock { Code = code.ToString().Trim() };
+        }
+
         private Statement ParseExpressionStatement()
         {
             var expr = ParseExpression();
@@ -1047,6 +1126,12 @@ namespace Wake.Net.Parser
                 var op = Previous().Type;
                 var value = ParseAssignment();
                 return new AssignmentExpression { Target = expr, Operator = op, Value = value };
+            }
+
+            // μHigh match expression: expr match { ... }
+            if (Match(TokenType.Match))
+            {
+                expr = ParseMatchExpression(expr);
             }
 
             return expr;
@@ -1355,6 +1440,65 @@ namespace Wake.Net.Parser
             throw new Exception($"Unexpected token {Peek().Type}");
         }
 
+        private Expression ParseMatchExpression(Expression? value = null)
+        {
+            // If value is null, parse it (for legacy/fallback)
+            if (value == null)
+                value = ParseExpression();
+
+            Consume(TokenType.LeftBrace, "Expected '{' after match value");
+
+            var arms = new List<MatchArm>();
+
+            while (!Check(TokenType.RightBrace) && !IsAtEnd())
+            {
+                arms.Add(ParseMatchArm());
+
+                // Optional comma after each arm
+                if (Check(TokenType.Comma))
+                {
+                    Advance();
+                }
+            }
+
+            Consume(TokenType.RightBrace, "Expected '}' after match arms");
+
+            return new MatchExpression
+            {
+                Value = value,
+                Arms = arms
+            };
+        }
+
+        private MatchArm ParseMatchArm()
+        {
+            var patterns = new List<Expression>();
+            bool isDefault = false;
+
+            if (Match(TokenType.Underscore))
+            {
+                isDefault = true;
+            }
+            else
+            {
+                // Parse pattern(s) - support comma-separated patterns
+                do
+                {
+                    patterns.Add(ParseExpression());
+                } while (Match(TokenType.Comma) && !Check(TokenType.Arrow));
+            }
+
+            Consume(TokenType.Arrow, "Expected '=>' after match pattern");
+            var result = ParseExpression();
+
+            return new MatchArm
+            {
+                Patterns = patterns,
+                Result = result,
+                IsDefault = isDefault
+            };
+        }
+
         private Expression ParseInterpolatedString()
         {
             var parts = new List<InterpolationPart>();
@@ -1649,7 +1793,7 @@ namespace Wake.Net.Parser
                 // e.g., "private field name: string"
                 // Check if the next token after identifier is 'field'
                 var nameToken = Advance(); // consume identifier
-                
+
                 if (Match(TokenType.Field))
                 {
                     // This is "private field name: string" pattern
@@ -1667,10 +1811,10 @@ namespace Wake.Net.Parser
                         initializer = ParseExpression();
                     }
 
-                    return new FieldDeclaration 
-                    { 
-                        Name = fieldName, 
-                        Type = type, 
+                    return new FieldDeclaration
+                    {
+                        Name = fieldName,
+                        Type = type,
                         Initializer = initializer,
                         Modifiers = modifiers
                     };
@@ -1679,7 +1823,7 @@ namespace Wake.Net.Parser
                 {
                     // Put back the identifier token and parse as normal field
                     _current--; // Back up to re-parse the identifier
-                    
+
                     var fieldName = Consume(TokenType.Identifier, "Expected field name").Value;
                     string? type = null;
                     Expression? initializer = null;
@@ -1694,10 +1838,10 @@ namespace Wake.Net.Parser
                         initializer = ParseExpression();
                     }
 
-                    return new FieldDeclaration 
-                    { 
-                        Name = fieldName, 
-                        Type = type, 
+                    return new FieldDeclaration
+                    {
+                        Name = fieldName,
+                        Type = type,
                         Initializer = initializer,
                         Modifiers = modifiers
                     };

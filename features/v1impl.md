@@ -694,3 +694,19 @@ class Circle {
 ```
 
 These features would significantly enhance μHigh's capabilities while maintaining its goal of simplicity and readability. The implementation priority should focus on the most commonly used features first (enums, interfaces, null safety) before moving to more advanced concepts.
+
+Raw C# code injection for advanced scenarios:
+
+```go
+func optimized_function() {
+    sharp {
+        // Raw C# code - no validation performed
+        var result = System.Math.Pow(2, 10);
+        Console.WriteLine($"2^10 = {result}");
+        
+        // Access .NET APIs directly
+        var process = System.Diagnostics.Process.GetCurrentProcess();
+        Console.WriteLine($"Process: {process.ProcessName}");
+    }
+}
+```

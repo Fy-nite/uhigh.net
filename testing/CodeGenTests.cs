@@ -141,6 +141,30 @@ namespace Wake.Net.Testing
         }
 
         [Test]
+        public void TestExternalAttributeSkipping()
+        {
+            var result = GenerateCSharp(@"
+                [external]
+                func Console.WriteLine(message: string): void");
+            
+            // Should not contain the function body since it has [external]
+            Assert.IsFalse(result.Contains("public static void Console.WriteLine"));
+        }
+
+        [Test]
+        public void TestExternalClassSkipping()
+        {
+            var result = GenerateCSharp(@"
+                [external]
+                class ExternalLibrary {
+                    func someMethod(): void
+                }");
+            
+            // Should not contain the class since it has [external]
+            Assert.IsFalse(result.Contains("class ExternalLibrary"));
+        }
+
+        [Test]
         public void TestTypeConversion()
         {
             var result = GenerateCSharp(@"
@@ -149,6 +173,33 @@ namespace Wake.Net.Testing
                 }");
             
             Assert.IsTrue(result.Contains("public static void test(int a, double b, string c, bool d)"));
+        }
+
+        [Test]
+        public void TestMatchExpression()
+        {
+            var result = GenerateCSharp(@"
+                var result = cmd match {
+                    ""help"" => ""Showing help"",
+                    ""exit"" => ""Goodbye"", 
+                    _ => ""Unknown""
+                }");
+            
+            Assert.IsTrue(result.Contains("cmd switch {"));
+            Assert.IsTrue(result.Contains("\"help\" => \"Showing help\""));
+            Assert.IsTrue(result.Contains("_ => \"Unknown\""));
+        }
+
+        [Test]
+        public void TestMatchWithMultiplePatterns()
+        {
+            var result = GenerateCSharp(@"
+                var size = num match {
+                    1, 2, 3 => ""small"",
+                    _ => ""large""
+                }");
+            
+            Assert.IsTrue(result.Contains("1 or 2 or 3 => \"small\""));
         }
     }
 }

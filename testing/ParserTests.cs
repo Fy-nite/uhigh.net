@@ -208,7 +208,7 @@ namespace Wake.Net.Testing
         public void TestAttributesParsing()
         {
             var program = ParseSource(@"
-                [dotnetfunc]
+                [external]
                 func Console.WriteLine(message: string): void");
 
             Assert.AreEqual(1, program.Statements.Count);
@@ -227,16 +227,11 @@ namespace Wake.Net.Testing
                 }
             }
             
-            // The issue might be that attributes aren't being properly assigned
-            // Let's be more flexible with the test
+            // Test external attribute
             if (funcDecl.Attributes?.Count > 0)
             {
-                Assert.AreEqual("dotnetfunc", funcDecl.Attributes[0].Name);
-            }
-            else
-            {
-                // If attributes parsing isn't working, at least verify the function name
-                Console.WriteLine("Warning: Attributes not parsed, but function name should be correct");
+                Assert.AreEqual("external", funcDecl.Attributes[0].Name);
+                Assert.IsTrue(funcDecl.Attributes[0].IsExternal);
             }
             
             Assert.AreEqual("Console.WriteLine", funcDecl.Name);
@@ -299,6 +294,71 @@ namespace Wake.Net.Testing
             Assert.IsNotNull(fieldDecl, "Should have a field declaration");
             Assert.AreEqual("history", fieldDecl.Name);
             Assert.IsTrue(fieldDecl.Modifiers.Contains("private"));
+        }
+
+        [Test]
+        public void TestMatchExpression()
+        {
+            var program = ParseSource(@"
+                var result = cmd match {
+                    ""help"" => ""Showing help"",
+                    ""exit"" => ""Goodbye"",
+                    _ => ""Unknown command: "" + cmd
+                }");
+
+            Assert.AreEqual(1, program.Statements.Count);
+            Assert.IsTrue(program.Statements[0] is VariableDeclaration);
+            
+            var varDecl = (VariableDeclaration)program.Statements[0];
+            Assert.IsTrue(varDecl.Initializer is MatchExpression);
+            
+            var matchExpr = (MatchExpression)varDecl.Initializer;
+            Assert.IsTrue(matchExpr.Value is IdentifierExpression);
+            Assert.AreEqual(3, matchExpr.Arms.Count);
+            
+            // Test first arm
+            Assert.IsFalse(matchExpr.Arms[0].IsDefault);
+            Assert.AreEqual(1, matchExpr.Arms[0].Patterns.Count);
+            
+            // Test default arm
+            Assert.IsTrue(matchExpr.Arms[2].IsDefault);
+        }
+
+        [Test]
+        public void TestMatchWithMultiplePatterns()
+        {
+            var program = ParseSource(@"
+                var category = number match {
+                    1, 2, 3 => ""small"",
+                    4, 5, 6 => ""medium"",
+                    _ => ""large""
+                }");
+
+            var varDecl = (VariableDeclaration)program.Statements[0];
+            var matchExpr = (MatchExpression)varDecl.Initializer;
+            
+            Assert.AreEqual(3, matchExpr.Arms[0].Patterns.Count);
+            Assert.AreEqual(3, matchExpr.Arms[1].Patterns.Count);
+            Assert.IsTrue(matchExpr.Arms[2].IsDefault);
+        }
+
+        [Test]
+        public void TestMatchWithFunctionCalls()
+        {
+            var program = ParseSource(@"
+                var action = command match {
+                    ""save"" => saveFile(),
+                    ""load"" => loadFile(),
+                    ""quit"" => exit(),
+                    _ => showError(""Unknown command"")
+                }");
+
+            var varDecl = (VariableDeclaration)program.Statements[0];
+            var matchExpr = (MatchExpression)varDecl.Initializer;
+            
+            Assert.AreEqual(4, matchExpr.Arms.Count);
+            Assert.IsTrue(matchExpr.Arms[0].Result is CallExpression);
+            Assert.IsTrue(matchExpr.Arms[3].IsDefault);
         }
     }
 }

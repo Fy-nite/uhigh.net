@@ -10,8 +10,8 @@ namespace Wake.Net.Lexer
         
         // Keywords
         Var, Const, Func, Return, If, Else, While, For, In,
-        Print, Include, Try, Catch, Throw, Field, // Added Field
-        True, False, Int, Float, StringType, Bool, Asm, Range,
+        Print, Include, Try, Catch, Throw, Field, Match, // Added Match
+        True, False, Int, Float, StringType, Bool, Sharp, Range,
         Break, Continue, // Add break and continue support
         Class, Namespace, Import, From, This, // New keywords
         Get, Set, // Add getter/setter keywords
@@ -43,6 +43,8 @@ namespace Wake.Net.Lexer
         Equal, NotEqual, Less, Greater, LessEqual, GreaterEqual,
         And, Or, Not, Increment, Decrement,
         PlusAssign, MinusAssign, MultiplyAssign, DivideAssign,
+        Arrow, // => for match arms
+        Underscore, // _ for default case
         
         // Punctuation
         LeftParen, RightParen, LeftBrace, RightBrace,

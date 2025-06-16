@@ -227,13 +227,13 @@ namespace Wake.Net.Parser
 
         public void RegisterMethod(FunctionDeclaration func, SourceLocation? location = null)
         {
-            // Check if function has dotnetfunc attribute - skip validation for these
-            var hasDotNetFuncAttribute = func.Attributes.Any(attr => 
-                attr.Name.Equals("dotnetfunc", StringComparison.OrdinalIgnoreCase));
+            // Check if function has external or dotnetfunc attribute - skip validation for these
+            var hasExternalAttribute = func.Attributes.Any(attr => attr.IsExternal);
+            var hasDotNetFuncAttribute = func.Attributes.Any(attr => attr.IsDotNetFunc);
 
-            if (hasDotNetFuncAttribute)
+            if (hasDotNetFuncAttribute || hasExternalAttribute)
             {
-                _diagnostics.ReportInfo($"Skipping method validation for .NET function: {func.Name}");
+                _diagnostics.ReportInfo($"Skipping method validation for external function: {func.Name}");
                 return;
             }
 
@@ -255,13 +255,13 @@ namespace Wake.Net.Parser
 
         public void RegisterMethod(MethodDeclaration method, string className, SourceLocation? location = null)
         {
-            // Check if method has dotnetfunc attribute - skip validation for these
-            var hasDotNetFuncAttribute = method.Attributes?.Any(attr => 
-                attr.Name.Equals("dotnetfunc", StringComparison.OrdinalIgnoreCase)) ?? false;
+            // Check if method has external or dotnetfunc attribute - skip validation for these
+            var hasExternalAttribute = method.Attributes?.Any(attr => attr.IsExternal) ?? false;
+            var hasDotNetFuncAttribute = method.Attributes?.Any(attr => attr.IsDotNetFunc) ?? false;
 
-            if (hasDotNetFuncAttribute)
+            if (hasDotNetFuncAttribute || hasExternalAttribute)
             {
-                _diagnostics.ReportInfo($"Skipping method validation for .NET method: {className}.{method.Name}");
+                _diagnostics.ReportInfo($"Skipping method validation for external method: {className}.{method.Name}");
                 return;
             }
 

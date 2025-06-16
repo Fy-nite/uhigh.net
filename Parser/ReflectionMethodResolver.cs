@@ -31,7 +31,23 @@ namespace Wake.Net.Parser
                 typeof(DateTime),
                 typeof(List<>),
                 typeof(Array),
-                typeof(Enumerable)
+                typeof(Enumerable),
+                typeof(Dictionary<,>),
+                typeof(Exception),
+                typeof(ArgumentException),
+                typeof(InvalidOperationException),
+                typeof(System.IO.File),
+                typeof(System.IO.Directory),
+                typeof(System.IO.Path),
+                typeof(System.Text.StringBuilder),
+                typeof(System.Text.RegularExpressions.Regex),
+                typeof(System.Linq.Enumerable),
+                typeof(System.Linq.Queryable),
+                typeof(System.Threading.Tasks.Task),
+                typeof(System.Threading.Tasks.Task<>),
+                typeof(System.Threading.Thread),
+
+                typeof(System.Threading.CancellationToken)
             };
 
             foreach (var type in systemTypes)

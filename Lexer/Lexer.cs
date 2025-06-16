@@ -29,7 +29,7 @@ namespace Wake.Net.Lexer
             { "catch", TokenType.Catch },
             { "throw", TokenType.Throw },
             { "include", TokenType.Include },
-            { "asm", TokenType.Asm },
+            { "sharp", TokenType.Sharp },
             { "range", TokenType.Range },
             { "true", TokenType.True },
             { "false", TokenType.False },
@@ -61,7 +61,8 @@ namespace Wake.Net.Lexer
             { "sealed", TokenType.Sealed },
             { "readonly", TokenType.Readonly },
             { "async", TokenType.Async },
-            { "await", TokenType.Await }
+            { "await", TokenType.Await },
+            { "match", TokenType.Match }
         };
 
         public Lexer(string source, DiagnosticsReporter? diagnostics = null)
@@ -356,6 +357,7 @@ namespace Wake.Net.Lexer
                 "?." => new Token(TokenType.QuestionDot, twoChar, line, column),
                 ".." => new Token(TokenType.DotDot, twoChar, line, column),
                 "$\"" => new Token(TokenType.InterpolatedStringStart, twoChar, line, column),
+                "=>" => new Token(TokenType.Arrow, twoChar, line, column),
                 _ => null
             };
         }
@@ -439,6 +441,7 @@ namespace Wake.Net.Lexer
                 ':' => new Token(TokenType.Colon, c.ToString(), line, column),
                 '?' => new Token(TokenType.Question, c.ToString(), line, column),
                 '.' => new Token(TokenType.Dot, c.ToString(), line, column),
+                '_' => new Token(TokenType.Underscore, c.ToString(), line, column),
                 _ => null
             };
         }

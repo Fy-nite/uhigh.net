@@ -200,5 +200,17 @@ namespace Wake.Net.Testing
             Assert.AreEqual(TokenType.LeftParen, tokens[2].Type);
             Assert.AreEqual(TokenType.EOF, tokens.Last().Type);
         }
+
+        [Test]
+        public void TestMatchKeywords()
+        {
+            var lexer = CreateLexer("match => _");
+            var tokens = lexer.Tokenize();
+
+            Assert.AreEqual(4, tokens.Count); // match, =>, _, EOF
+            Assert.AreEqual(TokenType.Match, tokens[0].Type);
+            Assert.AreEqual(TokenType.Arrow, tokens[1].Type);
+            Assert.AreEqual(TokenType.Underscore, tokens[2].Type);
+        }
     }
 }

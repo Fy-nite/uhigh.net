@@ -137,6 +137,11 @@ namespace Wake.Net.Parser
     
     public class ContinueStatement : Statement { }
     
+    public class SharpBlock : Statement 
+    {
+        public string Code { get; set; } = "";
+    }
+    
     public class ClassDeclaration : Statement
     {
         public string Name { get; set; } = "";
@@ -259,6 +264,19 @@ namespace Wake.Net.Parser
         public bool IsExclusive { get; set; } // true for ..<, false for ..
     }
 
+    public class MatchExpression : Expression
+    {
+        public Expression Value { get; set; } = null!;
+        public List<MatchArm> Arms { get; set; } = new();
+    }
+    
+    public class MatchArm : ASTNode
+    {
+        public List<Expression> Patterns { get; set; } = new(); // Support multiple patterns like case 1, 2, 3:
+        public Expression Result { get; set; } = null!;
+        public bool IsDefault { get; set; } // true for _ pattern
+    }
+    
     // Top-level
     public class FunctionDeclaration : Statement 
     {
@@ -274,6 +292,10 @@ namespace Wake.Net.Parser
     {
         public string Name { get; set; } = "";
         public List<Expression> Arguments { get; set; } = new();
+        
+        // Helper properties for common attributes
+        public bool IsExternal => Name.Equals("external", StringComparison.OrdinalIgnoreCase);
+        public bool IsDotNetFunc => Name.Equals("dotnetfunc", StringComparison.OrdinalIgnoreCase);
     }
     
     public class Parameter : ASTNode 

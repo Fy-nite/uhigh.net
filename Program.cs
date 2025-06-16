@@ -55,6 +55,7 @@ public class EntryPoint
         {
             switch (command)
             {
+
                 case "create":
                     success = await HandleCreateCommand(args, compiler);
                     break;
