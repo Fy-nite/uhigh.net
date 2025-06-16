@@ -4,6 +4,8 @@ VisualStudioVersion = 17.5.2.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "uhigh", "uhigh.csproj", "{D08DBDEB-593A-A48C-380E-3064D5892A7F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "main", "meowout\main.csproj", "{2CB4F4C8-677A-7E8E-59C7-03D5D56A6E2B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -14,11 +16,15 @@ Global
 		{D08DBDEB-593A-A48C-380E-3064D5892A7F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D08DBDEB-593A-A48C-380E-3064D5892A7F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D08DBDEB-593A-A48C-380E-3064D5892A7F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2CB4F4C8-677A-7E8E-59C7-03D5D56A6E2B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2CB4F4C8-677A-7E8E-59C7-03D5D56A6E2B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2CB4F4C8-677A-7E8E-59C7-03D5D56A6E2B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2CB4F4C8-677A-7E8E-59C7-03D5D56A6E2B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {27159A7C-6256-4D10-B7B6-A177DE50B0C0}
+		SolutionGuid = {E69C586A-CFD8-4DBF-B286-597BB7184B23}
 	EndGlobalSection
 EndGlobal

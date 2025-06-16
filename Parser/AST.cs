@@ -1,6 +1,6 @@
-using Wake.Net.Lexer;
+using uhigh.Net.Lexer;
 
-namespace Wake.Net.Parser
+namespace uhigh.Net.Parser
 {
     public abstract class ASTNode { }
     

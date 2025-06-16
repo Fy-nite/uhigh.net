@@ -1,4 +1,4 @@
-namespace Wake.Net.Lexer
+namespace uhigh.Net.Lexer
 {
     public enum TokenType
     {

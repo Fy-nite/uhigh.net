@@ -1,6 +1,6 @@
-using Wake.Net.Lexer;
+using uhigh.Net.Lexer;
 
-namespace Wake.Net.Diagnostics
+namespace uhigh.Net.Diagnostics
 {
     public enum DiagnosticSeverity
     {

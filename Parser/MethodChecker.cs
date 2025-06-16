@@ -1,7 +1,7 @@
-using Wake.Net.Diagnostics;
-using Wake.Net.Lexer;
+using uhigh.Net.Diagnostics;
+using uhigh.Net.Lexer;
 
-namespace Wake.Net.Parser
+namespace uhigh.Net.Parser
 {
     public class MethodSignature
     {

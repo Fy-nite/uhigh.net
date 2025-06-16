@@ -1,4 +1,4 @@
-﻿using Wake.Net;
+﻿using uhigh.Net;
 
 public class EntryPoint
 {
@@ -33,7 +33,7 @@ public class EntryPoint
             Console.WriteLine();
             Console.WriteLine("Examples:");
             Console.WriteLine("  uhigh.net create MyLibrary --type Library");
-            Console.WriteLine("  uhigh.net build MyProject.wakeproj MyProject.dll");
+            Console.WriteLine("  uhigh.net build MyProject.uhighproj MyProject.dll");
             Console.WriteLine();
             Console.WriteLine("Syntax examples:");
             Console.WriteLine("  var obj = Program()               # Constructor call (no 'new' needed)");
@@ -241,7 +241,7 @@ public class EntryPoint
         if (args.Length < 4)
         {
             Console.WriteLine("Error: Project file, package name, and version are required");
-            Console.WriteLine("Usage: wake.net add-package <project-file> <package-name> <version>");
+            Console.WriteLine("Usage: uhigh.net add-package <project-file> <package-name> <version>");
             return false;
         }
 
@@ -264,8 +264,8 @@ public class EntryPoint
         Console.WriteLine("============================");
         Console.WriteLine();
 
-        var testSuites = Wake.Net.Testing.TestRunner.RunAllTests();
-        Wake.Net.Testing.TestRunner.PrintResults(testSuites);
+        var testSuites = uhigh.Net.Testing.TestRunner.RunAllTests();
+        uhigh.Net.Testing.TestRunner.PrintResults(testSuites);
 
         var totalFailed = testSuites.Sum(s => s.FailedCount);
         return totalFailed == 0;

@@ -1,10 +1,10 @@
 using System.Xml.Serialization;
 using System.Collections.Generic; // Add this using directive
 
-namespace Wake.Net
+namespace uhigh.Net
 {
     [XmlRoot("Project")]
-    public class WakeProject
+    public class uhighProject
     {
         [XmlElement("Name")]
         public string Name { get; set; } = "";
@@ -45,9 +45,9 @@ namespace Wake.Net
         [XmlElement("Nullable")]
         public bool Nullable { get; set; } = true;
 
-        public static WakeProject CreateDefault(string projectName)
+        public static uhighProject CreateDefault(string projectName)
         {
-            return new WakeProject
+            return new uhighProject
             {
                 Name = projectName,
                 Version = "1.0.0",

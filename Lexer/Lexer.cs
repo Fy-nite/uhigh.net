@@ -1,7 +1,7 @@
 using System.Text.RegularExpressions;
-using Wake.Net.Diagnostics;
+using uhigh.Net.Diagnostics;
 
-namespace Wake.Net.Lexer
+namespace uhigh.Net.Lexer
 {
     public class Lexer
     {

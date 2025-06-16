@@ -1,8 +1,8 @@
-using Wake.Net.Lexer;
-using Wake.Net.Diagnostics;
+using uhigh.Net.Lexer;
+using uhigh.Net.Diagnostics;
 using System.Text;
 
-namespace Wake.Net.Parser
+namespace uhigh.Net.Parser
 {
     public class Parser
     {

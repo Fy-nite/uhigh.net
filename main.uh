@@ -1,3 +1,4 @@
+
 namespace testing
 {
 
@@ -14,15 +15,17 @@ namespace testing
             }
             return Console.ReadLine()
         }
+
         public static func input(): string {
             return Console.ReadLine()
         }
-        
+
         public static func help(): void {
             print("Available commands:")
             print("  help - Show this help message")
             print("  exit - Exit the program")
         }
+        
         public static func Main(args: StringArray): void {
             var cmd = ""
             var running = true

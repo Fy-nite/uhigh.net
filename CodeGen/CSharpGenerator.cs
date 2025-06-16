@@ -1,9 +1,9 @@
-using Wake.Net.Parser;
-using Wake.Net.Lexer;
-using Wake.Net.Diagnostics;
+using uhigh.Net.Parser;
+using uhigh.Net.Lexer;
+using uhigh.Net.Diagnostics;
 using System.Text;
 
-namespace Wake.Net.CodeGen
+namespace uhigh.Net.CodeGen
 {
     public class CSharpGenerator
     {

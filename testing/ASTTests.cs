@@ -1,7 +1,7 @@
-using Wake.Net.Parser;
-using Wake.Net.Lexer;
+using uhigh.Net.Parser;
+using uhigh.Net.Lexer;
 
-namespace Wake.Net.Testing
+namespace uhigh.Net.Testing
 {
     public class ASTTests
     {

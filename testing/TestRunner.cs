@@ -1,4 +1,4 @@
-namespace Wake.Net.Testing
+namespace uhigh.Net.Testing
 {
     public class TestProgram
     {

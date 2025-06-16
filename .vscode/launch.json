@@ -9,7 +9,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/bin/Debug/net9.0/wake.net.dll",
+            "program": "${workspaceFolder}/bin/Debug/net9.0/uhigh.net.dll",
             "args": ["main.uh"],
             "cwd": "${workspaceFolder}",
         }

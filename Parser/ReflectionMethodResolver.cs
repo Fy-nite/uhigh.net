@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Wake.Net.Diagnostics;
+using uhigh.Net.Diagnostics;
 
-namespace Wake.Net.Parser
+namespace uhigh.Net.Parser
 {
     public class ReflectionMethodResolver
     {

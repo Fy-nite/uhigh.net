@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Reflection;
 
-namespace Wake.Net.Testing
+namespace uhigh.Net.Testing
 {
     public class TestResult
     {

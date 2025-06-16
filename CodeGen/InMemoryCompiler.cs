@@ -6,7 +6,7 @@ using System.Reflection;
 using System.Runtime.Loader;
 using System.Runtime.InteropServices;
 
-namespace Wake.Net.CodeGen
+namespace uhigh.Net.CodeGen
 {
     public class InMemoryCompiler
     {

@@ -1,7 +1,7 @@
-using Wake.Net.Lexer;
-using Wake.Net.Diagnostics;
+using uhigh.Net.Lexer;
+using uhigh.Net.Diagnostics;
 
-namespace Wake.Net.Testing
+namespace uhigh.Net.Testing
 {
     public class LexerTests
     {
