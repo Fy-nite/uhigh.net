@@ -99,7 +99,12 @@ namespace uhigh.Net.Parser
         public Expression Expression { get; set; } = null!;
     }
     
-    public class VariableDeclaration : Statement 
+    public class MatchStatement : Statement 
+    {
+        public Expression Value { get; set; } = null!;
+        public List<MatchArm> Arms { get; set; } = new();
+    }
+    public class VariableDeclaration : Statement
     {
         public string Name { get; set; } = "";
         public Expression? Initializer { get; set; }

@@ -65,11 +65,13 @@ namespace uhigh.Net.Diagnostics
         private readonly bool _verboseMode;
         private readonly string? _sourceFileName;
         private readonly Dictionary<int, string> _sourceLines = new();
+        private readonly bool _suppressOutput;
 
-        public DiagnosticsReporter(bool verboseMode = false, string? sourceFileName = null)
+        public DiagnosticsReporter(bool verboseMode = false, string? sourceFileName = null, bool suppressOutput = false)
         {
             _verboseMode = verboseMode;
             _sourceFileName = sourceFileName;
+            _suppressOutput = suppressOutput;
             LoadSourceLines();
         }
 
@@ -84,14 +86,14 @@ namespace uhigh.Net.Diagnostics
                     {
                         _sourceLines[i + 1] = lines[i]; // 1-based line numbers
                     }
-                    if (_verboseMode)
+                    if (_verboseMode && !_suppressOutput)
                     {
                         Console.WriteLine($"Loaded {lines.Length} source lines from {_sourceFileName}");
                     }
                 }
                 catch (Exception ex)
                 {
-                    if (_verboseMode)
+                    if (_verboseMode && !_suppressOutput)
                     {
                         Console.WriteLine($"Failed to load source lines: {ex.Message}");
                     }
@@ -161,6 +163,8 @@ namespace uhigh.Net.Diagnostics
 
         private void PrintRustStyleDiagnostic(Diagnostic diagnostic)
         {
+            if (_suppressOutput) return; // Don't print anything if output is suppressed
+            
             var originalColor = Console.ForegroundColor;
             try
             {
@@ -249,6 +253,8 @@ namespace uhigh.Net.Diagnostics
 
         public void PrintSummary()
         {
+            if (_suppressOutput) return; // Don't print anything if output is suppressed
+            
             if (_diagnostics.Count == 0)
             {
                 var originalColor = Console.ForegroundColor;

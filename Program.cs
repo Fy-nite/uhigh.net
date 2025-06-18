@@ -16,6 +16,13 @@ public class EntryPoint
             Console.WriteLine("  run <project-file>                # Run μHigh.Net project");
             Console.WriteLine("  info <project-file>               # Show project information");
             Console.WriteLine("  add-file <project-file> <file>    # Add source file to project");
+            Console.WriteLine("  add-package <project-file> <n> <version> # Add package to project");
+            Console.WriteLine("  --lsp                             # Start Language Server Protocol mode");
+            Console.WriteLine("  create <project-name> [options]   # Create new μHigh.Net project");
+            Console.WriteLine("  build <project-file>              # Build μHigh.Net project");
+            Console.WriteLine("  run <project-file>                # Run μHigh.Net project");
+            Console.WriteLine("  info <project-file>               # Show project information");
+            Console.WriteLine("  add-file <project-file> <file>    # Add source file to project");
             Console.WriteLine("  add-package <project-file> <name> <version> # Add package to project");
             Console.WriteLine();
             Console.WriteLine("File compilation options:");
@@ -52,9 +59,12 @@ public class EntryPoint
         bool success = false;
 
         try
-        {
-            switch (command)
+        {            switch (command)
             {
+                case "--lsp":
+                case "lsp":
+                    success = await HandleLspCommand(args, compiler);
+                    break;
 
                 case "create":
                     success = await HandleCreateCommand(args, compiler);
@@ -312,5 +322,21 @@ public class EntryPoint
         }
 
         return success;
+    }
+
+    private static async Task<bool> HandleLspCommand(string[] args, Compiler compiler)
+    {
+        try
+        {
+            // Start LSP server - this should block until the client disconnects
+            var host = new uhigh.Net.LanguageServer.LanguageServerHost(Console.OpenStandardInput(), Console.OpenStandardOutput());
+            await host.RunAsync();
+            
+            return true;
+        }
+        catch (Exception ex)
+        {
+            return false;
+        }
     }
 }

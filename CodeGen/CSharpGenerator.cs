@@ -326,6 +326,39 @@ namespace uhigh.Net.CodeGen
                     GenerateExpression(exprStmt.Expression);
                     _output.AppendLine(";");
                     break;
+                case MatchStatement matchStmt:
+                    Indent();
+                    GenerateExpression(matchStmt.Value);
+                    _output.Append(" switch {");
+                    bool isFirst = true;
+                    foreach (var arm in matchStmt.Arms)
+                    {
+                        if (!isFirst) _output.Append(",");
+                        _output.AppendLine();
+                        var originalIndent = _indentLevel;
+                        _indentLevel = originalIndent + 1;
+                        Indent();
+                        if (arm.IsDefault)
+                        {
+                            _output.Append("_");
+                        }
+                        else
+                        {
+                            for (int i = 0; i < arm.Patterns.Count; i++)
+                            {
+                                if (i > 0) _output.Append(" or ");
+                                GenerateExpression(arm.Patterns[i]);
+                            }
+                        }
+                        _output.Append(" => ");
+                        GenerateExpression(arm.Result);
+                        _indentLevel = originalIndent;
+                        isFirst = false;
+                    }
+                    _output.AppendLine();
+                    Indent();
+                    _output.AppendLine("};");
+                    break;
                 default:
                     _diagnostics.ReportCodeGenWarning($"Unknown statement type: {statement.GetType().Name}");
                     break;

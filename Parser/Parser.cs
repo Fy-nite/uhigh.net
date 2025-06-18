@@ -358,6 +358,9 @@ namespace uhigh.Net.Parser
                 if (Match(TokenType.Continue)) return ParseContinueStatement();
                 if (Match(TokenType.Sharp)) return ParseSharpBlock();
 
+                // Support top-level match statement
+                if (Match(TokenType.Match)) return ParseMatchStatement();
+
                 return ParseExpressionStatement();
             }
             catch (ParseException)
@@ -1855,6 +1858,28 @@ namespace uhigh.Net.Parser
             }
 
             return null;
+        }
+
+        private Statement ParseMatchStatement()
+        {
+            // Parse: match <value> { ... }
+            var value = ParseExpression();
+            Consume(TokenType.LeftBrace, "Expected '{' after match value");
+
+            var arms = new List<MatchArm>();
+            while (!Check(TokenType.RightBrace) && !IsAtEnd())
+            {
+                arms.Add(ParseMatchArm());
+                if (Check(TokenType.Comma))
+                    Advance();
+            }
+            Consume(TokenType.RightBrace, "Expected '}' after match arms");
+
+            return new MatchStatement
+            {
+                Value = value,
+                Arms = arms
+            };
         }
     }
 }
