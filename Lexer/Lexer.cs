@@ -62,7 +62,33 @@ namespace uhigh.Net.Lexer
             { "readonly", TokenType.Readonly },
             { "async", TokenType.Async },
             { "await", TokenType.Await },
-            { "match", TokenType.Match }
+            { "match", TokenType.Match },
+            
+
+            // { "switch", TokenType.Switch },
+            // { "case", TokenType.Case },
+            // { "default", TokenType.Default },
+            // { "struct", TokenType.Struct },
+            // { "union", TokenType.Union },
+            // { "module", TokenType.Module },
+            // { "use", TokenType.Use },
+            // { "let", TokenType.Let },
+            // { "mut", TokenType.Mut },
+            // { "macro", TokenType.Macro },
+            // { "yield", TokenType.Yield },
+
+            // { "loop", TokenType.Loop },
+            // { "until", TokenType.Until },
+            
+
+            // { "finally", TokenType.Finally },
+            
+
+            // { "typeof", TokenType.Typeof },
+            // { "sizeof", TokenType.Sizeof },
+            
+            // { "extern", TokenType.Extern },
+            // { "inline", TokenType.Inline }
         };
 
         public Lexer(string source, DiagnosticsReporter? diagnostics = null)

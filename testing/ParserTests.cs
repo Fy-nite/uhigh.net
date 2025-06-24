@@ -360,5 +360,68 @@ namespace uhigh.Net.Testing
             Assert.IsTrue(matchExpr.Arms[0].Result is CallExpression);
             Assert.IsTrue(matchExpr.Arms[3].IsDefault);
         }
+
+        [Test]
+        public void TestFunctionCallValidation()
+        {
+            // This should work - correct number of parameters
+            var program = ParseSource(@"
+                func calculate_area(length: float, width: float): float {
+                    return length * width
+                }
+                
+                func main() {
+                    var l = 5.5
+                    var w = 3.2
+                    var area = calculate_area(l, w)
+                }");
+            
+            Assert.AreEqual(2, program.Statements.Count);
+            Assert.IsTrue(program.Statements[0] is FunctionDeclaration);
+            Assert.IsTrue(program.Statements[1] is FunctionDeclaration);
+            
+            var mainFunc = (FunctionDeclaration)program.Statements[1];
+            Assert.AreEqual("main", mainFunc.Name);
+            Assert.AreEqual(3, mainFunc.Body.Count); // 3 variable declarations
+        }
+
+        [Test]
+        public void TestCalculateAreaFunctionCall()
+        {
+            // This should work - exact case from the failing test
+            var program = ParseSource(@"
+                func calculate_area(length: float, width: float): float {
+                    return length * width
+                }
+                
+                func main() {
+                    var l = 5.5
+                    var w = 3.2
+                    var area = calculate_area(l, w)
+                    Console.WriteLine(""The area of the rectangle is: "" + area)
+                }");
+            
+            // The parse should succeed
+            Assert.AreEqual(2, program.Statements.Count);
+            
+            // Both should be function declarations
+            var calculateAreaFunc = program.Statements[0] as FunctionDeclaration;
+            var mainFunc = program.Statements[1] as FunctionDeclaration;
+            
+            Assert.IsNotNull(calculateAreaFunc);
+            Assert.IsNotNull(mainFunc);
+            
+            // Verify the calculate_area function has the right signature
+            Assert.AreEqual("calculate_area", calculateAreaFunc.Name);
+            Assert.AreEqual(2, calculateAreaFunc.Parameters.Count);
+            Assert.AreEqual("length", calculateAreaFunc.Parameters[0].Name);
+            Assert.AreEqual("float", calculateAreaFunc.Parameters[0].Type);
+            Assert.AreEqual("width", calculateAreaFunc.Parameters[1].Name);
+            Assert.AreEqual("float", calculateAreaFunc.Parameters[1].Type);
+            
+            // Verify the main function
+            Assert.AreEqual("main", mainFunc.Name);
+            Assert.AreEqual(4, mainFunc.Body.Count); // 3 var declarations + 1 console call
+        }
     }
 }

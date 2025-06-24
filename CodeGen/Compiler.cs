@@ -150,7 +150,10 @@ namespace uhigh.Net
                 // Parse
                 var parser = new Parser.Parser(tokens, diagnostics);
                 var ast = parser.Parse();
-                
+
+                // Handle include statements before code generation
+                ast = ProcessIncludes(ast, diagnostics, new HashSet<string>());
+
                 if (diagnostics.HasErrors)
                 {
                     throw new Exception("Parsing failed");
@@ -669,6 +672,42 @@ namespace uhigh.Net
                 diagnostics.PrintSummary();
                 return false;
             }
+        }
+
+        // Add this helper method to recursively process includes
+        private Program ProcessIncludes(Program ast, DiagnosticsReporter diagnostics, HashSet<string> includedFiles)
+        {
+            var newStatements = new List<Statement>();
+            foreach (var stmt in ast.Statements)
+            {
+                if (stmt is IncludeStatement include)
+                {
+                    var filePath = include.FileName.Trim('"');
+                    if (includedFiles.Contains(filePath))
+                    {
+                        diagnostics.ReportError($"Recursive include detected: {filePath}");
+                        continue;
+                    }
+                    if (!File.Exists(filePath))
+                    {
+                        diagnostics.ReportError($"Included file not found: {filePath}");
+                        continue;
+                    }
+                    includedFiles.Add(filePath);
+                    var includedSource = File.ReadAllText(filePath);
+                    var lexer = new Lexer.Lexer(includedSource, diagnostics);
+                    var tokens = lexer.Tokenize();
+                    var parser = new Parser.Parser(tokens, diagnostics);
+                    var includedAst = parser.Parse();
+                    var processedAst = ProcessIncludes(includedAst, diagnostics, includedFiles);
+                    newStatements.AddRange(processedAst.Statements);
+                }
+                else
+                {
+                    newStatements.Add(stmt);
+                }
+            }
+            return new Program { Statements = newStatements };
         }
     }
 }

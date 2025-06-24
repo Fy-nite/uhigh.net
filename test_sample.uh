@@ -1,7 +1,0 @@
-func main() {
-    Console.WriteLine("Hello from μHigh!")
-    var x = 42
-    var name = "World"
-    Console.WriteLine("Number: " + x.ToString())
-    Console.WriteLine("Greeting to " + name)
-}

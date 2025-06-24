@@ -1,4 +1,4 @@
-
+include "test_sample.uh"
 namespace testing
 {
 
@@ -29,10 +29,7 @@ namespace testing
         public static func Main(args: StringArray): void {
             var cmd = ""
             var running = true
-            var response = command match {
-                "help" => help(),
-                _ => print("Unknown command: " + command)
-            }
+            tests.testing()
         }
     }
 }

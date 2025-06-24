@@ -375,9 +375,7 @@ namespace uhigh.Net.Diagnostics
         public static void ReportParseError(this DiagnosticsReporter diagnostics, string message, Token token)
         {
             diagnostics.ReportTokenError($"Parse error: {message}", token, "UH100");
-        }
-
-        public static void ReportCodeGenWarning(this DiagnosticsReporter diagnostics, string message, string? context = null)
+        }        public static void ReportCodeGenWarning(this DiagnosticsReporter diagnostics, string message, string? context = null)
         {
             diagnostics.ReportWarning($"Code generation: {message}" + (context != null ? $" (Context: {context})" : ""), code: "UH200");
         }
@@ -388,9 +386,17 @@ namespace uhigh.Net.Diagnostics
             diagnostics.ReportTokenError($"Method '{methodName}' is not defined", token, "UH201");
         }
 
-        public static void ReportParameterMismatch(this DiagnosticsReporter diagnostics, string methodName, int expected, int actual, Token token)
+        public static void ReportMethodParameterMismatch(this DiagnosticsReporter diagnostics, string methodName, int expected, int actual, Token token)
         {
-            diagnostics.ReportTokenError($"Method '{methodName}' expects {expected} parameter(s), but {actual} were provided", token, "UH202");
+            if (expected == actual)
+            {
+                // Same count but type mismatch
+                diagnostics.ReportError($"Method '{methodName}' parameter types do not match the provided arguments", token.Line, token.Column, "UH203");
+            }
+            else
+            {
+                diagnostics.ReportError($"Method '{methodName}' expects {expected} parameter(s), but {actual} were provided", token.Line, token.Column, "UH202");
+            }
         }
 
         public static void ReportMethodSuggestion(this DiagnosticsReporter diagnostics, string suggestion, Token token)

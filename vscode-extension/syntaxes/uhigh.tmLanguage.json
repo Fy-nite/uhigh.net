@@ -10,18 +10,6 @@
         },
         {
             "include": "#comments"
-        },
-        {
-            "include": "#numbers"
-        },
-        {
-            "include": "#operators"
-        },
-        {
-            "include": "#functions"
-        },
-        {
-            "include": "#types"
         }
     ],
     "repository": {
@@ -29,19 +17,11 @@
             "patterns": [
                 {
                     "name": "keyword.control.uhigh",
-                    "match": "\\b(if|else|while|for|in|return|break|continue|match)\\b"
+                    "match": "\\b(if|else|while|for|return|break|continue)\\b"
                 },
                 {
                     "name": "keyword.declaration.uhigh",
-                    "match": "\\b(var|const|func|class|namespace|import|from|field|enum|interface|extension|record)\\b"
-                },
-                {
-                    "name": "keyword.modifier.uhigh",
-                    "match": "\\b(public|private|protected|internal|static|abstract|virtual|override|sealed|readonly|async|await)\\b"
-                },
-                {
-                    "name": "keyword.other.uhigh",
-                    "match": "\\b(this|new|try|catch|throw|include|sharp|range|get|set)\\b"
+                    "match": "\\b(var|const|func|class|namespace|public|private|static)\\b"
                 },
                 {
                     "name": "constant.language.uhigh",
@@ -54,24 +34,7 @@
                 {
                     "name": "string.quoted.double.uhigh",
                     "begin": "\"",
-                    "end": "\"",
-                    "patterns": [
-                        {
-                            "name": "constant.character.escape.uhigh",
-                            "match": "\\\\."
-                        }
-                    ]
-                },
-                {
-                    "name": "string.quoted.single.uhigh",
-                    "begin": "'",
-                    "end": "'",
-                    "patterns": [
-                        {
-                            "name": "constant.character.escape.uhigh",
-                            "match": "\\\\."
-                        }
-                    ]
+                    "end": "\""
                 }
             ]
         },
@@ -81,58 +44,6 @@
                     "name": "comment.line.double-slash.uhigh",
                     "begin": "//",
                     "end": "$"
-                }
-            ]
-        },
-        "numbers": {
-            "patterns": [
-                {
-                    "name": "constant.numeric.decimal.uhigh",
-                    "match": "\\b\\d+(\\.\\d+)?\\b"
-                }
-            ]
-        },
-        "operators": {
-            "patterns": [
-                {
-                    "name": "keyword.operator.assignment.uhigh",
-                    "match": "(=|\\+=|-=|\\*=|/=)"
-                },
-                {
-                    "name": "keyword.operator.comparison.uhigh",
-                    "match": "(==|!=|<|>|<=|>=)"
-                },
-                {
-                    "name": "keyword.operator.logical.uhigh",
-                    "match": "(&&|\\|\\||!)"
-                },
-                {
-                    "name": "keyword.operator.arithmetic.uhigh",
-                    "match": "(\\+|-|\\*|/|%)"
-                },
-                {
-                    "name": "keyword.operator.other.uhigh",
-                    "match": "(\\.|::|\\?|\\?\\?|\\?\\.)"
-                }
-            ]
-        },
-        "functions": {
-            "patterns": [
-                {
-                    "name": "entity.name.function.uhigh",
-                    "match": "\\b([a-zA-Z_][a-zA-Z0-9_]*)(?=\\s*\\()"
-                }
-            ]
-        },
-        "types": {
-            "patterns": [
-                {
-                    "name": "storage.type.primitive.uhigh",
-                    "match": "\\b(int|float|string|bool|void)\\b"
-                },
-                {
-                    "name": "entity.name.type.uhigh",
-                    "match": "\\b[A-Z][a-zA-Z0-9_]*\\b"
                 }
             ]
         }

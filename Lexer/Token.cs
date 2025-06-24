@@ -16,10 +16,16 @@ namespace uhigh.Net.Lexer
         Class, Namespace, Import, From, This, // New keywords
         Get, Set, // Add getter/setter keywords
         Enum, Interface, Extension, Record, // New feature keywords
+        Switch, Case, Default, // Example: switch statement keywords
+        Struct, Union,         // Example: data structure keywords
+        Module, Use,           // Example: module system keywords
+        Let, Mut,             // Example: variable declaration keywords
+        Async, Await,         // Already exists, but example of async keywords
+        Macro, Yield,         // Example: advanced language features
         
         // Access Modifiers and Keywords
         Public, Private, Protected, Internal, Static, Abstract, Virtual, Override, Sealed,
-        Readonly, Async, Await,
+        Readonly,
         
         // Nullable and null operators
         Question, // ? for nullable types

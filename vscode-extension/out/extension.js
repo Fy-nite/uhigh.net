@@ -1,139 +1,142 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deactivate = exports.activate = void 0;
-const vscode = require("vscode");
-const parser_1 = require("./parser");
-const completion_1 = require("./completion");
-const hover_1 = require("./hover");
-const symbols_1 = require("./symbols");
-const diagnostics_1 = require("./diagnostics");
+const vscode = __importStar(require("vscode"));
+const languageServer_1 = require("./languageServer");
+let languageServer;
+let diagnosticCollection;
+let isActivated = false; // Add flag to prevent multiple activations
 function activate(context) {
-    console.log('Uhigh Language Extension is now active!');
-    // Create parser and diagnostics collection
-    const parser = new parser_1.UhighParser();
-    const diagnosticsCollection = vscode.languages.createDiagnosticCollection('uhigh');
-    const diagnosticsProvider = new diagnostics_1.UhighDiagnosticsProvider(parser, diagnosticsCollection);
-    // Register language providers
-    const completionProvider = vscode.languages.registerCompletionItemProvider({ scheme: 'file', language: 'uhigh' }, new completion_1.UhighCompletionProvider(parser), '.', ':' // Trigger characters
-    );
-    const hoverProvider = vscode.languages.registerHoverProvider({ scheme: 'file', language: 'uhigh' }, new hover_1.UhighHoverProvider(parser));
-    const symbolProvider = vscode.languages.registerDocumentSymbolProvider({ scheme: 'file', language: 'uhigh' }, new symbols_1.UhighSymbolProvider(parser));
-    // Update diagnostics when document changes
-    const diagnosticsWatcher = vscode.workspace.onDidChangeTextDocument(event => {
-        if (event.document.languageId === 'uhigh') {
-            diagnosticsProvider.updateDiagnostics(event.document);
-        }
-    });
-    // Update diagnostics when document is opened
-    const openDocumentWatcher = vscode.workspace.onDidOpenTextDocument(document => {
-        if (document.languageId === 'uhigh') {
-            diagnosticsProvider.updateDiagnostics(document);
-        }
-    });
-    // Update diagnostics for already open documents
-    vscode.workspace.textDocuments.forEach(document => {
-        if (document.languageId === 'uhigh') {
-            diagnosticsProvider.updateDiagnostics(document);
-        }
-    });
-    // Clear diagnostics when document is closed
-    const closeDocumentWatcher = vscode.workspace.onDidCloseTextDocument(document => {
-        if (document.languageId === 'uhigh') {
-            diagnosticsCollection.delete(document.uri);
-        }
-    });
-    // Register compile command
-    const compileCommand = vscode.commands.registerCommand('uhigh.compile', async (uri) => {
-        const fileUri = uri || vscode.window.activeTextEditor?.document.uri;
-        if (!fileUri) {
-            vscode.window.showErrorMessage('No Uhigh file to compile');
+    console.log('Uhigh extension activate() called');
+    // Prevent multiple activations
+    if (isActivated) {
+        console.warn('Uhigh extension already activated, skipping duplicate activation');
+        return;
+    }
+    isActivated = true;
+    languageServer = new languageServer_1.UhighLanguageServer();
+    diagnosticCollection = vscode.languages.createDiagnosticCollection('uhigh');
+    if (languageServer.isTypingFast) {
+        console.log('Skipping validation due to fast typing');
+        return;
+    }
+    // Register commands
+    const compileCommand = vscode.commands.registerCommand('uhigh.compile', () => {
+        if (languageServer.isTypingFast) {
+            console.log('Skipping validation due to fast typing');
             return;
         }
-        if (!fileUri.fsPath.endsWith('.uh')) {
-            vscode.window.showErrorMessage('Selected file is not a Uhigh file (.uh)');
+        const editor = vscode.window.activeTextEditor;
+        if (editor && editor.document.languageId === 'uhigh') {
+            vscode.window.showInformationMessage('Compiling Uhigh file...');
+            // TODO: Implement compilation
+        }
+    });
+    const parseCommand = vscode.commands.registerCommand('uhigh.parseCurrentFile', () => {
+        if (languageServer.isTypingFast) {
+            console.log('Skipping validation due to fast typing');
             return;
         }
-        try {
-            // Show progress
-            await vscode.window.withProgress({
-                location: vscode.ProgressLocation.Notification,
-                title: 'Compiling Uhigh file...',
-                cancellable: false
-            }, async (progress) => {
-                progress.report({ increment: 0, message: 'Starting compilation...' });
-                // Use the uhigh compiler
-                const terminal = vscode.window.createTerminal('Uhigh Compiler');
-                terminal.sendText(`dotnet run "${fileUri.fsPath}"`);
-                terminal.show();
-                progress.report({ increment: 100, message: 'Compilation started in terminal' });
-            });
-        }
-        catch (error) {
-            vscode.window.showErrorMessage(`Compilation failed: ${error}`);
+        const editor = vscode.window.activeTextEditor;
+        if (editor && editor.document.languageId === 'uhigh') {
+            const diagnostics = languageServer.validateDocument(editor.document);
+            diagnosticCollection.set(editor.document.uri, diagnostics);
+            vscode.window.showInformationMessage(`Parse complete. Found ${diagnostics.length} issues.`);
         }
     });
-    // Register status bar item
-    const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
-    statusBarItem.text = "$(gear) Uhigh";
-    statusBarItem.tooltip = "Uhigh Language Support";
-    statusBarItem.command = 'uhigh.compile';
-    // Show status bar item when Uhigh files are open
-    const updateStatusBar = () => {
-        const activeEditor = vscode.window.activeTextEditor;
-        if (activeEditor && activeEditor.document.languageId === 'uhigh') {
-            statusBarItem.show();
+    // Temporarily disable completion provider to test performance
+    // const completionProvider = vscode.languages.registerCompletionItemProvider(
+    //     'uhigh',
+    //     {
+    //         provideCompletionItems(document: vscode.TextDocument, position: vscode.Position) {
+    //             return languageServer.getCompletions(document, position);
+    //         }
+    //     },
+    //     // Add trigger characters to limit when completions are provided
+    //     '.', ':', ' ', '\n'
+    // );
+    // Disable ALL language features temporarily to isolate the issue
+    // Re-enable hover provider
+    console.log('Registering language providers...');
+    const hoverProvider = vscode.languages.registerHoverProvider('uhigh', {
+        provideHover(document, position) {
+            if (languageServer.isTypingFast) {
+                console.log('Skipping validation due to fast typing');
+                return;
+            }
+            return languageServer.getHover(document, position);
         }
-        else {
-            statusBarItem.hide();
-        }
-    };
-    // Update status bar on editor change
-    const statusBarWatcher = vscode.window.onDidChangeActiveTextEditor(updateStatusBar);
-    updateStatusBar(); // Initial update
-    // Add output channel for logging
-    const outputChannel = vscode.window.createOutputChannel('Uhigh Language');
-    outputChannel.appendLine('Uhigh Language Extension activated');
-    outputChannel.appendLine(`Parser initialized with built-in language support`);
-    // Register additional commands
-    const showOutputCommand = vscode.commands.registerCommand('uhigh.showOutput', () => {
-        outputChannel.show();
     });
-    const parseCurrentFileCommand = vscode.commands.registerCommand('uhigh.parseCurrentFile', () => {
-        const activeEditor = vscode.window.activeTextEditor;
-        if (!activeEditor || activeEditor.document.languageId !== 'uhigh') {
-            vscode.window.showErrorMessage('No active Uhigh file');
+    // Replace document-level validation with line-level validation
+    const onDidChangeTextEditorSelection = vscode.window.onDidChangeTextEditorSelection((event) => {
+        // add a 100ms debounce to avoid excessive validation
+        if (languageServer.isTypingFast) {
+            console.log('Skipping validation due to fast typing');
             return;
         }
-        const parsed = parser.parseDocument(activeEditor.document);
-        outputChannel.clear();
-        outputChannel.appendLine('=== Parse Results ===');
-        outputChannel.appendLine(`Functions: ${parsed.functions.length}`);
-        parsed.functions.forEach(func => {
-            outputChannel.appendLine(`  - ${func.name}(${func.parameters.map(p => p.name).join(', ')})`);
-        });
-        outputChannel.appendLine(`Variables: ${parsed.variables.length}`);
-        parsed.variables.forEach(variable => {
-            outputChannel.appendLine(`  - ${variable.name}${variable.type ? `: ${variable.type}` : ''}`);
-        });
-        outputChannel.appendLine(`Classes: ${parsed.classes.length}`);
-        parsed.classes.forEach(cls => {
-            outputChannel.appendLine(`  - ${cls.name} (${cls.methods.length} methods, ${cls.fields.length} fields)`);
-        });
-        outputChannel.appendLine(`Errors: ${parsed.errors.length}`);
-        parsed.errors.forEach(error => {
-            outputChannel.appendLine(`  - ${error.message}`);
-        });
-        outputChannel.show();
+        const editor = event.textEditor;
+        if (editor && editor.document.languageId === 'uhigh') {
+            const position = editor.selection.active;
+            const diagnostics = languageServer.validateLine(editor.document, position.line);
+            // Only update diagnostics for the current line
+            const allDiagnostics = diagnosticCollection.get(editor.document.uri) || [];
+            const otherLineDiagnostics = allDiagnostics.filter(d => d.range.start.line !== position.line);
+            const newDiagnostics = [...otherLineDiagnostics, ...diagnostics];
+            diagnosticCollection.set(editor.document.uri, newDiagnostics);
+        }
     });
-    // Register all disposables
-    context.subscriptions.push(completionProvider, hoverProvider, symbolProvider, diagnosticsCollection, diagnosticsWatcher, openDocumentWatcher, closeDocumentWatcher, compileCommand, showOutputCommand, parseCurrentFileCommand, statusBarItem, statusBarWatcher);
-    // Log successful activation
-    console.log('Uhigh Language Extension registered all providers successfully');
-    outputChannel.appendLine('All language providers registered successfully');
+    // Keep save validation for full document check
+    const onDidSaveTextDocument = vscode.workspace.onDidSaveTextDocument((document) => {
+        if (document.languageId === 'uhigh') {
+            const diagnostics = languageServer.validateDocument(document);
+            diagnosticCollection.set(document.uri, diagnostics);
+        }
+    });
+    console.log('Language providers registered successfully');
+    // Be more careful about what we push to subscriptions
+    const subscriptions = [
+        compileCommand,
+        parseCommand,
+        hoverProvider,
+        diagnosticCollection,
+        onDidChangeTextEditorSelection,
+        onDidSaveTextDocument
+    ];
+    console.log(`Adding ${subscriptions.length} subscriptions to context`);
+    context.subscriptions.push(...subscriptions);
+    console.log('Uhigh extension activation complete');
 }
 exports.activate = activate;
 function deactivate() {
-    console.log('Uhigh Language Extension deactivated');
+    console.log('Uhigh extension deactivate() called');
+    isActivated = false;
+    if (diagnosticCollection) {
+        diagnosticCollection.dispose();
+    }
+    return Promise.resolve();
 }
 exports.deactivate = deactivate;
 //# sourceMappingURL=extension.js.map

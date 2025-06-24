@@ -10,54 +10,39 @@ namespace uhigh.Net.Parser
         public string? ReturnType { get; set; }
         public bool IsBuiltIn { get; set; }
         public bool IsStatic { get; set; }
-        public string? ClassName { get; set; }
+        public string? ClassName { get; set; }        
         public SourceLocation? DeclarationLocation { get; set; }
 
         public string GetFullSignature()
         {
             var paramTypes = Parameters.Select(p => p.Type ?? "object").ToList();
             return $"{Name}({string.Join(", ", paramTypes)})";
-        }
-
-        public bool MatchesCall(string name, List<Expression> arguments)
+        }        public bool MatchesCall(string name, List<Expression> arguments)
         {
             if (Name != name) return false;
             
-            // Use enhanced type matching for built-in methods
+            // For built-in methods, use reflection for type checking
             if (IsBuiltIn)
             {
-                return Parameters.Count == arguments.Count; // Let reflection handle the details
+                return Parameters.Count == arguments.Count;
             }
             
-            // Enhanced parameter matching for user-defined methods
-            if (Parameters.Count != arguments.Count)
-            {
-                // Check for optional parameters
-                var requiredParams = Parameters.Count(p => p.Type != null && !p.Type.EndsWith("?"));
-                return arguments.Count >= requiredParams && arguments.Count <= Parameters.Count;
-            }
-            
-            // Type compatibility checking
-            for (int i = 0; i < Math.Min(Parameters.Count, arguments.Count); i++)
-            {
-                var paramType = Parameters[i].Type;
-                var argType = InferArgumentType(arguments[i]);
-                
-                if (!IsTypeCompatible(paramType, argType))
-                {
-                    return false;
-                }
-            }
-            
-            return true;
+            // For user-defined methods in μHigh, be more lenient
+            // Just check parameter count for now
+            return Parameters.Count == arguments.Count;
         }
 
-        private string InferArgumentType(Expression argument)
+        private bool HasDefaultValue(Parameter parameter)
+        {
+            // Check if parameter has a default value
+            // For now, we'll consider parameters with nullable types as having defaults
+            return parameter.Type != null && parameter.Type.EndsWith("?");
+        }        private string InferArgumentType(Expression argument)
         {
             return argument switch
             {
                 LiteralExpression lit => InferLiteralType(lit),
-                IdentifierExpression => "object", // Unknown at compile time
+                IdentifierExpression => "number", // Assume numeric variables for μHigh
                 CallExpression => "object", // Would need more sophisticated analysis
                 BinaryExpression binExpr when IsArithmeticOperator(binExpr.Operator) => "number",
                 BinaryExpression binExpr when IsComparisonOperator(binExpr.Operator) => "bool",
@@ -70,17 +55,15 @@ namespace uhigh.Net.Parser
             return literal.Value switch
             {
                 string => "string",
-                int => "int",
-                long => "long",
-                float => "float",
-                double => "double",
+                int => "number",
+                long => "number", 
+                float => "number",
+                double => "number",
                 bool => "bool",
                 null => "null",
                 _ => "object"
             };
-        }
-
-        private bool IsTypeCompatible(string? paramType, string argType)
+        }private bool IsTypeCompatible(string? paramType, string argType)
         {
             if (paramType == null || paramType == "object") return true;
             if (paramType == argType) return true;
@@ -92,7 +75,7 @@ namespace uhigh.Net.Parser
                 return baseType == argType || argType == "null";
             }
             
-            // Handle numeric conversions
+            // Handle numeric conversions (more permissive for μHigh)
             var numericTypes = new[] { "int", "long", "float", "double", "number" };
             if (numericTypes.Contains(paramType) && numericTypes.Contains(argType))
             {
@@ -103,6 +86,12 @@ namespace uhigh.Net.Parser
             if (paramType == "string" && argType != "null")
             {
                 return true; // Most types can be converted to string
+            }
+            
+            // Handle object parameters (can accept anything)
+            if (paramType == "object")
+            {
+                return true;
             }
             
             return false;
@@ -399,9 +388,7 @@ namespace uhigh.Net.Parser
             }
 
             return false;
-        }
-
-        public bool ValidateCall(string functionName, List<Expression> arguments, Token location)
+        }        public bool ValidateCall(string functionName, List<Expression> arguments, Token location)
         {
             // Check if this is actually a constructor call (capitalized name)
             if (char.IsUpper(functionName[0]) && !functionName.Contains('.'))
@@ -409,20 +396,52 @@ namespace uhigh.Net.Parser
                 return ValidateConstructorCall(functionName, arguments, location);
             }
 
+            _diagnostics.ReportInfo($"Validating call to '{functionName}' with {arguments.Count} arguments");
+
             // First check user-defined functions
             if (_methods.ContainsKey(functionName))
             {
                 var signatures = _methods[functionName];
+                _diagnostics.ReportInfo($"Found {signatures.Count} signature(s) for '{functionName}'");
+                
+                // foreach (var sig in signatures)
+                // {
+                //     _diagnostics.ReportInfo($"  Signature: {sig.GetFullSignature()}");
+                // }
+
                 var matchingSignature = signatures.FirstOrDefault(s => s.MatchesCall(functionName, arguments));
 
                 if (matchingSignature != null)
+                {
+                    _diagnostics.ReportInfo($"Successfully validated call to '{functionName}' with {arguments.Count} arguments");
                     return true;
-
-                // Report parameter count mismatch
-                var expectedCounts = signatures.Select(s => s.Parameters.Count).Distinct();
-                _diagnostics.ReportError(
-                    $"Method '{functionName}' expects {string.Join(" or ", expectedCounts)} parameter(s), but {arguments.Count} were provided",
-                    location.Line, location.Column, "UH200");
+                }                // Report parameter count mismatch with better error message
+                var expectedCounts = signatures.Select(s => s.Parameters.Count).Distinct().ToList();
+                
+                // Provide detailed parameter information for debugging
+                var sig = signatures.First();
+                var paramDetails = sig.Parameters.Select((p, i) => $"param {i+1}: {p.Name}:{p.Type ?? "any"}").ToList();
+                var argDetails = arguments.Select((a, i) => $"arg {i+1}: {InferArgumentType(a)}").ToList();
+                
+                _diagnostics.ReportInfo($"Function '{functionName}' signature: ({string.Join(", ", paramDetails)})");
+                _diagnostics.ReportInfo($"Call arguments: ({string.Join(", ", argDetails)})");
+                
+                if (expectedCounts.Count == 1 && expectedCounts[0] == arguments.Count)
+                {
+                    // Same parameter count but type mismatch - report different error
+                    _diagnostics.ReportError(
+                        $"Method '{functionName}' parameter types do not match the provided arguments",
+                        location.Line, location.Column, "UH200");
+                }
+                else
+                {
+                    var expectedCountsStr = expectedCounts.Count == 1 ? 
+                        expectedCounts[0].ToString() : 
+                        string.Join(" or ", expectedCounts);
+                    _diagnostics.ReportError(
+                        $"Method '{functionName}' expects {expectedCountsStr} parameter(s), but {arguments.Count} were provided",
+                        location.Line, location.Column, "UH200");
+                }
                 return false;
             }
 
@@ -447,7 +466,8 @@ namespace uhigh.Net.Parser
                 }
             }
 
-            _diagnostics.ReportError($"Unknown function: {functionName}", location.Line, location.Column, "UH004");
+            _diagnostics.ReportError($"Unknown function: {functionName}", location.Line, location.Column, "UH201");
+            SuggestSimilarMethods(functionName, location);
             return false;
         }
 
@@ -595,6 +615,45 @@ namespace uhigh.Net.Parser
                 return _classMethods[methodName].FirstOrDefault();
                 
             return null;
+        }
+        
+        private string InferArgumentType(Expression argument)
+        {
+            return argument switch
+            {
+                LiteralExpression lit => InferLiteralType(lit),
+                IdentifierExpression => "number", // Assume numeric variables for μHigh
+                CallExpression => "object", // Would need more sophisticated analysis
+                BinaryExpression binExpr when IsArithmeticOperator(binExpr.Operator) => "number",
+                BinaryExpression binExpr when IsComparisonOperator(binExpr.Operator) => "bool",
+                _ => "object"
+            };
+        }
+
+        private string InferLiteralType(LiteralExpression literal)
+        {
+            return literal.Value switch
+            {
+                string => "string",
+                int => "number",
+                long => "number", 
+                float => "number",
+                double => "number",
+                bool => "bool",
+                null => "null",
+                _ => "object"
+            };
+        }
+        
+        private bool IsArithmeticOperator(TokenType op)
+        {
+            return op is TokenType.Plus or TokenType.Minus or TokenType.Multiply or TokenType.Divide or TokenType.Modulo;
+        }
+
+        private bool IsComparisonOperator(TokenType op)
+        {
+            return op is TokenType.Equal or TokenType.NotEqual or TokenType.Less or TokenType.Greater 
+                or TokenType.LessEqual or TokenType.GreaterEqual;
         }
     }
 }

@@ -325,6 +325,7 @@ namespace uhigh.Net.Parser
                     modifiers.Add(Advance().Value);
                 }
 
+                if (Match(TokenType.Include)) return ParseIncludeStatement();
                 if (Match(TokenType.Import)) return ParseImportStatement();
                 if (Match(TokenType.Namespace)) return ParseNamespaceDeclaration();
                 if (Match(TokenType.Enum)) return ParseEnumDeclaration(modifiers);
@@ -360,6 +361,13 @@ namespace uhigh.Net.Parser
 
                 // Support top-level match statement
                 if (Match(TokenType.Match)) return ParseMatchStatement();
+
+
+                // if (Match(TokenType.Switch)) return ParseSwitchStatement();
+                // if (Match(TokenType.Struct)) return ParseStructDeclaration();
+                // if (Match(TokenType.Module)) return ParseModuleDeclaration();
+                // if (Match(TokenType.Let)) return ParseLetDeclaration();
+                // if (Match(TokenType.Loop)) return ParseLoopStatement();
 
                 return ParseExpressionStatement();
             }
@@ -1128,13 +1136,6 @@ namespace uhigh.Net.Parser
             {
                 var op = Previous().Type;
                 var value = ParseAssignment();
-                return new AssignmentExpression { Target = expr, Operator = op, Value = value };
-            }
-
-            // μHigh match expression: expr match { ... }
-            if (Match(TokenType.Match))
-            {
-                expr = ParseMatchExpression(expr);
             }
 
             return expr;
@@ -1881,5 +1882,18 @@ namespace uhigh.Net.Parser
                 Arms = arms
             };
         }
+
+        private Statement ParseIncludeStatement()
+        {
+            // include "filename.uh"
+            var fileToken = Consume(TokenType.String, "Expected file name after include");
+            return new IncludeStatement { FileName = fileToken.Value };
+        }
+    }
+
+    // Add this AST node at the end of the file (or in your AST definitions)
+    public class IncludeStatement : Statement
+    {
+        public string FileName { get; set; } = "";
     }
 }

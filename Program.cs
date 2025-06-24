@@ -329,8 +329,8 @@ public class EntryPoint
         try
         {
             // Start LSP server - this should block until the client disconnects
-            var host = new uhigh.Net.LanguageServer.LanguageServerHost(Console.OpenStandardInput(), Console.OpenStandardOutput());
-            await host.RunAsync();
+            // var host = new uhigh.Net.LanguageServer.LanguageServerHost(Console.OpenStandardInput(), Console.OpenStandardOutput());
+            // await host.RunAsync();
             
             return true;
         }

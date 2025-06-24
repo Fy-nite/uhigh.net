@@ -319,4 +319,45 @@ namespace uhigh.Net.Parser
         public ParseException(string message) : base(message) { }
         public ParseException(string message, Exception innerException) : base(message, innerException) { }
     }
+
+    // Add new AST nodes for your keywords
+    public class SwitchStatement : Statement
+    {
+        public Expression Value { get; set; } = null!;
+        public List<SwitchCase> Cases { get; set; } = new();
+    }
+
+    public class SwitchCase : ASTNode
+    {
+        public Expression? Pattern { get; set; }
+        public List<Statement> Statements { get; set; } = new();
+        public bool IsDefault { get; set; }
+    }
+
+    public class StructDeclaration : Statement
+    {
+        public string Name { get; set; } = "";
+        public List<FieldDeclaration> Fields { get; set; } = new();
+        public List<string> Modifiers { get; set; } = new();
+    }
+
+    public class ModuleDeclaration : Statement
+    {
+        public string Name { get; set; } = "";
+        public List<Statement> Members { get; set; } = new();
+    }
+
+    public class LetDeclaration : Statement
+    {
+        public string Name { get; set; } = "";
+        public Expression? Initializer { get; set; }
+        public string? Type { get; set; }
+        public bool IsMutable { get; set; }
+    }
+
+    public class LoopStatement : Statement
+    {
+        public List<Statement> Body { get; set; } = new();
+        public Expression? Condition { get; set; } // for until loops
+    }
 }

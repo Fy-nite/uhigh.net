@@ -56,7 +56,7 @@
 
 1. Clone the repository:
      ```bash
-     git clone https://github.com/your-username/uhigh.net
+     git clone https://github.com/fy-nite/uhigh.net
      cd uhigh.net
      ```
 
