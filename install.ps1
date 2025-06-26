@@ -14,6 +14,6 @@ if ($toolInstalled) {
 } else {
     Write-Host "uhigh is not currently installed."
 }
-
+# dotnet pack uhigh.csproj
 dotnet tool update --global --add-source ./bin/Release uhigh
 exit $LASTEXITCODE
