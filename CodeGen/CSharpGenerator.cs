@@ -37,6 +37,12 @@ namespace uhigh.Net.CodeGen
             }
             _output.AppendLine();
 
+            // Generate type aliases as C# using statements
+            foreach (var typeAlias in program.Statements.OfType<TypeAliasDeclaration>())
+            {
+                GenerateTypeAlias(typeAlias);
+            }
+
             // Generate program content
             GenerateProgramContent(program);
 
@@ -277,6 +283,9 @@ namespace uhigh.Net.CodeGen
                 case ImportStatement:
                     // Already processed
                     break;
+                case TypeAliasDeclaration typeAlias:
+                    GenerateTypeAlias(typeAlias);
+                    break;
                 case NamespaceDeclaration nsDecl:
                     GenerateNamespaceDeclaration(nsDecl);
                     break;
@@ -328,36 +337,51 @@ namespace uhigh.Net.CodeGen
                     break;
                 case MatchStatement matchStmt:
                     Indent();
+                    _output.Append("switch (");
                     GenerateExpression(matchStmt.Value);
-                    _output.Append(" switch {");
-                    bool isFirst = true;
+                    _output.AppendLine(")");
+                    Indent();
+                    _output.AppendLine("{");
+                    _indentLevel++;
+                    
                     foreach (var arm in matchStmt.Arms)
                     {
-                        if (!isFirst) _output.Append(",");
-                        _output.AppendLine();
-                        var originalIndent = _indentLevel;
-                        _indentLevel = originalIndent + 1;
-                        Indent();
                         if (arm.IsDefault)
                         {
-                            _output.Append("_");
+                            Indent();
+                            _output.AppendLine("default:");
                         }
                         else
                         {
-                            for (int i = 0; i < arm.Patterns.Count; i++)
+                            // Handle multiple patterns as separate case labels
+                            foreach (var pattern in arm.Patterns)
                             {
-                                if (i > 0) _output.Append(" or ");
-                                GenerateExpression(arm.Patterns[i]);
+                                if (pattern is IdentifierExpression idExpr && idExpr.Name == "_")
+                                {
+                                    // add underscore patterns as default case
+                                    Indent();
+                                    _output.AppendLine("default:");
+                                    continue;
+                                }
+                                Indent();
+                                _output.Append("case ");
+                                GenerateExpression(pattern);
+                                _output.AppendLine(":");
                             }
                         }
-                        _output.Append(" => ");
+                        
+                        _indentLevel++;
+                        Indent();
                         GenerateExpression(arm.Result);
-                        _indentLevel = originalIndent;
-                        isFirst = false;
+                        _output.AppendLine(";");
+                        Indent();
+                        _output.AppendLine("break;");
+                        _indentLevel--;
                     }
-                    _output.AppendLine();
+                    
+                    _indentLevel--;
                     Indent();
-                    _output.AppendLine("};");
+                    _output.AppendLine("}");
                     break;
                 default:
                     _diagnostics.ReportCodeGenWarning($"Unknown statement type: {statement.GetType().Name}");
@@ -760,7 +784,9 @@ namespace uhigh.Net.CodeGen
             _output.AppendLine(";");
         }
 
-        private void GenerateExpression(ASTNode expression)
+        private void
+
+        GenerateExpression(ASTNode expression)
         {
             switch (expression)
             {
@@ -808,7 +834,7 @@ namespace uhigh.Net.CodeGen
                     if (callExpr.Function is IdentifierExpression funcIdExpr)
                     {
                         var functionName = funcIdExpr.Name;
-                        
+
                         // If this is a capitalized name, it should have been converted to ConstructorCallExpression
                         // If we reach here, treat it as a regular function call
                         GenerateFunctionCall(functionName, callExpr.Arguments);
@@ -853,47 +879,44 @@ namespace uhigh.Net.CodeGen
 
         private void GenerateMatchExpression(MatchExpression matchExpr)
         {
+            // Generate as a traditional switch statement with case labels
+            _output.Append("(");
             GenerateExpression(matchExpr.Value);
-            _output.Append(" switch {");
+            _output.AppendLine(" switch");
+            Indent();
+            _output.AppendLine("{");
+            _indentLevel++;
             
-            bool isFirst = true;
             foreach (var arm in matchExpr.Arms)
             {
-                if (!isFirst)
-                {
-                    _output.Append(",");
-                }
-                _output.AppendLine();
-                
-                // Increase indent for arms
-                var originalIndent = _indentLevel;
-                _indentLevel = originalIndent + 1;
-                Indent();
-                
                 if (arm.IsDefault)
                 {
-                    _output.Append("_");
+                    Indent();
+                    _output.Append("_ => ");
                 }
                 else
                 {
                     // Handle multiple patterns (e.g., 1 or 2 or 3)
                     for (int i = 0; i < arm.Patterns.Count; i++)
                     {
-                        if (i > 0) _output.Append(" or ");
+                        Indent();
                         GenerateExpression(arm.Patterns[i]);
+                        _output.Append(" => ");
+                        if (i < arm.Patterns.Count - 1)
+                        {
+                            GenerateExpression(arm.Result);
+                            _output.AppendLine(",");
+                        }
                     }
                 }
                 
-                _output.Append(" => ");
                 GenerateExpression(arm.Result);
-                
-                _indentLevel = originalIndent;
-                isFirst = false;
+                _output.AppendLine(",");
             }
             
-            _output.AppendLine();
+            _indentLevel--;
             Indent();
-            _output.Append("}");
+            _output.Append("})");
         }
 
         private void GenerateFunctionCall(string functionName, List<Expression> arguments)
@@ -968,8 +991,61 @@ namespace uhigh.Net.CodeGen
             };
         }
 
+        private void GenerateTypeAlias(TypeAliasDeclaration alias)
+        {
+            Indent();
+            _output.Append("using ");
+            if (alias.Modifiers.Count > 0)
+                _output.Append(string.Join(" ", alias.Modifiers) + " ");
+            _output.Append($"{alias.Name} = ");
+            _output.Append(ConvertTypeAnnotation(alias.Type));
+            _output.AppendLine(";");
+        }
+
+        // Convert TypeAnnotation to C# type string
+        private string ConvertTypeAnnotation(TypeAnnotation typeAnn)
+        {
+            if (typeAnn.Name == "array" && typeAnn.TypeArguments.Count == 1)
+            {
+                return $"{ConvertTypeAnnotation(typeAnn.TypeArguments[0])}[]";
+            }
+            if (typeAnn.TypeArguments.Count > 0)
+            {
+                return $"{ConvertType(typeAnn.Name)}<{string.Join(", ", typeAnn.TypeArguments.Select(ConvertTypeAnnotation))}>";
+            }
+            return ConvertType(typeAnn.Name);
+        }
+
         private string ConvertType(string type)
         {
+            // Handle generic types like array<string>, list<int>, etc.
+            if (type.Contains('<') && type.Contains('>'))
+            {
+                var genericMatch = System.Text.RegularExpressions.Regex.Match(type, @"^(\w+)<(.+)>$");
+                if (genericMatch.Success)
+                {
+                    var baseType = genericMatch.Groups[1].Value;
+                    var typeArgs = genericMatch.Groups[2].Value;
+                    
+                    // Handle multiple type arguments (e.g., Dictionary<string, int>)
+                    var typeArgsList = typeArgs.Split(',').Select(t => ConvertType(t.Trim())).ToList();
+                    
+                    var convertedBaseType = baseType switch
+                    {
+                        "array" => $"{typeArgsList[0]}[]",
+                        "list" => $"List<{string.Join(", ", typeArgsList)}>",
+                        "map" => typeArgsList.Count >= 2 ? $"Dictionary<{typeArgsList[0]}, {typeArgsList[1]}>" : "Dictionary<object, object>",
+                        "set" => $"HashSet<{typeArgsList[0]}>",
+                        "tuple" => typeArgsList.Count >= 2 ? $"Tuple<{string.Join(", ", typeArgsList)}>" : "Tuple<object, object>",
+                        "promise" => $"Task<{typeArgsList[0]}>",
+                        "function" => typeArgsList.Count == 1 ? $"Func<{typeArgsList[0]}>" : $"Func<{string.Join(", ", typeArgsList)}>",
+                        _ => $"{ConvertType(baseType)}<{string.Join(", ", typeArgsList)}>"
+                    };
+                    
+                    return convertedBaseType;
+                }
+            }
+            
             var converted = type switch
             {
                 "int" => "int",
@@ -985,7 +1061,6 @@ namespace uhigh.Net.CodeGen
                 "char" => "char",
                 "list" => "List<object>",
                 "array" => "object[]",
-                "StringArray" => "string[]",
                 "map" => "Dictionary<object, object>",
                 "function" => "Func<object[], object>", // Generic function type
                 "promise" => "Task<object>", // Async promise type

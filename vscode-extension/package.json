@@ -27,6 +27,13 @@
                 "configuration": "./language-configuration.json"
             }
         ],
+            "grammars": [
+        {
+            "language": "uhigh",
+            "scopeName": "source.uhigh",
+            "path": "./syntaxes/uhigh.tmLanguage.json"
+        }
+    ],
         "commands": [
             {
                 "command": "uhigh.compile",

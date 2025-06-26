@@ -157,7 +157,7 @@ namespace uhigh.Net.Parser
                                     }
                                     else
                                     {
-                                        paramType = Consume(TokenType.Identifier, "Expected parameter type").Value;
+                                        paramType = ParseTypeName();
                                     }
                                 }
 
@@ -325,6 +325,7 @@ namespace uhigh.Net.Parser
                     modifiers.Add(Advance().Value);
                 }
 
+                if (Match(TokenType.Type)) return ParseTypeAliasDeclaration(modifiers);
                 if (Match(TokenType.Include)) return ParseIncludeStatement();
                 if (Match(TokenType.Import)) return ParseImportStatement();
                 if (Match(TokenType.Namespace)) return ParseNamespaceDeclaration();
@@ -365,7 +366,8 @@ namespace uhigh.Net.Parser
 
                 // if (Match(TokenType.Switch)) return ParseSwitchStatement();
                 // if (Match(TokenType.Struct)) return ParseStructDeclaration();
-                // if (Match(TokenType.Module)) return ParseModuleDeclaration();
+                // if (Match(TokenTy
+                // pe.Module)) return ParseModuleDeclaration();
                 // if (Match(TokenType.Let)) return ParseLetDeclaration();
                 // if (Match(TokenType.Loop)) return ParseLoopStatement();
 
@@ -519,10 +521,27 @@ namespace uhigh.Net.Parser
             return null;
         }
 
-        private string ParseTypeName()
+        private Statement ParseTypeAliasDeclaration(List<string> modifiers)
         {
-            var typeName = "";
+            var name = Consume(TokenType.Identifier, "Expected type alias name").Value;
+            Consume(TokenType.Assign, "Expected '=' in type alias");
+            var type = ParseTypeAnnotation();
+            // Optional semicolon
+            if (Check(TokenType.Semicolon)) Advance();
+            return new TypeAliasDeclaration
+            {
+                Name = name,
+                Type = type,
+                Modifiers = modifiers
+            };
+        }
 
+        // Add this method to parse type annotations with generics
+        private TypeAnnotation ParseTypeAnnotation()
+        {
+            string typeName;
+            
+            // Handle built-in type keywords
             if (Check(TokenType.StringType))
             {
                 typeName = "string";
@@ -543,18 +562,38 @@ namespace uhigh.Net.Parser
                 typeName = "bool";
                 Advance();
             }
+            else if (Check(TokenType.Void))
+            {
+                typeName = "void";
+                Advance();
+            }
             else
             {
                 typeName = Consume(TokenType.Identifier, "Expected type name").Value;
             }
+            
+            var typeAnn = new TypeAnnotation { Name = typeName };
 
-            // Handle nullable types
-            if (Match(TokenType.Question))
+            if (Match(TokenType.Less)) // <
             {
-                typeName += "?";
+                do
+                {
+                    typeAnn.TypeArguments.Add(ParseTypeAnnotation());
+                } while (Match(TokenType.Comma));
+                Consume(TokenType.Greater, "Expected '>' after generic type arguments");
             }
+            return typeAnn;
+        }
 
-            return typeName;
+        // Update this method to use ParseTypeAnnotation for type names
+        private string ParseTypeName()
+        {
+            var typeAnn = ParseTypeAnnotation();
+            // For backward compatibility, return the name for simple types
+            if (typeAnn.TypeArguments.Count == 0)
+                return typeAnn.Name;
+            // For generic types, reconstruct as e.g. array<string>
+            return $"{typeAnn.Name}<{string.Join(",", typeAnn.TypeArguments.Select(t => t.Name))}>";
         }
 
         private Statement ParseFieldDeclaration()
@@ -588,7 +627,7 @@ namespace uhigh.Net.Parser
                 }
                 else
                 {
-                    type = Consume(TokenType.Identifier, "Expected field type").Value;
+                    type = ParseTypeName();
                 }
             }
 
@@ -632,7 +671,7 @@ namespace uhigh.Net.Parser
                 }
                 else
                 {
-                    type = Consume(TokenType.Identifier, "Expected property type").Value;
+                    type = ParseTypeName();
                 }
             }
 
@@ -758,7 +797,7 @@ namespace uhigh.Net.Parser
                         }
                         else
                         {
-                            paramType = Consume(TokenType.Identifier, "Expected parameter type").Value;
+                            paramType = ParseTypeName();
                         }
                     }
 
@@ -771,31 +810,7 @@ namespace uhigh.Net.Parser
             string? returnType = null;
             if (Match(TokenType.Colon))
             {
-                // Handle return type tokens properly
-                if (Check(TokenType.StringType))
-                {
-                    returnType = "string";
-                    Advance();
-                }
-                else if (Check(TokenType.Int))
-                {
-                    returnType = "int";
-                    Advance();
-                }
-                else if (Check(TokenType.Float))
-                {
-                    returnType = "float";
-                    Advance();
-                }
-                else if (Check(TokenType.Bool))
-                {
-                    returnType = "bool";
-                    Advance();
-                }
-                else
-                {
-                    returnType = Consume(TokenType.Identifier, "Expected return type").Value;
-                }
+                returnType = ParseTypeName();
             }
 
             Consume(TokenType.LeftBrace, "Expected '{' before method body");
@@ -869,31 +884,7 @@ namespace uhigh.Net.Parser
 
                     if (Match(TokenType.Colon))
                     {
-                        // Handle type tokens properly
-                        if (Check(TokenType.StringType))
-                        {
-                            paramType = "string";
-                            Advance();
-                        }
-                        else if (Check(TokenType.Int))
-                        {
-                            paramType = "int";
-                            Advance();
-                        }
-                        else if (Check(TokenType.Float))
-                        {
-                            paramType = "float";
-                            Advance();
-                        }
-                        else if (Check(TokenType.Bool))
-                        {
-                            paramType = "bool";
-                            Advance();
-                        }
-                        else
-                        {
-                            paramType = Consume(TokenType.Identifier, "Expected parameter type").Value;
-                        }
+                        paramType = ParseTypeName();
                     }
 
                     parameters.Add(new Parameter { Name = paramName, Type = paramType });
@@ -905,31 +896,7 @@ namespace uhigh.Net.Parser
             string? returnType = null;
             if (Match(TokenType.Colon))
             {
-                // Handle return type tokens properly
-                if (Check(TokenType.StringType))
-                {
-                    returnType = "string";
-                    Advance();
-                }
-                else if (Check(TokenType.Int))
-                {
-                    returnType = "int";
-                    Advance();
-                }
-                else if (Check(TokenType.Float))
-                {
-                    returnType = "float";
-                    Advance();
-                }
-                else if (Check(TokenType.Bool))
-                {
-                    returnType = "bool";
-                    Advance();
-                }
-                else
-                {
-                    returnType = Consume(TokenType.Identifier, "Expected return type").Value;
-                }
+                returnType = ParseTypeName();
             }
 
             Consume(TokenType.LeftBrace, "Expected '{' before function body");
@@ -1723,7 +1690,7 @@ namespace uhigh.Net.Parser
             string? baseClass = null;
             if (Match(TokenType.Colon))
             {
-                baseClass = Consume(TokenType.Identifier, "Expected base class name").Value;
+                baseClass = ParseTypeName();
             }
 
             Consume(TokenType.LeftBrace, "Expected '{' before class body");

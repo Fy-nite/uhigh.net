@@ -28,6 +28,7 @@ namespace uhigh.Net.Lexer
             { "try", TokenType.Try },
             { "catch", TokenType.Catch },
             { "throw", TokenType.Throw },
+            { "type", TokenType.Type },
             { "include", TokenType.Include },
             { "sharp", TokenType.Sharp },
             { "range", TokenType.Range },
@@ -37,6 +38,7 @@ namespace uhigh.Net.Lexer
             { "float", TokenType.Float },
             { "string", TokenType.StringType },
             { "bool", TokenType.Bool },
+            { "void", TokenType.Void },
             { "class", TokenType.Class },
             { "namespace", TokenType.Namespace },
             { "import", TokenType.Import },
@@ -62,6 +64,8 @@ namespace uhigh.Net.Lexer
             { "readonly", TokenType.Readonly },
             { "async", TokenType.Async },
             { "await", TokenType.Await },
+
+
             { "match", TokenType.Match },
             
 

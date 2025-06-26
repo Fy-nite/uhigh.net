@@ -1,35 +1,20 @@
-include "test_sample.uh"
-namespace testing
-{
-
-    public class Program
-    {
-
-        public static func print(message: string): void {
-            Console.WriteLine(message)
-        }
-
-        public static func input(prompt: string): string {
-            if (prompt != null) {
-                Console.Write(prompt)
-            }
-            return Console.ReadLine()
-        }
-
-        public static func input(): string {
-            return Console.ReadLine()
-        }
-
-        public static func help(): void {
-            print("Available commands:")
-            print("  help - Show this help message")
-            print("  exit - Exit the program")
-        }
-        
-        public static func Main(args: StringArray): void {
-            var cmd = ""
-            var running = true
-            tests.testing()
+namespace command {
+    type CommandList = array<Command>
+    
+    class Command {
+        field name: string
+        field description: string
+        field usage: string
+        field aliases: array<string>
+        field options: array<string>
+        field arguments: array<string>
+        field subcommands: CommandList
+    }
+    
+    class Program {
+        public static func Main(args: array<string>): void {
+            // Example usage of Command class
+            Console.WriteLine("Command Example")
         }
     }
 }

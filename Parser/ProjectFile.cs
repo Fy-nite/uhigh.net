@@ -38,6 +38,7 @@ namespace uhigh.Net
                 var projectDir = Path.GetDirectoryName(projectPath) ?? "";
                 for (int i = 0; i < project.SourceFiles.Count; i++)
                 {
+                    
                     if (!Path.IsPathRooted(project.SourceFiles[i]))
                     {
                         project.SourceFiles[i] = Path.Combine(projectDir, project.SourceFiles[i]);

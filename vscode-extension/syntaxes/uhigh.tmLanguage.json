@@ -17,15 +17,23 @@
             "patterns": [
                 {
                     "name": "keyword.control.uhigh",
-                    "match": "\\b(if|else|while|for|return|break|continue)\\b"
+                    "match": "\\b(if|else|while|for|in|return|break|continue|try|catch|throw|match|switch|case|default|yield|await|async)\\b"
                 },
                 {
                     "name": "keyword.declaration.uhigh",
-                    "match": "\\b(var|const|func|class|namespace|public|private|static)\\b"
+                    "match": "\\b(var|const|let|mut|func|class|namespace|import|from|this|enum|interface|extension|record|struct|union|module|use|field|get|set|macro)\\b"
+                },
+                {
+                    "name": "storage.modifier.uhigh",
+                    "match": "\\b(public|private|protected|internal|static|abstract|virtual|override|sealed|readonly)\\b"
                 },
                 {
                     "name": "constant.language.uhigh",
-                    "match": "\\b(true|false|null)\\b"
+                    "match": "\\b(true|false|null|int|float|string|bool|sharp)\\b"
+                },
+                {
+                    "name": "keyword.operator.uhigh",
+                    "match": "(\\?|\\?\\?|\\?\\.|!|\\+|\\-|\\*|\\/|%|=|==|!=|<|>|<=|>=|&&|\\|\\||!|\\+\\+|\\-\\-|\\+=|\\-=|\\*=|\\/=|=>|\\.|\\.{2}|\\.{2}<|_)"
                 }
             ]
         },

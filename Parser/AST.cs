@@ -360,4 +360,18 @@ namespace uhigh.Net.Parser
         public List<Statement> Body { get; set; } = new();
         public Expression? Condition { get; set; } // for until loops
     }
+
+    public class TypeAliasDeclaration : Statement
+    {
+        public string Name { get; set; } = "";
+        public TypeAnnotation Type { get; set; } = null!;
+        public List<string> Modifiers { get; set; } = new();
+    }
+
+    // Add a type annotation class to represent generic types
+    public class TypeAnnotation : ASTNode
+    {
+        public string Name { get; set; } = "";
+        public List<TypeAnnotation> TypeArguments { get; set; } = new();
+    }
 }
