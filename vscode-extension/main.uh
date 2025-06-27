@@ -19,7 +19,10 @@ namespace testing
         public static func input(): string {
             return Console.ReadLine()
         }
-
+        publiuc static func exit(): void {
+            print("Exiting the program.")
+            Environment.Exit(0)
+        }
         public static func help(): void {
             print("Available commands:")
             print("  help - Show this help message")

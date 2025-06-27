@@ -15,6 +15,20 @@ namespace command {
         public static func Main(args: array<string>): void {
             // Example usage of Command class
             Console.WriteLine("Command Example")
+            var m = Console.ReadLine()
+            match m {
+                "help" => {
+                    Console.WriteLine("Showing help...")
+                    Console.WriteLine("Help displayed")
+                },
+                "exit" => {
+                    Console.WriteLine("Exiting program")
+                },
+                _ => {
+                    Console.WriteLine("Unknown command: " + m)
+                    Console.WriteLine("Error")
+                }
+            }
         }
     }
 }

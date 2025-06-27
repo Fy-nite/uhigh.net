@@ -180,13 +180,14 @@ namespace uhigh.Net.Testing
                     {
                         result.Passed = false;
                         result.Exception = ex;
-                        result.ErrorMessage = $"Teardown failed: {ex.Message}";
+                        result.ErrorMessage = ex.Message;
                     }
                 }
+                
                 stopwatch.Stop();
                 result.Duration = stopwatch.Elapsed;
             }
-
+            
             return result;
         }
 

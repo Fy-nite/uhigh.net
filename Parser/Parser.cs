@@ -10,6 +10,7 @@ namespace uhigh.Net.Parser
         private int _current = 0;
         private readonly DiagnosticsReporter _diagnostics;
         private readonly MethodChecker _methodChecker;
+        private bool _verboseMode = false; // Add a flag for verbose mode
 
         public Parser(List<Token> tokens, DiagnosticsReporter? diagnostics = null)
         {
@@ -220,14 +221,6 @@ namespace uhigh.Net.Parser
                     {
                         Advance(); // Skip 'class'
 
-                        // Parse modifiers before class name
-                        var modifiers = new List<string>();
-                        while (IsModifierToken(Previous()))
-                        {
-                            modifiers.Add(Previous().Value);
-                            if (!IsAtEnd()) Advance();
-                        }
-
                         var classNameToken = Consume(TokenType.Identifier, "Expected class name");
 
                         // Skip external classes
@@ -251,6 +244,21 @@ namespace uhigh.Net.Parser
                                 }
                             }
                             continue;
+                        }
+
+                        // Parse modifiers that came before 'class'
+                        var modifiers = new List<string>();
+                        // Look backwards for modifiers
+                        for (int j = _current - 2; j >= 0; j--)
+                        {
+                            if (IsModifierToken(_tokens[j]))
+                            {
+                                modifiers.Insert(0, _tokens[j].Value);
+                            }
+                            else
+                            {
+                                break;
+                            }
                         }
 
                         // Create a temporary class declaration for registration
@@ -1460,14 +1468,42 @@ namespace uhigh.Net.Parser
             }
 
             Consume(TokenType.Arrow, "Expected '=>' after match pattern");
-            var result = ParseExpression();
-
-            return new MatchArm
+            
+            // Check if the result is a block or a single expression
+            if (Check(TokenType.LeftBrace))
             {
-                Patterns = patterns,
-                Result = result,
-                IsDefault = isDefault
-            };
+                // Parse block
+                Consume(TokenType.LeftBrace, "Expected '{' for match arm block");
+                var block = new List<Statement>();
+                
+                while (!Check(TokenType.RightBrace) && !IsAtEnd())
+                {
+                    var stmt = ParseStatement();
+                    if (stmt != null) block.Add(stmt);
+                }
+                
+                Consume(TokenType.RightBrace, "Expected '}' after match arm block");
+                
+                return new MatchArm
+                {
+                    Patterns = patterns,
+                    Block = block,
+                    Result = null,
+                    IsDefault = isDefault
+                };
+            }
+            else
+            {
+                // Parse single expression
+                var result = ParseExpression();
+                return new MatchArm
+                {
+                    Patterns = patterns,
+                    Result = result,
+                    Block = null,
+                    IsDefault = isDefault
+                };
+            }
         }
 
         private Expression ParseInterpolatedString()
@@ -1671,16 +1707,30 @@ namespace uhigh.Net.Parser
             while (!Check(TokenType.RightBrace) && !IsAtEnd())
             {
                 var member = ParseStatement();
-                if (member != null) members.Add(member);
+                if (member != null) 
+                {
+                    members.Add(member);
+                    if (_verboseMode)
+                    {
+                        _diagnostics.ReportInfo($"Added namespace member: {member.GetType().Name}");
+                    }
+                }
             }
 
             Consume(TokenType.RightBrace, "Expected '}' after namespace body");
 
-            return new NamespaceDeclaration
+            var nsDecl = new NamespaceDeclaration
             {
                 Name = name,
                 Members = members
             };
+            
+            if (_verboseMode)
+            {
+                _diagnostics.ReportInfo($"Parsed namespace '{name}' with {members.Count} members");
+            }
+
+            return nsDecl;
         }
 
         private Statement ParseClassDeclaration()
@@ -1855,6 +1905,41 @@ namespace uhigh.Net.Parser
             // include "filename.uh"
             var fileToken = Consume(TokenType.String, "Expected file name after include");
             return new IncludeStatement { FileName = fileToken.Value };
+        }
+
+        private Program ProcessIncludes(Program ast, DiagnosticsReporter diagnostics, HashSet<string> includedFiles)
+        {
+            var newStatements = new List<Statement>();
+            foreach (var stmt in ast.Statements)
+            {
+                if (stmt is IncludeStatement include)
+                {
+                    var filePath = include.FileName.Trim('"');
+                    if (includedFiles.Contains(filePath))
+                    {
+                        diagnostics.ReportError($"Recursive include detected: {filePath}");
+                        continue;
+                    }
+                    if (!File.Exists(filePath))
+                    {
+                        diagnostics.ReportError($"Included file not found: {filePath}");
+                        continue;
+                    }
+                    includedFiles.Add(filePath);
+                    var includedSource = File.ReadAllText(filePath);
+                    var lexer = new Lexer.Lexer(includedSource, diagnostics);
+                    var tokens = lexer.Tokenize();
+                    var parser = new Parser(tokens, diagnostics);
+                    var includedAst = parser.Parse();
+                    var processedAst = ProcessIncludes(includedAst, diagnostics, includedFiles);
+                    newStatements.AddRange(processedAst.Statements);
+                }
+                else
+                {
+                    newStatements.Add(stmt);
+                }
+            }
+            return new Program { Statements = newStatements };
         }
     }
 

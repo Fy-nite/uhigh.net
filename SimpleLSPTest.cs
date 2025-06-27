@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 public class SimpleLSPTest
 {
-    public static async Task TMain(string[] args)
+    public static async Task TestMain(string[] args)
     {
         if (args.Length > 0 && args[0] == "simple-lsp")
         {

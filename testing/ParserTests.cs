@@ -1,5 +1,6 @@
-using uhigh.Net.Lexer;
+using System.Reflection;
 using uhigh.Net.Parser;
+using uhigh.Net.Lexer;
 using uhigh.Net.Diagnostics;
 
 namespace uhigh.Net.Testing
@@ -9,9 +10,9 @@ namespace uhigh.Net.Testing
         private Program ParseSource(string source)
         {
             var diagnostics = new DiagnosticsReporter();
-            var lexer = new Lexer.Lexer(source, diagnostics);
+            var lexer = new uhigh.Net.Lexer.Lexer(source, diagnostics);
             var tokens = lexer.Tokenize();
-            var parser = new Parser.Parser(tokens, diagnostics);
+            var parser = new uhigh.Net.Parser.Parser(tokens, diagnostics);
             return parser.Parse();
         }
 
@@ -64,7 +65,7 @@ namespace uhigh.Net.Testing
             
             var classDecl = (ClassDeclaration)program.Statements[0];
             Assert.AreEqual("Person", classDecl.Name);
-            Assert.Contains(classDecl.Modifiers, "public");
+            Assert.IsTrue(classDecl.Modifiers.Contains("public"));
             Assert.AreEqual(2, classDecl.Members.Count);
         }
 
@@ -90,10 +91,10 @@ namespace uhigh.Net.Testing
         public void TestIfStatement()
         {
             var program = ParseSource(@"
-                if x > 5 {
-                    print(""x is greater than 5"")
+                if (x > 0) {
+                    print(""positive"")
                 } else {
-                    print(""x is 5 or less"")
+                    print(""not positive"")
                 }");
 
             Assert.AreEqual(1, program.Statements.Count);

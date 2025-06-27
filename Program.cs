@@ -16,20 +16,16 @@ public class EntryPoint
             Console.WriteLine("  run <project-file>                # Run μHigh.Net project");
             Console.WriteLine("  info <project-file>               # Show project information");
             Console.WriteLine("  add-file <project-file> <file>    # Add source file to project");
-            Console.WriteLine("  add-package <project-file> <n> <version> # Add package to project");
-            Console.WriteLine("  --lsp                             # Start Language Server Protocol mode");
-            Console.WriteLine("  create <project-name> [options]   # Create new μHigh.Net project");
-            Console.WriteLine("  build <project-file>              # Build μHigh.Net project");
-            Console.WriteLine("  run <project-file>                # Run μHigh.Net project");
-            Console.WriteLine("  info <project-file>               # Show project information");
-            Console.WriteLine("  add-file <project-file> <file>    # Add source file to project");
             Console.WriteLine("  add-package <project-file> <name> <version> # Add package to project");
+            Console.WriteLine("  --lsp                             # Start Language Server Protocol mode");
             Console.WriteLine();
             Console.WriteLine("File compilation options:");
             Console.WriteLine("  uhigh.net program.uh               # Compile and run in memory");
             Console.WriteLine("  uhigh.net program.uh program.exe   # Compile to executable");
             Console.WriteLine("  uhigh.net program.uh --run         # Compile and run in memory");
             Console.WriteLine("  uhigh.net program.uh --save path   # Save C# code to folder");
+            Console.WriteLine("  uhigh.net program.uh --ast         # Show Abstract Syntax Tree");
+            Console.WriteLine("  uhigh.net build project.uhighproj --save path # Save project as separate C# files");
             Console.WriteLine();
             Console.WriteLine("Project creation options:");
             Console.WriteLine("  --type <Exe|Library>              # Output type (default: Exe)");
@@ -59,7 +55,8 @@ public class EntryPoint
         bool success = false;
 
         try
-        {            switch (command)
+        {            
+            switch (command)
             {
                 case "--lsp":
                 case "lsp":
@@ -169,12 +166,26 @@ public class EntryPoint
         if (args.Length < 2)
         {
             Console.WriteLine("Error: Project file is required");
-            Console.WriteLine("Usage: uhigh build <project-file> [output-file]");
+            Console.WriteLine("Usage: uhigh build <project-file> [output-file] [--save path]");
             return false;
         }
 
         var projectFile = args[1];
-        string? outputFile = args.Length > 2 ? args[2] : null;
+        string? outputFile = null;
+        string? savePath = null;
+
+        // Parse arguments
+        for (int i = 2; i < args.Length; i++)
+        {
+            if (args[i] == "--save" && i + 1 < args.Length)
+            {
+                savePath = args[++i];
+            }
+            else if (!args[i].StartsWith("--") && outputFile == null)
+            {
+                outputFile = args[i];
+            }
+        }
 
         if (!File.Exists(projectFile))
         {
@@ -182,7 +193,14 @@ public class EntryPoint
             return false;
         }
 
-        return await compiler.CompileProject(projectFile, outputFile);
+        if (savePath != null)
+        {
+            return await compiler.SaveProjectAsCSharpFiles(projectFile, savePath);
+        }
+        else
+        {
+            return await compiler.CompileProject(projectFile, outputFile);
+        }
     }
 
     private static async Task<bool> HandleRunCommand(string[] args, Compiler compiler)
@@ -292,6 +310,14 @@ public class EntryPoint
         }
 
         bool success;
+        
+        // Check for --ast flag
+        if (args.Contains("--ast"))
+        {
+            Console.WriteLine($"Showing AST for: {sourceFile}");
+            success = await compiler.PrintAST(sourceFile);
+            return success;
+        }
         
         // Check for --save flag
         var saveIndex = Array.IndexOf(args, "--save");

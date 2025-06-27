@@ -16,6 +16,7 @@ namespace uhigh.Net.CodeGen
             public string? MainClassName { get; set; }
             public List<string> AllClasses { get; set; } = new();
             public bool HasMainMethod { get; set; }
+            public bool HasMainFunction { get; set; } // Add this to track μHigh main functions
         }
 
         public async Task<bool> CompileAndRun(string csharpCode, string? outputPath = null, string? rootNamespace = null, string? className = null, string outputType = "Exe")
@@ -193,7 +194,7 @@ namespace uhigh.Net.CodeGen
                 var className = classDecl.Identifier.ValueText;
                 sourceInfo.AllClasses.Add(className);
 
-                // Check if this class has a Main method
+                // Check if this class has a Main method (C# style)
                 var hasMainMethod = classDecl.Members
                     .OfType<MethodDeclarationSyntax>()
                     .Any(m => m.Identifier.ValueText == "Main" && 
@@ -204,6 +205,37 @@ namespace uhigh.Net.CodeGen
                     sourceInfo.MainClassName = className;
                     sourceInfo.HasMainMethod = true;
                 }
+
+                // Also check for μHigh-style main method (lower case)
+                var hasMainFunction = classDecl.Members
+                    .OfType<MethodDeclarationSyntax>()
+                    .Any(m => m.Identifier.ValueText == "main" && 
+                             m.Modifiers.Any(mod => mod.IsKind(SyntaxKind.StaticKeyword)));
+
+                if (hasMainFunction)
+                {
+                    sourceInfo.MainClassName = className;
+                    sourceInfo.HasMainFunction = true;
+                    sourceInfo.HasMainMethod = true; // Treat as main method for execution
+                }
+            }
+
+            // Check for global main function (not in a class)
+            var globalMethods = root.DescendantNodes()
+                .OfType<MethodDeclarationSyntax>()
+                .Where(m => !m.Ancestors().OfType<ClassDeclarationSyntax>().Any());
+
+            foreach (var method in globalMethods)
+            {
+                if ((method.Identifier.ValueText == "Main" || method.Identifier.ValueText == "main") &&
+                    method.Modifiers.Any(mod => mod.IsKind(SyntaxKind.StaticKeyword)))
+                {
+                    sourceInfo.HasMainMethod = true;
+                    if (method.Identifier.ValueText == "main")
+                    {
+                        sourceInfo.HasMainFunction = true;
+                    }
+                }
             }
 
             // If no class with Main method found, use the first class as default
@@ -211,11 +243,6 @@ namespace uhigh.Net.CodeGen
             {
                 sourceInfo.MainClassName = sourceInfo.AllClasses.First();
             }
-            // if (_verboseMode)
-            // {
-            //     Console.WriteLine($"Found {sourceInfo.AllClasses.Count} classes: {string.Join(", ", sourceInfo.AllClasses)}");
-            // Console.WriteLine($"Extracted source info: Namespace='{sourceInfo.Namespace}', MainClass='{sourceInfo.MainClassName}', HasMain={sourceInfo.HasMainMethod}");
-            // }
             
             return sourceInfo;
         }

@@ -191,15 +191,51 @@ namespace uhigh.Net.Testing
         }
 
         [Test]
-        public void TestMatchWithMultiplePatterns()
+        public void TestMatchExpressionWithBlocks()
         {
             var result = GenerateCSharp(@"
-                var size = num match {
-                    1, 2, 3 => ""small"",
-                    _ => ""large""
+                var result = cmd match {
+                    ""help"" => {
+                        print(""Showing help"")
+                        return ""help displayed""
+                    },
+                    ""exit"" => ""Goodbye"", 
+                    _ => {
+                        print(""Unknown command: "" + cmd)
+                        return ""error""
+                    }
                 }");
             
-            Assert.IsTrue(result.Contains("1 or 2 or 3 => \"small\""));
+            Assert.IsTrue(result.Contains("cmd switch"));
+            Assert.IsTrue(result.Contains("\"help\" => (() => {"));
+            Assert.IsTrue(result.Contains("\"exit\" => \"Goodbye\""));
+            Assert.IsTrue(result.Contains("_ => (() => {"));
+        }
+
+        [Test]
+        public void TestMatchStatementWithBlocks()
+        {
+            var result = GenerateCSharp(@"
+                cmd match {
+                    ""help"" => {
+                        print(""Showing help"")
+                        showHelp()
+                    },
+                    ""exit"" => exitProgram(),
+                    _ => {
+                        print(""Unknown command: "" + cmd)
+                        showError()
+                    }
+                }");
+            
+            Assert.IsTrue(result.Contains("switch (cmd)"));
+            Assert.IsTrue(result.Contains("case \"help\":"));
+            Assert.IsTrue(result.Contains("print(\"Showing help\")"));
+            Assert.IsTrue(result.Contains("showHelp()"));
+            Assert.IsTrue(result.Contains("case \"exit\":"));
+            Assert.IsTrue(result.Contains("exitProgram()"));
+            Assert.IsTrue(result.Contains("default:"));
+            Assert.IsTrue(result.Contains("showError()"));
         }
     }
 }

@@ -106,15 +106,15 @@ dotnet run build MyApp/MyApp.uhighproj
 ### Compile a single file
 
 ```bash
-dotnet run source.uh
+dotnet run -- source.uh
 ```
 
-This will generate a `source.exe` file with the compiled executable.
+This will compile and run the μHigh source file in memory.
 
 ### Specify output file
 
 ```bash
-dotnet run source.uh output.exe
+dotnet run -- source.uh output.exe
 ```
 
 This will compile `source.uh` and create `output.exe`.
@@ -123,13 +123,13 @@ This will compile `source.uh` and create `output.exe`.
 
 ```bash
 # Create a new project
-dotnet run create MyProject --type Exe --author "Your Name"
+dotnet run -- create MyProject --type Exe --author "Your Name"
 
 # Build the project
-dotnet run build MyProject/MyProject.uhighproj
+dotnet run -- build MyProject/MyProject.uhighproj
 
 # Build to specific output
-dotnet run build MyProject/MyProject.uhighproj MyProject.exe
+dotnet run -- build MyProject/MyProject.uhighproj MyProject.exe
 ```
 
 ## Language Reference
