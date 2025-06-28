@@ -524,13 +524,29 @@ namespace uhigh.Net
 
                 diagnostics.ReportInfo($"Compiling project: {project.Name} (OutputType: {project.OutputType})");
 
+                // Define projectDir for resolving relative paths
+                var projectDir = Path.GetDirectoryName(projectPath) ?? "";
+
+                // Restore NuGet packages
+                var nugetManager = new NuGet.NuGetManager(diagnostics);
+                var restoreSuccess = await nugetManager.RestorePackagesAsync(project, projectDir);
+                if (!restoreSuccess)
+                {
+                    diagnostics.ReportWarning("Some packages failed to restore, compilation may fail");
+                }
+
+                // Get NuGet package assemblies
+                var nugetAssemblies = new List<string>();
+                foreach (var package in project.Dependencies)
+                {
+                    var assemblies = await nugetManager.GetPackageAssembliesAsync(package, project.Target);
+                    nugetAssemblies.AddRange(assemblies);
+                }
+
                 // Parse all source files first
                 var allPrograms = new List<Program>();
                 var projectRootNamespace = project.RootNamespace ?? project.Name;
                 var projectClassName = project.ClassName ?? "Program";
-
-                // Define projectDir for resolving relative paths
-                var projectDir = Path.GetDirectoryName(projectPath) ?? "";
 
                 foreach (var sourceFile in project.SourceFiles)
                 {
@@ -605,15 +621,25 @@ namespace uhigh.Net
                     diagnostics.ReportInfo("Generated combined C# code:");
                     Console.WriteLine(combinedCode);
                     Console.WriteLine();
+                    
+                    if (nugetAssemblies.Count > 0)
+                    {
+                        diagnostics.ReportInfo($"Using {nugetAssemblies.Count} NuGet assemblies:");
+                        foreach (var assembly in nugetAssemblies)
+                        {
+                            Console.WriteLine($"  - {Path.GetFileName(assembly)}");
+                        }
+                        Console.WriteLine();
+                    }
                 }
 
-                // Use in-memory compiler with project configuration and standard library
+                // Use in-memory compiler with project configuration, standard library, and NuGet packages
                 var inMemoryCompiler = new InMemoryCompiler(_stdLibPath);
                 
                 if (outputFile != null)
                 {
                     // Generate executable/library to specified output file
-                    var success = await inMemoryCompiler.CompileToExecutable(combinedCode, outputFile, projectRootNamespace, projectClassName, project.OutputType);
+                    var success = await inMemoryCompiler.CompileToExecutable(combinedCode, outputFile, projectRootNamespace, projectClassName, project.OutputType, nugetAssemblies);
                     diagnostics.PrintSummary();
                     return success;
                 }
@@ -624,7 +650,7 @@ namespace uhigh.Net
                         ? $"{project.Name}.dll" 
                         : $"{project.Name}.exe";
                     
-                    var success = await inMemoryCompiler.CompileToExecutable(combinedCode, defaultOutputFile, projectRootNamespace, projectClassName, project.OutputType);
+                    var success = await inMemoryCompiler.CompileToExecutable(combinedCode, defaultOutputFile, projectRootNamespace, projectClassName, project.OutputType, nugetAssemblies);
                     diagnostics.PrintSummary();
                     return success;
                 }

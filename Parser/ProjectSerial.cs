@@ -71,6 +71,21 @@ namespace uhigh.Net
         
         [XmlAttribute("RequiredFor")]
         public string? RequiredFor { get; set; } // New: track what feature requires this package
+        
+        [XmlAttribute("Source")]
+        public string? Source { get; set; } // New: NuGet source URL
+        
+        [XmlAttribute("IncludeAssets")]
+        public string? IncludeAssets { get; set; } // New: What assets to include (compile, runtime, build, etc.)
+        
+        [XmlAttribute("ExcludeAssets")]
+        public string? ExcludeAssets { get; set; } // New: What assets to exclude
+        
+        [XmlAttribute("PrivateAssets")]
+        public string? PrivateAssets { get; set; } // New: Private assets
+        
+        [XmlAttribute("CompileOnly")]
+        public bool CompileOnly { get; set; } = false; // New: Whether this is compile-time only
     }
 
     public class ProjectProperty

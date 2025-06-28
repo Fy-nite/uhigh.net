@@ -27,7 +27,7 @@ namespace uhigh.Net.CodeGen
             public bool HasMainFunction { get; set; } // Add this to track μHigh main functions
         }
 
-        private static MetadataReference[] GetAssemblyReferences(string? stdLibPath = null)
+        private static MetadataReference[] GetAssemblyReferences(string? stdLibPath = null, List<string>? additionalAssemblies = null)
         {
             var references = new List<MetadataReference>();
             
@@ -48,6 +48,26 @@ namespace uhigh.Net.CodeGen
             // Add standard library references
             var stdLibReferences = GetStandardLibraryReferences(stdLibPath);
             references.AddRange(stdLibReferences);
+            
+            // Add NuGet package references
+            if (additionalAssemblies != null)
+            {
+                foreach (var assembly in additionalAssemblies)
+                {
+                    try
+                    {
+                        if (File.Exists(assembly))
+                        {
+                            references.Add(MetadataReference.CreateFromFile(assembly));
+                            Console.WriteLine($"Added NuGet assembly: {Path.GetFileName(assembly)}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Warning: Could not load NuGet assembly {Path.GetFileName(assembly)}: {ex.Message}");
+                    }
+                }
+            }
             
             // Add additional assemblies if they exist
             try
@@ -115,7 +135,7 @@ namespace uhigh.Net.CodeGen
             return references;
         }
 
-        public async Task<bool> CompileAndRun(string csharpCode, string? outputPath = null, string? rootNamespace = null, string? className = null, string outputType = "Exe")
+        public async Task<bool> CompileAndRun(string csharpCode, string? outputPath = null, string? rootNamespace = null, string? className = null, string outputType = "Exe", List<string>? additionalAssemblies = null)
         {
             try
             {
@@ -125,8 +145,8 @@ namespace uhigh.Net.CodeGen
                 // Extract source information
                 var sourceInfo = ExtractSourceInfo(syntaxTree);
                 
-                // Get references to required assemblies (including standard libraries)
-                var references = GetAssemblyReferences(_stdLibPath);
+                // Get references to required assemblies (including standard libraries and NuGet packages)
+                var references = GetAssemblyReferences(_stdLibPath, additionalAssemblies);
                 
                 // Use extracted info or provided parameters or defaults
                 var actualRootNamespace = rootNamespace ?? sourceInfo.Namespace;
@@ -381,7 +401,7 @@ namespace uhigh.Net.CodeGen
             }
         }
         
-        public async Task<bool> CompileToExecutable(string csharpCode, string outputPath, string? rootNamespace = null, string? className = null, string outputType = "Exe")
+        public async Task<bool> CompileToExecutable(string csharpCode, string outputPath, string? rootNamespace = null, string? className = null, string outputType = "Exe", List<string>? additionalAssemblies = null)
         {
             try
             {
@@ -390,7 +410,7 @@ namespace uhigh.Net.CodeGen
                 // Extract source information
                 var sourceInfo = ExtractSourceInfo(syntaxTree);
                 
-                var references = GetAssemblyReferences(_stdLibPath);
+                var references = GetAssemblyReferences(_stdLibPath, additionalAssemblies);
                 
                 // Use extracted info or provided parameters or defaults
                 var actualRootNamespace = rootNamespace ?? sourceInfo.Namespace ?? "Generated";
@@ -442,7 +462,7 @@ namespace uhigh.Net.CodeGen
                 }
                 
                 // Copy required assemblies to build directory
-                await CopyRequiredAssemblies(buildDir);
+                await CopyRequiredAssemblies(buildDir, additionalAssemblies);
                 
                 // Create runtime configuration file only for executables
                 if (outputKind == OutputKind.ConsoleApplication)
@@ -467,7 +487,7 @@ namespace uhigh.Net.CodeGen
             }
         }
         
-        private async Task CopyRequiredAssemblies(string buildDir)
+        private async Task CopyRequiredAssemblies(string buildDir, List<string>? additionalAssemblies = null)
         {
             // Copy standard library DLLs to build directory
             if (Directory.Exists(_stdLibPath))
@@ -492,7 +512,32 @@ namespace uhigh.Net.CodeGen
                 }
             }
             
-            Console.WriteLine("Standard library assemblies copied to build directory");
+            // Copy NuGet package assemblies to build directory
+            if (additionalAssemblies != null)
+            {
+                foreach (var assembly in additionalAssemblies)
+                {
+                    try
+                    {
+                        if (File.Exists(assembly))
+                        {
+                            var fileName = Path.GetFileName(assembly);
+                            var destPath = Path.Combine(buildDir, fileName);
+                            if (!File.Exists(destPath))
+                            {
+                                File.Copy(assembly, destPath);
+                                Console.WriteLine($"Copied NuGet assembly: {fileName}");
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Warning: Could not copy NuGet assembly {Path.GetFileName(assembly)}: {ex.Message}");
+                    }
+                }
+            }
+            
+            Console.WriteLine("Required assemblies copied to build directory");
         }
         
         private async Task CreateRuntimeConfigAsync(string executablePath)

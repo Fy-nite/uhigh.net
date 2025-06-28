@@ -14,6 +14,10 @@ public class EntryPoint
             InfoOptions, 
             AddFileOptions, 
             AddPackageOptions, 
+            InstallPackagesOptions,
+            SearchPackagesOptions,
+            ListPackagesOptions,
+            RestorePackagesOptions,
             LspOptions, 
             TestOptions>(args)
             .MapResult(
@@ -24,6 +28,10 @@ public class EntryPoint
                 (InfoOptions opts) => HandleInfoCommand(opts),
                 (AddFileOptions opts) => HandleAddFileCommand(opts),
                 (AddPackageOptions opts) => HandleAddPackageCommand(opts),
+                (InstallPackagesOptions opts) => HandleInstallPackagesCommand(opts),
+                (SearchPackagesOptions opts) => HandleSearchPackagesCommand(opts),
+                (ListPackagesOptions opts) => HandleListPackagesCommand(opts),
+                (RestorePackagesOptions opts) => HandleRestorePackagesCommand(opts),
                 (LspOptions opts) => HandleLspCommand(opts),
                 (TestOptions opts) => HandleTestCommand(opts),
                 
@@ -220,6 +228,172 @@ public class EntryPoint
         catch (Exception ex)
         {
             WriteError($"Add package failed: {ex.Message}");
+            return 1;
+        }
+    }
+
+    private static async Task<int> HandleInstallPackagesCommand(InstallPackagesOptions options)
+    {
+        try
+        {
+            Console.WriteLine($"Installing packages for project: {options.ProjectFile}");
+            
+            var project = await uhigh.Net.ProjectFile.LoadAsync(options.ProjectFile);
+            if (project == null)
+            {
+                WriteError($"Project file '{options.ProjectFile}' not found or invalid");
+                return 1;
+            }
+
+            var projectDir = Path.GetDirectoryName(options.ProjectFile) ?? "";
+            var nugetManager = new uhigh.Net.NuGet.NuGetManager();
+            var success = await nugetManager.RestorePackagesAsync(project, projectDir, force: true);
+            
+            if (success)
+            {
+                Console.WriteLine("All packages installed successfully");
+                return 0;
+            }
+            else
+            {
+                WriteError("Some packages failed to install");
+                return 1;
+            }
+        }
+        catch (Exception ex)
+        {
+            WriteError($"Install packages failed: {ex.Message}");
+            return 1;
+        }
+    }
+
+    private static async Task<int> HandleSearchPackagesCommand(SearchPackagesOptions options)
+    {
+        try
+        {
+            Console.WriteLine($"Searching for packages: {options.SearchTerm}");
+            
+            var nugetManager = new uhigh.Net.NuGet.NuGetManager();
+            var packages = await nugetManager.SearchPackagesAsync(options.SearchTerm, options.Take);
+            
+            if (packages.Count == 0)
+            {
+                Console.WriteLine("No packages found");
+                return 0;
+            }
+
+            Console.WriteLine($"\nFound {packages.Count} packages:");
+            Console.WriteLine();
+            
+            foreach (var package in packages)
+            {
+                Console.WriteLine($"📦 {package.Id} v{package.Version}");
+                if (!string.IsNullOrEmpty(package.Description))
+                {
+                    Console.WriteLine($"   {package.Description}");
+                }
+                if (package.Authors.Count > 0)
+                {
+                    Console.WriteLine($"   Authors: {string.Join(", ", package.Authors)}");
+                }
+                if (package.TotalDownloads > 0)
+                {
+                    Console.WriteLine($"   Downloads: {package.TotalDownloads:N0}");
+                }
+                if (!string.IsNullOrEmpty(package.ProjectUrl))
+                {
+                    Console.WriteLine($"   Project: {package.ProjectUrl}");
+                }
+                Console.WriteLine();
+            }
+            
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            WriteError($"Package search failed: {ex.Message}");
+            return 1;
+        }
+    }
+
+    private static async Task<int> HandleListPackagesCommand(ListPackagesOptions options)
+    {
+        try
+        {
+            var project = await uhigh.Net.ProjectFile.LoadAsync(options.ProjectFile);
+            if (project == null)
+            {
+                WriteError($"Project file '{options.ProjectFile}' not found or invalid");
+                return 1;
+            }
+
+            Console.WriteLine($"Packages in project '{project.Name}':");
+            Console.WriteLine();
+            
+            if (project.Dependencies.Count == 0)
+            {
+                Console.WriteLine("No packages found");
+                return 0;
+            }
+
+            foreach (var package in project.Dependencies)
+            {
+                Console.WriteLine($"📦 {package.Name} v{package.Version}");
+                if (!string.IsNullOrEmpty(package.RequiredFor))
+                {
+                    Console.WriteLine($"   Required for: {package.RequiredFor}");
+                }
+                if (!string.IsNullOrEmpty(package.Source))
+                {
+                    Console.WriteLine($"   Source: {package.Source}");
+                }
+                if (package.CompileOnly)
+                {
+                    Console.WriteLine($"   Compile-time only");
+                }
+                Console.WriteLine();
+            }
+            
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            WriteError($"List packages failed: {ex.Message}");
+            return 1;
+        }
+    }
+
+    private static async Task<int> HandleRestorePackagesCommand(RestorePackagesOptions options)
+    {
+        try
+        {
+            Console.WriteLine($"Restoring packages for project: {options.ProjectFile}");
+            
+            var project = await uhigh.Net.ProjectFile.LoadAsync(options.ProjectFile);
+            if (project == null)
+            {
+                WriteError($"Project file '{options.ProjectFile}' not found or invalid");
+                return 1;
+            }
+
+            var projectDir = Path.GetDirectoryName(options.ProjectFile) ?? "";
+            var nugetManager = new uhigh.Net.NuGet.NuGetManager();
+            var success = await nugetManager.RestorePackagesAsync(project, projectDir, options.Force);
+            
+            if (success)
+            {
+                Console.WriteLine("All packages restored successfully");
+                return 0;
+            }
+            else
+            {
+                WriteError("Some packages failed to restore");
+                return 1;
+            }
+        }
+        catch (Exception ex)
+        {
+            WriteError($"Restore packages failed: {ex.Message}");
             return 1;
         }
     }

@@ -15,6 +15,7 @@
 
 ### Current Features
 - **Project system** with support for executables and libraries
+- **NuGet package management** with restore, search, and install capabilities
 - Variable declarations (var) and constants (const)
 - **Function-based variable assignments** (e.g., `var x = input()`)
 - **Class definitions** with methods and properties
