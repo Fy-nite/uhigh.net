@@ -288,33 +288,21 @@ public class EntryPoint
     private static async Task<int> HandleParseError(IEnumerable<Error> errors)
     {
         var errorsList = errors.ToList();
-        
-        // Check if it's just help or version request
         if (errorsList.Any(e => e is HelpRequestedError || e is VersionRequestedError))
         {
-            return 0;
+            return 0; // Help/version requested is not an error
         }
-
-        // For other errors, provide helpful feedback
-        Console.WriteLine("μHigh.Net Compiler");
-        Console.WriteLine("Usage examples:");
-        Console.WriteLine("  uhigh source.uh                    # Compile and run");
-        Console.WriteLine("  uhigh source.uh output.exe         # Compile to executable");
-        Console.WriteLine("  uhigh create MyProject --type Exe  # Create new project");
-        Console.WriteLine("  uhigh build project.uhighproj      # Build project");
-        Console.WriteLine("  uhigh --help                       # Show detailed help");
-        Console.WriteLine();
         
+        Console.WriteLine("Command line parsing failed:");
+        foreach (var error in errorsList)
+        {
+            Console.WriteLine($"  {error}");
+        }
         return 1;
     }
 
     private static void WriteError(string message)
     {
-        var originalColor = Console.ForegroundColor;
-        Console.ForegroundColor = ConsoleColor.Red;
-        Console.Write("error");
-        Console.ForegroundColor = ConsoleColor.White;
-        Console.WriteLine($": {message}");
-        Console.ForegroundColor = originalColor;
+        Console.Error.WriteLine(message);
     }
 }

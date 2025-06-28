@@ -97,10 +97,17 @@ namespace uhigh.Net.Parser
 
                         var classNameToken = Consume(TokenType.Identifier, "Expected class name");
 
+                        // Handle qualified class names (e.g., microshell.shell)
+                        var fullClassName = classNameToken.Value;
+                        while (Match(TokenType.Dot))
+                        {
+                            fullClassName += "." + Consume(TokenType.Identifier, "Expected identifier after '.'").Value;
+                        }
+
                         // Skip external classes
                         if (hasExternalAttribute)
                         {
-                            _diagnostics.ReportInfo($"Skipping registration for external class: {classNameToken.Value}");
+                            _diagnostics.ReportInfo($"Skipping registration for external class: {fullClassName}");
                             // Skip to end of class declaration
                             while (!Check(TokenType.LeftBrace) && !IsAtEnd())
                             {
@@ -123,7 +130,7 @@ namespace uhigh.Net.Parser
                         // Create a temporary class declaration for registration
                         var tempClassDecl = new ClassDeclaration
                         {
-                            Name = classNameToken.Value,
+                            Name = fullClassName,
                             Modifiers = modifiers,
                             Members = new List<Statement>()
                         };
@@ -450,8 +457,7 @@ namespace uhigh.Net.Parser
 
                 // if (Match(TokenType.Switch)) return ParseSwitchStatement();
                 // if (Match(TokenType.Struct)) return ParseStructDeclaration();
-                // if (Match(TokenTy
-                // pe.Module)) return ParseModuleDeclaration();
+                // if (Match(TokenType.Module)) return ParseModuleDeclaration();
                 // if (Match(TokenType.Let)) return ParseLetDeclaration();
                 // if (Match(TokenType.Loop)) return ParseLoopStatement();
 
@@ -1362,10 +1368,12 @@ namespace uhigh.Net.Parser
 
             var rightParen = Consume(TokenType.RightParen, "Expected ')' after arguments");
 
-            // Check if this is a constructor call (capitalized identifier without dots)
+            // Only treat as constructor call if it's a simple identifier (not qualified) 
+            // that starts with uppercase and doesn't contain dots
             if (callee is IdentifierExpression identExpr &&
                 char.IsUpper(identExpr.Name[0]) &&
-                !identExpr.Name.Contains('.'))
+                !identExpr.Name.Contains('.') &&
+                identExpr.Name.Length > 1) // Avoid single letter identifiers
             {
                 // This is a constructor call - convert to ConstructorCallExpression
                 _methodChecker.ValidateConstructorCall(identExpr.Name, arguments, rightParen);
@@ -2017,9 +2025,5 @@ namespace uhigh.Net.Parser
         }
     }
 
-    // Add this AST node at the end of the file (or in your AST definitions)
-    public class IncludeStatement : Statement
-    {
-        public string FileName { get; set; } = "";
-    }
+
 }

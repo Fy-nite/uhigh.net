@@ -13,6 +13,7 @@ namespace uhigh.Net.Lexer
         
         private static readonly Dictionary<string, TokenType> Keywords = new()
         {
+            { "new", TokenType.New },
             { "const", TokenType.Const },
             { "var", TokenType.Var },
             { "field", TokenType.Field }, // Added field keyword

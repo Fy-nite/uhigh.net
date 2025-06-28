@@ -170,6 +170,11 @@ namespace uhigh.Net.Parser
         public string? Alias { get; set; }
     }
     
+    public class IncludeStatement : Statement
+    {
+        public string FileName { get; set; } = "";
+    }
+    
     public class MethodDeclaration : Statement
     {
         public string Name { get; set; } = "";

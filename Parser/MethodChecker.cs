@@ -310,8 +310,15 @@ namespace uhigh.Net.Parser
             // Don't validate qualified names like "microshell.shell" as constructor calls
             if (className.Contains('.'))
             {
-                _diagnostics.ReportInfo($"Skipping constructor validation for qualified name: {className}");
+                _diagnostics.ReportInfo($"Allowing qualified constructor call (assuming external): {className}");
                 return true; // Assume qualified names are valid external references
+            }
+
+            // Check if this is a known external class from imports
+            if (IsExternalClass(className))
+            {
+                _diagnostics.ReportInfo($"Allowing external class constructor: {className}");
+                return true;
             }
 
             if (!_classes.ContainsKey(className))
@@ -356,6 +363,14 @@ namespace uhigh.Net.Parser
                 $"Class '{className}' constructor expects {string.Join(" or ", expectedCounts)} parameter(s), but {arguments.Count} were provided",
                 callToken.Line, callToken.Column, "UH207");
             return false;
+        }
+
+        // Add helper method to check if a class is external
+        private bool IsExternalClass(string className)
+        {
+            // Check if this class name appears in any import mappings or known external classes
+            // This could be expanded to check against a registry of external/imported classes
+            return false; // For now, return false - can be enhanced later
         }
 
         public bool ValidateMemberAccess(string className, string memberName, Token accessToken)
