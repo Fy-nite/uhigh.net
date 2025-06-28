@@ -1,368 +1,320 @@
 ﻿using uhigh.Net;
+using uhigh.Net.CommandLine;
+using CommandLine;
 
 public class EntryPoint
 {
     public static async Task Main(string[] args)
     {
-        if (args.Length == 0)
-        {
-            Console.WriteLine("μHigh.Net Compiler");
-            Console.WriteLine("Usage: uhigh.net <command> [options]");
-            Console.WriteLine();
-            Console.WriteLine("Commands:");
-            Console.WriteLine("  <source-file>                     # Compile and run μHigh.Net file");
-            Console.WriteLine("  create <project-name> [options]   # Create new μHigh.Net project");
-            Console.WriteLine("  build <project-file>              # Build μHigh.Net project");
-            Console.WriteLine("  run <project-file>                # Run μHigh.Net project");
-            Console.WriteLine("  info <project-file>               # Show project information");
-            Console.WriteLine("  add-file <project-file> <file>    # Add source file to project");
-            Console.WriteLine("  add-package <project-file> <name> <version> # Add package to project");
-            Console.WriteLine("  --lsp                             # Start Language Server Protocol mode");
-            Console.WriteLine();
-            Console.WriteLine("File compilation options:");
-            Console.WriteLine("  uhigh.net program.uh               # Compile and run in memory");
-            Console.WriteLine("  uhigh.net program.uh program.exe   # Compile to executable");
-            Console.WriteLine("  uhigh.net program.uh --run         # Compile and run in memory");
-            Console.WriteLine("  uhigh.net program.uh --save path   # Save C# code to folder");
-            Console.WriteLine("  uhigh.net program.uh --ast         # Show Abstract Syntax Tree");
-            Console.WriteLine("  uhigh.net build project.uhighproj --save path # Save project as separate C# files");
-            Console.WriteLine();
-            Console.WriteLine("Project creation options:");
-            Console.WriteLine("  --type <Exe|Library>              # Output type (default: Exe)");
-            Console.WriteLine("  --target <framework>              # Target framework (default: net9.0)");
-            Console.WriteLine("  --description <text>              # Project description");
-            Console.WriteLine("  --author <name>                   # Project author");
-            Console.WriteLine("  --dir <path>                      # Project directory (default: current)");
-            Console.WriteLine();
-            Console.WriteLine("Examples:");
-            Console.WriteLine("  uhigh.net create MyLibrary --type Library");
-            Console.WriteLine("  uhigh.net build MyProject.uhighproj MyProject.dll");
-            Console.WriteLine();
-            Console.WriteLine("Syntax examples:");
-            Console.WriteLine("  var obj = Program()               # Constructor call (no 'new' needed)");
-            Console.WriteLine("  Console.WriteLine(\"Hello\")        # Static method call");
-            Console.WriteLine("  [dotnetfunc] func Console.WriteLine(s: string) {} # .NET method declaration");
-            Console.WriteLine();
-            Console.WriteLine("Global options:");
-            Console.WriteLine("  --verbose                         # Enable verbose output");
-            return;
-        }
+        await Parser.Default.ParseArguments<
+            CompileOptions, 
+            CreateOptions, 
+            BuildOptions, 
+            RunOptions, 
+            InfoOptions, 
+            AddFileOptions, 
+            AddPackageOptions, 
+            LspOptions, 
+            TestOptions>(args)
+            .MapResult(
+                (CompileOptions opts) => HandleCompileCommand(opts),
+                (CreateOptions opts) => HandleCreateCommand(opts),
+                (BuildOptions opts) => HandleBuildCommand(opts),
+                (RunOptions opts) => HandleRunCommand(opts),
+                (InfoOptions opts) => HandleInfoCommand(opts),
+                (AddFileOptions opts) => HandleAddFileCommand(opts),
+                (AddPackageOptions opts) => HandleAddPackageCommand(opts),
+                (LspOptions opts) => HandleLspCommand(opts),
+                (TestOptions opts) => HandleTestCommand(opts),
+                
+                errors => HandleParseError(errors));
+    }
 
-        var verboseMode = args.Contains("--verbose");
-        var compiler = new Compiler(verboseMode);
-        
-        var command = args[0].ToLower();
-        bool success = false;
-
+    private static async Task<int> HandleCompileCommand(CompileOptions options)
+    {
         try
-        {            
-            switch (command)
-            {
-                case "--lsp":
-                case "lsp":
-                    success = await HandleLspCommand(args, compiler);
-                    break;
+        {
+            var compiler = new Compiler(options.Verbose, options.StdLibPath);
+            bool success;
 
-                case "create":
-                    success = await HandleCreateCommand(args, compiler);
-                    break;
-                    
-                case "build":
-                    success = await HandleBuildCommand(args, compiler);
-                    break;
-                    
-                case "run":
-                    success = await HandleRunCommand(args, compiler);
-                    break;
-                    
-                case "info":
-                    success = await HandleInfoCommand(args, compiler);
-                    break;
-                    
-                case "add-file":
-                    success = await HandleAddFileCommand(args, compiler);
-                    break;
-                    
-                case "add-package":
-                    success = await HandleAddPackageCommand(args, compiler);
-                    break;
-                    
-                case "test":
-                    success = await HandleTestCommand(args, compiler);
-                    break;
-                    
-                default:
-                    // Treat as source file compilation
-                    success = await HandleFileCompilation(args, compiler);
-                    break;
+            if (!File.Exists(options.SourceFile))
+            {
+                Console.WriteLine($"Error: Source file '{options.SourceFile}' not found");
+                return 1;
             }
+
+            if (!string.IsNullOrEmpty(options.SaveCSharpTo))
+            {
+                success = await compiler.SaveCSharpCode(options.SourceFile, options.SaveCSharpTo);
+            }
+            else if (options.RunInMemory || string.IsNullOrEmpty(options.OutputFile))
+            {
+                success = await compiler.CompileAndRunInMemory(options.SourceFile);
+            }
+            else
+            {
+                success = await compiler.CompileToExecutable(options.SourceFile, options.OutputFile);
+            }
+
+            return success ? 0 : 1;
         }
         catch (Exception ex)
         {
-            var originalColor = Console.ForegroundColor;
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.Write("error");
-            Console.ForegroundColor = ConsoleColor.White;
-            Console.WriteLine($": {ex.Message}");
-            Console.ForegroundColor = originalColor;
-            
-            if (verboseMode)
+            WriteError($"Compilation failed: {ex.Message}");
+            if (options.Verbose)
             {
-                Console.WriteLine($"\nStack trace:\n{ex.StackTrace}");
+                Console.WriteLine($"Stack trace:\n{ex.StackTrace}");
             }
-            success = false;
-        }
-        
-        Environment.Exit(success ? 0 : 1);
-    }
-
-    private static async Task<bool> HandleCreateCommand(string[] args, Compiler compiler)
-    {
-        if (args.Length < 2)
-        {
-            Console.WriteLine("Error: Project name is required");
-            Console.WriteLine("Usage: uhigh create <project-name> [options]");
-            return false;
-        }
-
-        var projectName = args[1];
-        string? description = null;
-        string? author = null;
-        string? projectDir = null;
-        string outputType = "Exe";
-        string target = "net9.0";
-
-        // Parse options
-        for (int i = 2; i < args.Length; i++)
-        {
-            switch (args[i])
-            {
-                case "--type" when i + 1 < args.Length:
-                    outputType = args[++i];
-                    break;
-                case "--target" when i + 1 < args.Length:
-                    target = args[++i];
-                    break;
-                case "--description" when i + 1 < args.Length:
-                    description = args[++i];
-                    break;
-                case "--author" when i + 1 < args.Length:
-                    author = args[++i];
-                    break;
-                case "--dir" when i + 1 < args.Length:
-                    projectDir = args[++i];
-                    break;
-                case "--verbose":
-                    // Already handled
-                    break;
-            }
-        }
-
-        return await compiler.CreateProject(projectName, projectDir, description, author, outputType, target);
-    }
-
-    private static async Task<bool> HandleBuildCommand(string[] args, Compiler compiler)
-    {
-        if (args.Length < 2)
-        {
-            Console.WriteLine("Error: Project file is required");
-            Console.WriteLine("Usage: uhigh build <project-file> [output-file] [--save path]");
-            return false;
-        }
-
-        var projectFile = args[1];
-        string? outputFile = null;
-        string? savePath = null;
-
-        // Parse arguments
-        for (int i = 2; i < args.Length; i++)
-        {
-            if (args[i] == "--save" && i + 1 < args.Length)
-            {
-                savePath = args[++i];
-            }
-            else if (!args[i].StartsWith("--") && outputFile == null)
-            {
-                outputFile = args[i];
-            }
-        }
-
-        if (!File.Exists(projectFile))
-        {
-            Console.WriteLine($"Error: Project file '{projectFile}' not found");
-            return false;
-        }
-
-        if (savePath != null)
-        {
-            return await compiler.SaveProjectAsCSharpFiles(projectFile, savePath);
-        }
-        else
-        {
-            return await compiler.CompileProject(projectFile, outputFile);
+            return 1;
         }
     }
 
-    private static async Task<bool> HandleRunCommand(string[] args, Compiler compiler)
-    {
-        if (args.Length < 2)
-        {
-            Console.WriteLine("Error: Project file is required");
-            Console.WriteLine("Usage: uhigh run <project-file>");
-            return false;
-        }
-
-        var projectFile = args[1];
-
-        if (!File.Exists(projectFile))
-        {
-            Console.WriteLine($"Error: Project file '{projectFile}' not found");
-            return false;
-        }
-
-        return await compiler.CompileProject(projectFile);
-    }
-
-    private static async Task<bool> HandleInfoCommand(string[] args, Compiler compiler)
-    {
-        if (args.Length < 2)
-        {
-            Console.WriteLine("Error: Project file is required");
-            Console.WriteLine("Usage: uhigh info <project-file>");
-            return false;
-        }
-
-        var projectFile = args[1];
-
-        if (!File.Exists(projectFile))
-        {
-            Console.WriteLine($"Error: Project file '{projectFile}' not found");
-            return false;
-        }
-
-        return await compiler.ListProjectInfo(projectFile);
-    }
-
-    private static async Task<bool> HandleAddFileCommand(string[] args, Compiler compiler)
-    {
-        if (args.Length < 3)
-        {
-            Console.WriteLine("Error: Project file and source file name are required");
-            Console.WriteLine("Usage: uhigh add-file <project-file> <source-file>");
-            return false;
-        }
-
-        var projectFile = args[1];
-        var sourceFile = args[2];
-
-        if (!File.Exists(projectFile))
-        {
-            Console.WriteLine($"Error: Project file '{projectFile}' not found");
-            return false;
-        }
-
-        return await compiler.AddSourceFileToProject(projectFile, sourceFile, true);
-    }
-
-    private static async Task<bool> HandleAddPackageCommand(string[] args, Compiler compiler)
-    {
-        if (args.Length < 4)
-        {
-            Console.WriteLine("Error: Project file, package name, and version are required");
-            Console.WriteLine("Usage: uhigh.net add-package <project-file> <package-name> <version>");
-            return false;
-        }
-
-        var projectFile = args[1];
-        var packageName = args[2];
-        var version = args[3];
-
-        if (!File.Exists(projectFile))
-        {
-            Console.WriteLine($"Error: Project file '{projectFile}' not found");
-            return false;
-        }
-
-        return await compiler.AddPackageToProject(projectFile, packageName, version);
-    }
-
-    private static async Task<bool> HandleTestCommand(string[] args, Compiler compiler)
-    {
-        Console.WriteLine("Running μHigh Compiler Tests");
-        Console.WriteLine("============================");
-        Console.WriteLine();
-
-        var testSuites = uhigh.Net.Testing.TestRunner.RunAllTests();
-        uhigh.Net.Testing.TestRunner.PrintResults(testSuites);
-
-        var totalFailed = testSuites.Sum(s => s.FailedCount);
-        return totalFailed == 0;
-    }
-
-    private static async Task<bool> HandleFileCompilation(string[] args, Compiler compiler)
-    {
-        var sourceFile = args[0];
-        
-        if (!File.Exists(sourceFile))
-        {
-            Console.WriteLine($"Error: Source file '{sourceFile}' not found");
-            return false;
-        }
-
-        bool success;
-        
-        // Check for --ast flag
-        if (args.Contains("--ast"))
-        {
-            Console.WriteLine($"Showing AST for: {sourceFile}");
-            success = await compiler.PrintAST(sourceFile);
-            return success;
-        }
-        
-        // Check for --save flag
-        var saveIndex = Array.IndexOf(args, "--save");
-        if (saveIndex >= 0 && saveIndex < args.Length - 1)
-        {
-            var savePath = args[saveIndex + 1];
-            Console.WriteLine($"Saving C# code to: {savePath}");
-            success = await compiler.SaveCSharpCode(sourceFile, savePath);
-        }
-        else if (args.Length == 1 || (args.Length == 2 && args[1] == "--run"))
-        {
-            // Run in memory
-          //  Console.WriteLine("Compiling and running in memory...");
-            success = await compiler.CompileAndRunInMemory(sourceFile);
-        }
-        else if (args.Length >= 2 && !args[1].StartsWith("--"))
-        {
-            // Compile to file
-            var outputFile = args[1];
-            Console.WriteLine($"Compiling to executable: {outputFile}");
-            success = await compiler.CompileToExecutable(sourceFile, outputFile);
-        }
-        else
-        {
-            // Default: run in memory
-            //Console.WriteLine("Compiling and running in memory...");
-            success = await compiler.CompileAndRunInMemory(sourceFile);
-        }
-
-        return success;
-    }
-
-    private static async Task<bool> HandleLspCommand(string[] args, Compiler compiler)
+    private static async Task<int> HandleCreateCommand(CreateOptions options)
     {
         try
         {
-            // Start LSP server - this should block until the client disconnects
-            // var host = new uhigh.Net.LanguageServer.LanguageServerHost(Console.OpenStandardInput(), Console.OpenStandardOutput());
+            var compiler = new Compiler(options.Verbose, options.StdLibPath);
+            var success = await compiler.CreateProject(
+                options.ProjectName,
+                options.Directory,
+                options.Description,
+                options.Author,
+                options.OutputType,
+                options.TargetFramework);
+
+            return success ? 0 : 1;
+        }
+        catch (Exception ex)
+        {
+            WriteError($"Project creation failed: {ex.Message}");
+            return 1;
+        }
+    }
+
+    private static async Task<int> HandleBuildCommand(BuildOptions options)
+    {
+        try
+        {
+            var compiler = new Compiler(options.Verbose, options.StdLibPath);
+
+            if (!File.Exists(options.ProjectFile))
+            {
+                WriteError($"Project file '{options.ProjectFile}' not found");
+                return 1;
+            }
+
+            bool success;
+            if (!string.IsNullOrEmpty(options.SaveCSharpTo))
+            {
+                Console.WriteLine($"Generating C# files to: {options.SaveCSharpTo}");
+                success = await compiler.SaveCSharpCodeFromProject(options.ProjectFile, options.SaveCSharpTo);
+                if (success)
+                {
+                    Console.WriteLine("Each μHigh source file has been converted to a separate C# file.");
+                }
+            }
+            else
+            {
+                success = await compiler.CompileProject(options.ProjectFile, options.OutputFile);
+            }
+            
+            return success ? 0 : 1;
+        }
+        catch (Exception ex)
+        {
+            WriteError($"Build failed: {ex.Message}");
+            return 1;
+        }
+    }
+
+    private static async Task<int> HandleRunCommand(RunOptions options)
+    {
+        try
+        {
+            var compiler = new Compiler(options.Verbose, options.StdLibPath);
+
+            if (!File.Exists(options.ProjectFile))
+            {
+                WriteError($"Project file '{options.ProjectFile}' not found");
+                return 1;
+            }
+
+            bool success;
+            if (!string.IsNullOrEmpty(options.SaveCSharpTo))
+            {
+                success = await compiler.SaveCSharpCodeFromProject(options.ProjectFile, options.SaveCSharpTo);
+            }
+            else
+            {
+                success = await compiler.CompileProject(options.ProjectFile);
+            }
+            
+            return success ? 0 : 1;
+        }
+        catch (Exception ex)
+        {
+            WriteError($"Run failed: {ex.Message}");
+            return 1;
+        }
+    }
+
+    private static async Task<int> HandleInfoCommand(InfoOptions options)
+    {
+        try
+        {
+            var compiler = new Compiler(options.Verbose, options.StdLibPath);
+
+            if (!File.Exists(options.ProjectFile))
+            {
+                WriteError($"Project file '{options.ProjectFile}' not found");
+                return 1;
+            }
+
+            var success = await compiler.ListProjectInfo(options.ProjectFile);
+            return success ? 0 : 1;
+        }
+        catch (Exception ex)
+        {
+            WriteError($"Info command failed: {ex.Message}");
+            return 1;
+        }
+    }
+
+    private static async Task<int> HandleAddFileCommand(AddFileOptions options)
+    {
+        try
+        {
+            var compiler = new Compiler(options.Verbose, options.StdLibPath);
+
+            if (!File.Exists(options.ProjectFile))
+            {
+                WriteError($"Project file '{options.ProjectFile}' not found");
+                return 1;
+            }
+
+            var success = await compiler.AddSourceFileToProject(options.ProjectFile, options.SourceFile, options.CreateFile);
+            return success ? 0 : 1;
+        }
+        catch (Exception ex)
+        {
+            WriteError($"Add file failed: {ex.Message}");
+            return 1;
+        }
+    }
+
+    private static async Task<int> HandleAddPackageCommand(AddPackageOptions options)
+    {
+        try
+        {
+            var compiler = new Compiler(options.Verbose, options.StdLibPath);
+
+            if (!File.Exists(options.ProjectFile))
+            {
+                WriteError($"Project file '{options.ProjectFile}' not found");
+                return 1;
+            }
+
+            var success = await compiler.AddPackageToProject(options.ProjectFile, options.PackageName, options.Version);
+            return success ? 0 : 1;
+        }
+        catch (Exception ex)
+        {
+            WriteError($"Add package failed: {ex.Message}");
+            return 1;
+        }
+    }
+
+    private static async Task<int> HandleLspCommand(LspOptions options)
+    {
+        try
+        {
+            Console.WriteLine("Starting μHigh Language Server...");
+            if (options.UseStdio)
+            {
+                Console.WriteLine("Using stdio for communication");
+            }
+            else if (options.Port.HasValue)
+            {
+                Console.WriteLine($"Listening on port {options.Port.Value}");
+            }
+
+            // TODO: Implement LSP server startup
+            // var host = new uhigh.Net.LanguageServer.LanguageServerHost(
+            //     Console.OpenStandardInput(), 
+            //     Console.OpenStandardOutput());
             // await host.RunAsync();
-            
-            return true;
+
+            Console.WriteLine("LSP server implementation not yet available");
+            return 0;
         }
         catch (Exception ex)
         {
-            return false;
+            WriteError($"LSP server failed: {ex.Message}");
+            return 1;
         }
+    }
+
+    private static async Task<int> HandleTestCommand(TestOptions options)
+    {
+        try
+        {
+            Console.WriteLine("Running μHigh Compiler Tests");
+            Console.WriteLine("============================");
+            Console.WriteLine();
+
+            if (options.ListTests)
+            {
+                Console.WriteLine("Available test suites:");
+                Console.WriteLine("- Lexer tests");
+                Console.WriteLine("- Parser tests");
+                Console.WriteLine("- Code generation tests");
+                Console.WriteLine("- Integration tests");
+                return 0;
+            }
+
+            var testSuites = uhigh.Net.Testing.TestRunner.RunAllTests();
+            uhigh.Net.Testing.TestRunner.PrintResults(testSuites);
+
+            var totalFailed = testSuites.Sum(s => s.FailedCount);
+            return totalFailed == 0 ? 0 : 1;
+        }
+        catch (Exception ex)
+        {
+            WriteError($"Test execution failed: {ex.Message}");
+            return 1;
+        }
+    }
+
+    private static async Task<int> HandleParseError(IEnumerable<Error> errors)
+    {
+        var errorsList = errors.ToList();
+        
+        // Check if it's just help or version request
+        if (errorsList.Any(e => e is HelpRequestedError || e is VersionRequestedError))
+        {
+            return 0;
+        }
+
+        // For other errors, provide helpful feedback
+        Console.WriteLine("μHigh.Net Compiler");
+        Console.WriteLine("Usage examples:");
+        Console.WriteLine("  uhigh source.uh                    # Compile and run");
+        Console.WriteLine("  uhigh source.uh output.exe         # Compile to executable");
+        Console.WriteLine("  uhigh create MyProject --type Exe  # Create new project");
+        Console.WriteLine("  uhigh build project.uhighproj      # Build project");
+        Console.WriteLine("  uhigh --help                       # Show detailed help");
+        Console.WriteLine();
+        
+        return 1;
+    }
+
+    private static void WriteError(string message)
+    {
+        var originalColor = Console.ForegroundColor;
+        Console.ForegroundColor = ConsoleColor.Red;
+        Console.Write("error");
+        Console.ForegroundColor = ConsoleColor.White;
+        Console.WriteLine($": {message}");
+        Console.ForegroundColor = originalColor;
     }
 }

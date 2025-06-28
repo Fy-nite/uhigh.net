@@ -72,6 +72,9 @@ namespace uhigh.Net.Testing
             var result = GenerateCSharp("var person = Person(\"John\", 25)");
             
             Assert.IsTrue(result.Contains("var person = new Person(\"John\", 25);"));
+            // Verify it's all on one line (no unexpected newlines)
+            Assert.IsFalse(result.Contains("new\nPerson"));
+            Assert.IsFalse(result.Contains("new \nPerson"));
         }
 
         [Test]
@@ -185,7 +188,7 @@ namespace uhigh.Net.Testing
                     _ => ""Unknown""
                 }");
             
-            Assert.IsTrue(result.Contains("cmd switch {"));
+            Assert.IsTrue(result.Contains("cmd switch"));
             Assert.IsTrue(result.Contains("\"help\" => \"Showing help\""));
             Assert.IsTrue(result.Contains("_ => \"Unknown\""));
         }
@@ -236,6 +239,41 @@ namespace uhigh.Net.Testing
             Assert.IsTrue(result.Contains("exitProgram()"));
             Assert.IsTrue(result.Contains("default:"));
             Assert.IsTrue(result.Contains("showError()"));
+        }
+
+        [Test]
+        public void TestMatchExpressionInAssignment()
+        {
+            var result = GenerateCSharp(@"
+                var message: string
+                message = status match {
+                    0 => ""OK"",
+                    _ => ""Error""
+                }");
+            
+            Assert.IsTrue(result.Contains("message = (status switch"));
+            Assert.IsTrue(result.Contains("0 => \"OK\""));
+            Assert.IsTrue(result.Contains("_ => \"Error\""));
+        }
+
+        [Test]
+        public void TestMatchExpressionWithBlocks()
+        {
+            var result = GenerateCSharp(@"
+                var result = cmd match {
+                    ""help"" => {
+                        Console.WriteLine(""Help"")
+                        ""Help shown""
+                    },
+                    ""exit"" => ""Goodbye"",
+                    _ => ""Unknown""
+                }");
+            
+            // Should generate appropriate C# code for mixed expression/block match
+            Assert.IsTrue(result.Contains("switch"));
+            Assert.IsTrue(result.Contains("Console.WriteLine(\"Help\")"));
+            Assert.IsTrue(result.Contains("case \"help\":"));
+            Assert.IsTrue(result.Contains("case \"exit\":"));
         }
     }
 }

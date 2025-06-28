@@ -307,6 +307,13 @@ namespace uhigh.Net.Parser
 
         public bool ValidateConstructorCall(string className, List<Expression> arguments, Token callToken)
         {
+            // Don't validate qualified names like "microshell.shell" as constructor calls
+            if (className.Contains('.'))
+            {
+                _diagnostics.ReportInfo($"Skipping constructor validation for qualified name: {className}");
+                return true; // Assume qualified names are valid external references
+            }
+
             if (!_classes.ContainsKey(className))
             {
                 // More detailed logging for debugging
@@ -390,10 +397,22 @@ namespace uhigh.Net.Parser
             return false;
         }        public bool ValidateCall(string functionName, List<Expression> arguments, Token location)
         {
-            // Check if this is actually a constructor call (capitalized name)
+            // Check if this is actually a constructor call (capitalized name without dots)
             if (char.IsUpper(functionName[0]) && !functionName.Contains('.'))
             {
                 return ValidateConstructorCall(functionName, arguments, location);
+            }
+
+            // Skip validation for qualified names that might be external references
+            if (functionName.Contains('.'))
+            {
+                var parts = functionName.Split('.');
+                if (parts.Length == 2 && char.IsLower(parts[1][0]))
+                {
+                    // This looks like namespace.function or class.method - allow it
+                    _diagnostics.ReportInfo($"Allowing qualified method call: {functionName}");
+                    return true;
+                }
             }
 
             _diagnostics.ReportInfo($"Validating call to '{functionName}' with {arguments.Count} arguments");

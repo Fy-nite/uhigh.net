@@ -2,6 +2,7 @@
 
 $ErrorActionPreference = "Stop"
 
+Write-Host "Building μHigh compiler..."
 dotnet pack uhigh.csproj
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
@@ -14,6 +15,15 @@ if ($toolInstalled) {
 } else {
     Write-Host "uhigh is not currently installed."
 }
-# dotnet pack uhigh.csproj
-dotnet tool update --global --add-source ./bin/Release uhigh
+
+Write-Host "Installing μHigh as global tool..."
+dotnet tool install --global --add-source ./bin/Release uhigh
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "μHigh installed successfully!"
+    Write-Host "You can now use 'uhigh' command from anywhere."
+    Write-Host ""
+    Write-Host "Try: uhigh --help"
+} else {
+    Write-Host "Installation failed with exit code $LASTEXITCODE"
+}
 exit $LASTEXITCODE

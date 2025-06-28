@@ -363,6 +363,28 @@ namespace uhigh.Net.Testing
         }
 
         [Test]
+        public void TestMatchExpressionAssignment()
+        {
+            var program = ParseSource(@"
+                var message: string
+                message = status match {
+                    0 => ""Success"",
+                    1 => ""Warning"", 
+                    _ => ""Error""
+                }");
+
+            Assert.AreEqual(2, program.Statements.Count);
+            Assert.IsTrue(program.Statements[0] is VariableDeclaration);
+            Assert.IsTrue(program.Statements[1] is ExpressionStatement);
+            
+            var exprStmt = (ExpressionStatement)program.Statements[1];
+            Assert.IsTrue(exprStmt.Expression is AssignmentExpression);
+            
+            var assignment = (AssignmentExpression)exprStmt.Expression;
+            Assert.IsTrue(assignment.Value is MatchExpression);
+        }
+
+        [Test]
         public void TestFunctionCallValidation()
         {
             // This should work - correct number of parameters
@@ -424,5 +446,44 @@ namespace uhigh.Net.Testing
             Assert.AreEqual("main", mainFunc.Name);
             Assert.AreEqual(4, mainFunc.Body.Count); // 3 var declarations + 1 console call
         }
+
+        [Test]
+        public void TestMatchExpressionWithBlocks()
+        {
+            var program = ParseSource(@"
+                var result = command match {
+                    ""help"" => {
+                        print(""Showing help information"")
+                        return ""Help displayed""
+                    },
+                    ""exit"" => {
+                        print(""Goodbye!"")
+                        return ""Exiting""
+                    },
+                    _ => ""Unknown command""
+                }");
+
+            Assert.AreEqual(1, program.Statements.Count);
+            Assert.IsTrue(program.Statements[0] is VariableDeclaration);
+            
+            var varDecl = (VariableDeclaration)program.Statements[0];
+            Assert.IsTrue(varDecl.Initializer is MatchExpression);
+            
+            var matchExpr = (MatchExpression)varDecl.Initializer;
+            Assert.AreEqual(3, matchExpr.Arms.Count);
+            
+            // First two arms should have block expressions
+            Assert.IsTrue(matchExpr.Arms[0].Result is BlockExpression);
+            Assert.IsTrue(matchExpr.Arms[1].Result is BlockExpression);
+            
+            // Last arm should be a simple expression
+            Assert.IsFalse(matchExpr.Arms[2].Result is BlockExpression);
+            
+            // Check block content
+            var firstBlock = (BlockExpression)matchExpr.Arms[0].Result;
+            Assert.AreEqual(2, firstBlock.Statements.Count); // print + return
+        }
+
+       
     }
 }

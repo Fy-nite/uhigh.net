@@ -1,33 +1,39 @@
-namespace command {
-    type CommandList = array<Command>
-    
-    class Command {
-        field name: string
-        field description: string
-        field usage: string
-        field aliases: array<string>
-        field options: array<string>
-        field arguments: array<string>
-        field subcommands: CommandList
-    }
-    
-    class Program {
-        public static func Main(args: array<string>): void {
-            // Example usage of Command class
-            Console.WriteLine("Command Example")
-            var m = Console.ReadLine()
-            match m {
-                "help" => {
-                    Console.WriteLine("Showing help...")
-                    Console.WriteLine("Help displayed")
-                },
-                "exit" => {
-                    Console.WriteLine("Exiting program")
-                },
-                _ => {
-                    Console.WriteLine("Unknown command: " + m)
-                    Console.WriteLine("Error")
-                }
+namespace testing
+{
+    class Program
+    {
+        static field cat: string = "purr"
+        static field meow: string
+        public static func Main(args: array<string>): void 
+        {
+            var catt = new Program()
+            var meow = cat match
+            {
+                "purr" => "meow",
+                "meow" => "purr",
+                _ => "unknown"
+            }
+            match cat 
+            {
+                "purr" => Console.WriteLine("The cat is purring."),
+                "meow" => Console.WriteLine("The cat is meowing."),
+                _ => Console.WriteLine("The cat is silent.")
+            }
+         
+            var x = 0
+            while x < 10
+            {
+                Console.WriteLine("x is: " + x);
+                x += 1;
+            }
+            
+            if meow == "meow"
+            {
+                Console.WriteLine("The cat says: " + meow);
+            }
+            else
+            {
+                Console.WriteLine("The cat is silent.");
             }
         }
     }

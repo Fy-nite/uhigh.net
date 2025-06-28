@@ -83,7 +83,7 @@ func main() {
 Compile and run it:
 
 ```bash
-dotnet run hello.uh
+uhigh hello.uh
 # This creates hello.exe which you can run directly
 ./hello.exe
 ```
@@ -92,13 +92,13 @@ dotnet run hello.uh
 
 ```bash
 # Create an executable project
-dotnet run create MyApp --type Exe
+uhigh create MyApp --type Exe
 
 # Create a library project
-dotnet run create MyLibrary --type Library
+uhigh create MyLibrary --type Library
 
 # Build the project
-dotnet run build MyApp/MyApp.uhighproj
+uhigh build MyApp/MyApp.uhighproj
 ```
 
 ## Usage
@@ -106,30 +106,67 @@ dotnet run build MyApp/MyApp.uhighproj
 ### Compile a single file
 
 ```bash
-dotnet run -- source.uh
+uhigh source.uh
 ```
 
-This will compile and run the μHigh source file in memory.
+This will compile and run the program in memory.
 
 ### Specify output file
 
 ```bash
-dotnet run -- source.uh output.exe
+uhigh source.uh output.exe
 ```
 
 This will compile `source.uh` and create `output.exe`.
+
+### Additional compile options
+
+```bash
+# Compile and run in memory (explicit)
+uhigh compile source.uh --run
+
+# Save generated C# code
+uhigh compile source.uh --save ./generated
+
+# Verbose output
+uhigh compile source.uh --verbose
+```
 
 ### Create and build projects
 
 ```bash
 # Create a new project
-dotnet run -- create MyProject --type Exe --author "Your Name"
+uhigh create MyProject --type Exe --author "Your Name"
 
 # Build the project
-dotnet run -- build MyProject/MyProject.uhighproj
+uhigh build MyProject/MyProject.uhighproj
 
 # Build to specific output
-dotnet run -- build MyProject/MyProject.uhighproj MyProject.exe
+uhigh build MyProject/MyProject.uhighproj MyProject.exe
+
+# Show project information
+uhigh info MyProject/MyProject.uhighproj
+
+# Add files to project
+uhigh add-file MyProject/MyProject.uhighproj utils.uh --create
+
+# Add packages to project
+uhigh add-package MyProject/MyProject.uhighproj Newtonsoft.Json 13.0.3
+```
+
+### Other commands
+
+```bash
+# Start Language Server (for IDE integration)
+uhigh lsp
+
+# Run tests
+uhigh test
+
+# Show help for any command
+uhigh --help
+uhigh create --help
+uhigh build --help
 ```
 
 ## Language Reference

@@ -26,10 +26,10 @@ Before we begin coding, make sure you have μHigh set up:
 3. Run the provided install script to set up your environment
 4. Open your favorite text editor or IDE (like Visual Studio Code)
 5. Start writing your μHigh programs!
-6. Run the compiler to see your code in action with `uhighc yourfile.uh`
+6. Run the compiler to see your code in action with `uhigh yourfile.uh`
 
 Note: μHigh is designed to be similar to C# and Java, so if you have experience with those languages, you'll find μHigh familiar.
-another Note: This tutorial assumes the Micro-High compiler has fully implemented the features discussed here, so make sure you have the latest version.
+Another Note: This tutorial assumes the μHigh compiler has fully implemented the features discussed here, so make sure you have the latest version.
 If any features are not yet implemented, you can still learn the syntax and concepts, and apply them once they are available.
 
 ## Your First Program

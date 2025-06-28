@@ -14,6 +14,7 @@ namespace uhigh.Net.CodeGen
         private DiagnosticsReporter _diagnostics = new();
         private string _rootNamespace = "Generated";
         private string _className = "Program";
+        private bool _suppressUsings = false; // Add flag to control using generation
 
         public string Generate(Program program, DiagnosticsReporter? diagnostics = null, string? rootNamespace = null, string? className = null)
         {
@@ -24,18 +25,22 @@ namespace uhigh.Net.CodeGen
             _importMappings.Clear();
             _rootNamespace = rootNamespace ?? "Generated";
             _className = className ?? "Program";
+            _suppressUsings = false; // Reset flag
 
             _diagnostics.ReportInfo("Starting C# code generation");
 
             // Process imports first
             ProcessImports(program);
 
-            // Add using statements
-            foreach (var usingDirective in _usings.OrderBy(u => u))
+            // Add using statements only if not suppressed
+            if (!_suppressUsings)
             {
-                _output.AppendLine($"using {usingDirective};");
+                foreach (var usingDirective in _usings.OrderBy(u => u))
+                {
+                    _output.AppendLine($"using {usingDirective};");
+                }
+                _output.AppendLine();
             }
-            _output.AppendLine();
 
             // Generate type aliases as C# using statements
             foreach (var typeAlias in program.Statements.OfType<TypeAliasDeclaration>())
@@ -48,6 +53,185 @@ namespace uhigh.Net.CodeGen
 
             _diagnostics.ReportInfo($"C# code generation completed. Generated {_output.ToString().Split('\n').Length} lines");
             return _output.ToString();
+        }
+
+        // Add method to generate code without using statements (for combining multiple files)
+        public string GenerateWithoutUsings(Program program, DiagnosticsReporter? diagnostics = null, string? rootNamespace = null, string? className = null)
+        {
+            _suppressUsings = true;
+            return Generate(program, diagnostics, rootNamespace, className);
+        }
+
+        // Add method to get collected using statements
+        public HashSet<string> GetCollectedUsings()
+        {
+            return new HashSet<string>(_usings);
+        }
+
+        // Add method to generate combined code from multiple programs
+        public string GenerateCombined(List<Program> programs, DiagnosticsReporter? diagnostics = null, string? rootNamespace = null, string? className = null)
+        {
+            _diagnostics = diagnostics ?? new DiagnosticsReporter();
+            _output.Clear();
+            _indentLevel = 0;
+            _usings.Clear();
+            _importMappings.Clear();
+            _rootNamespace = rootNamespace ?? "Generated";
+            _className = className ?? "Program";
+
+            _diagnostics.ReportInfo("Starting combined C# code generation");
+
+            // Collect all using statements from all programs first
+            foreach (var program in programs)
+            {
+                ProcessImports(program);
+            }
+
+            // Generate using statements once at the top
+            foreach (var usingDirective in _usings.OrderBy(u => u))
+            {
+                _output.AppendLine($"using {usingDirective};");
+            }
+            _output.AppendLine();
+
+            // Collect all statements from all programs and organize them by type
+            var allNamespaces = new Dictionary<string, List<Statement>>();
+            var allClasses = new Dictionary<string, List<Statement>>();
+            var allFunctions = new List<FunctionDeclaration>();
+            var allStatements = new List<Statement>();
+            var mainFunction = (FunctionDeclaration?)null;
+
+            foreach (var program in programs)
+            {
+                if (program.Statements == null) continue;
+
+                foreach (var statement in program.Statements.Where(s => !(s is ImportStatement)))
+                {
+                    switch (statement)
+                    {
+                        case NamespaceDeclaration nsDecl:
+                            if (!allNamespaces.ContainsKey(nsDecl.Name))
+                                allNamespaces[nsDecl.Name] = new List<Statement>();
+                            allNamespaces[nsDecl.Name].AddRange(nsDecl.Members);
+                            break;
+                        case ClassDeclaration classDecl:
+                            if (!allClasses.ContainsKey(classDecl.Name))
+                                allClasses[classDecl.Name] = new List<Statement>();
+                            allClasses[classDecl.Name].AddRange(classDecl.Members);
+                            break;
+                        case FunctionDeclaration funcDecl:
+                            if (funcDecl.Name == "main")
+                                mainFunction = funcDecl;
+                            else
+                                allFunctions.Add(funcDecl);
+                            break;
+                        default:
+                            allStatements.Add(statement);
+                            break;
+                    }
+                }
+            }
+
+            // Generate merged content
+            if (allNamespaces.Count > 0)
+            {
+                // Generate merged namespaces
+                foreach (var ns in allNamespaces)
+                {
+                    _output.AppendLine($"namespace {ns.Key}");
+                    _output.AppendLine("{");
+                    _indentLevel++;
+
+                    foreach (var member in ns.Value)
+                    {
+                        GenerateStatement(member);
+                    }
+
+                    _indentLevel--;
+                    _output.AppendLine("}");
+                    _output.AppendLine();
+                }
+            }
+
+            if (allClasses.Count > 0)
+            {
+                // Generate merged classes
+                foreach (var cls in allClasses)
+                {
+                    _output.AppendLine($"public class {cls.Key}");
+                    _output.AppendLine("{");
+                    _indentLevel++;
+
+                    foreach (var member in cls.Value)
+                    {
+                        GenerateStatement(member);
+                    }
+
+                    _indentLevel--;
+                    _output.AppendLine("}");
+                    _output.AppendLine();
+                }
+            }
+
+            // If we have loose functions or statements, wrap them in the default namespace/class
+            if (allFunctions.Count > 0 || allStatements.Count > 0 || mainFunction != null)
+            {
+                _output.AppendLine($"namespace {_rootNamespace}");
+                _output.AppendLine("{");
+                _indentLevel++;
+                
+                _output.AppendLine($"public class {_className}");
+                _output.AppendLine("{");
+                _indentLevel++;
+
+                GenerateBuiltInFunctions();
+
+                // Generate all loose statements first
+                foreach (var statement in allStatements)
+                {
+                    GenerateStatement(statement);
+                }
+
+                // Generate all functions
+                foreach (var function in allFunctions)
+                {
+                    GenerateFunctionDeclaration(function);
+                }
+
+                // Generate main function or method
+                if (mainFunction != null)
+                {
+                    GenerateMainFunction(mainFunction);
+                }
+                else if (allStatements.Where(s => !(s is FunctionDeclaration)).Any())
+                {
+                    // Generate main method for loose statements
+                    GenerateMainMethod(allStatements.Where(s => !(s is FunctionDeclaration)).Cast<ASTNode>().ToList());
+                }
+
+                _indentLevel--;
+                _output.AppendLine("}");
+                _indentLevel--;
+                _output.AppendLine("}");
+            }
+
+            _diagnostics.ReportInfo($"Combined C# code generation completed. Generated {_output.ToString().Split('\n').Length} lines");
+            return _output.ToString();
+        }
+
+        // Helper method to generate program content without using statements
+        private void GenerateProgramContentWithoutUsings(Program program)
+        {
+            if (program.Statements == null) return;
+
+            var hasNamespace = program.Statements.Any(s => s is NamespaceDeclaration);
+            var hasClass = program.Statements.Any(s => s is ClassDeclaration);
+            
+            // Generate the source structure directly without wrapping or using statements
+            foreach (var statement in program.Statements.Where(s => !(s is ImportStatement)))
+            {
+                GenerateStatement(statement);
+            }
         }
 
         private void ProcessImports(Program program)
@@ -844,7 +1028,6 @@ namespace uhigh.Net.CodeGen
                     GenerateExpression(assignExpr.Value);
                     break;
                 case ConstructorCallExpression constructorExpr:
-                    // Add "new" keyword for constructor calls in C#
                     _output.Append($"new {constructorExpr.ClassName}(");
                     for (int i = 0; i < constructorExpr.Arguments.Count; i++)
                     {
@@ -894,10 +1077,95 @@ namespace uhigh.Net.CodeGen
                     GenerateExpression(indexExpr.Index);
                     _output.Append("]");
                     break;
+                case BlockExpression blockExpr:
+                    GenerateBlockExpression(blockExpr);
+                    break;
                 case MatchExpression matchExpr:
                     GenerateMatchExpression(matchExpr);
                     break;
             }
+        }
+
+        private void GenerateBlockExpression(BlockExpression blockExpr)
+        {
+            _output.AppendLine();
+            Indent();
+            _output.AppendLine("{");
+            _indentLevel++;
+
+            foreach (var stmt in blockExpr.Statements)
+            {
+                GenerateStatement(stmt);
+            }
+
+            _indentLevel--;
+            Indent();
+            _output.Append("}");
+        }
+
+        private void GenerateMatchStatement(MatchStatement matchStmt)
+        {
+            Indent();
+            _output.Append("switch (");
+            GenerateExpression(matchStmt.Value);
+            _output.AppendLine(")");
+            Indent();
+            _output.AppendLine("{");
+            _indentLevel++;
+            
+            foreach (var arm in matchStmt.Arms)
+            {
+                if (arm.IsDefault)
+                {
+                    Indent();
+                    _output.AppendLine("default:");
+                }
+                else
+                {
+                    // Handle multiple patterns as separate case labels
+                    foreach (var pattern in arm.Patterns)
+                    {
+                        if (pattern is IdentifierExpression idExpr && idExpr.Name == "_")
+                        {
+                            // add underscore patterns as default case
+                            Indent();
+                            _output.AppendLine("default:");
+                            continue;
+                        }
+                        Indent();
+                        _output.Append("case ");
+                        GenerateExpression(pattern);
+                        _output.AppendLine(":");
+                    }
+                }
+                
+                _indentLevel++;
+                
+                // Handle both expression and block forms
+                if (arm.Result is BlockExpression blockExpr)
+                {
+                    // Generate block statements directly
+                    foreach (var stmt in blockExpr.Statements)
+                    {
+                        GenerateStatement(stmt);
+                    }
+                }
+                else
+                {
+                    // Generate single expression
+                    Indent();
+                    GenerateExpression(arm.Result);
+                    _output.AppendLine(";");
+                }
+                
+                Indent();
+                _output.AppendLine("break;");
+                _indentLevel--;
+            }
+            
+            _indentLevel--;
+            Indent();
+            _output.AppendLine("}");
         }
 
         private void GenerateMatchExpression(MatchExpression matchExpr)

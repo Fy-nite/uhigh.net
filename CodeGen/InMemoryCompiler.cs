@@ -10,6 +10,14 @@ namespace uhigh.Net.CodeGen
 {
     public class InMemoryCompiler
     {
+        private static readonly string DefaultStdLibPath = Path.Combine(AppContext.BaseDirectory, "stdlib");
+        private readonly string _stdLibPath;
+
+        public InMemoryCompiler(string? stdLibPath = null)
+        {
+            _stdLibPath = stdLibPath ?? DefaultStdLibPath;
+        }
+
         private class SourceInfo
         {
             public string? Namespace { get; set; }
@@ -17,6 +25,94 @@ namespace uhigh.Net.CodeGen
             public List<string> AllClasses { get; set; } = new();
             public bool HasMainMethod { get; set; }
             public bool HasMainFunction { get; set; } // Add this to track μHigh main functions
+        }
+
+        private static MetadataReference[] GetAssemblyReferences(string? stdLibPath = null)
+        {
+            var references = new List<MetadataReference>();
+            
+            // Use only the basic, compatible references
+            references.AddRange(new[]
+            {
+                MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
+                MetadataReference.CreateFromFile(typeof(Console).Assembly.Location),
+                // add mscorlib and system assemblies
+                MetadataReference.CreateFromFile(typeof(System.Runtime.GCSettings).Assembly.Location),
+                MetadataReference.CreateFromFile(typeof(System.Collections.IEnumerable).Assembly.Location),
+                MetadataReference.CreateFromFile(typeof(System.Collections.Generic.List<>).Assembly.Location),
+                MetadataReference.CreateFromFile(typeof(System.Linq.Enumerable).Assembly.Location),
+                // MetadataReference.CreateFromFile(typeof(System.Text.StringBuilder).Assembly.Location),
+                // MetadataReference.CreateFromFile(typeof(System.ComponentModel.Component).Assembly.Location)
+            });
+
+            // Add standard library references
+            var stdLibReferences = GetStandardLibraryReferences(stdLibPath);
+            references.AddRange(stdLibReferences);
+            
+            // Add additional assemblies if they exist
+            try
+            {
+                references.Add(MetadataReference.CreateFromFile(Assembly.Load("System.Runtime").Location));
+            }
+            catch { }
+            
+            try
+            {
+                references.Add(MetadataReference.CreateFromFile(Assembly.Load("System.Collections").Location));
+            }
+            catch { }
+            
+            return references.ToArray();
+        }
+
+        private static List<MetadataReference> GetStandardLibraryReferences(string? stdLibPath = null)
+        {
+            var references = new List<MetadataReference>();
+            var libsPath = stdLibPath ?? DefaultStdLibPath;
+
+            if (!Directory.Exists(libsPath))
+            {
+                // Try alternative paths for global tool installation
+                var alternativePaths = new[]
+                {
+                    Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!, "stdlib"),
+                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".uhigh", "stdlib"),
+                    "/usr/local/share/uhigh/stdlib",
+                    "/opt/uhigh/stdlib"
+                };
+
+                foreach (var altPath in alternativePaths)
+                {
+                    if (Directory.Exists(altPath))
+                    {
+                        libsPath = altPath;
+                        break;
+                    }
+                }
+
+                if (!Directory.Exists(libsPath))
+                {
+                    Console.WriteLine($"Warning: Standard library directory not found at: {libsPath}");
+                    return references;
+                }
+            }
+
+            var dllFiles = Directory.GetFiles(libsPath, "*.dll", SearchOption.AllDirectories);
+            foreach (var dllFile in dllFiles)
+            {
+                try
+                {
+                    var reference = MetadataReference.CreateFromFile(dllFile);
+                    references.Add(reference);
+                    Console.WriteLine($"Added standard library: {Path.GetFileName(dllFile)}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Warning: Could not load standard library {Path.GetFileName(dllFile)}: {ex.Message}");
+                }
+            }
+
+            return references;
         }
 
         public async Task<bool> CompileAndRun(string csharpCode, string? outputPath = null, string? rootNamespace = null, string? className = null, string outputType = "Exe")
@@ -29,8 +125,8 @@ namespace uhigh.Net.CodeGen
                 // Extract source information
                 var sourceInfo = ExtractSourceInfo(syntaxTree);
                 
-                // Get references to required assemblies
-                var references = GetAssemblyReferences();
+                // Get references to required assemblies (including standard libraries)
+                var references = GetAssemblyReferences(_stdLibPath);
                 
                 // Use extracted info or provided parameters or defaults
                 var actualRootNamespace = rootNamespace ?? sourceInfo.Namespace;
@@ -247,47 +343,13 @@ namespace uhigh.Net.CodeGen
             return sourceInfo;
         }
         
-        private static MetadataReference[] GetAssemblyReferences()
-        {
-            var references = new List<MetadataReference>();
-            
-            // Use only the basic, compatible references
-            references.AddRange(new[]
-            {
-                MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(Console).Assembly.Location),
-                // add mscorlib and system assemblies
-                MetadataReference.CreateFromFile(typeof(System.Runtime.GCSettings).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(System.Collections.IEnumerable).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(System.Collections.Generic.List<>).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(System.Linq.Enumerable).Assembly.Location),
-                // MetadataReference.CreateFromFile(typeof(System.Text.StringBuilder).Assembly.Location),
-                // MetadataReference.CreateFromFile(typeof(System.ComponentModel.Component).Assembly.Location)
-            });
-            
-            // Add additional assemblies if they exist
-            try
-            {
-                references.Add(MetadataReference.CreateFromFile(Assembly.Load("System.Runtime").Location));
-            }
-            catch { }
-            
-            try
-            {
-                references.Add(MetadataReference.CreateFromFile(Assembly.Load("System.Collections").Location));
-            }
-            catch { }
-            
-            return references.ToArray();
-        }
-        
         public async Task<byte[]?> CompileToBytes(string csharpCode)
         {
             try
             {
                 var syntaxTree = CSharpSyntaxTree.ParseText(csharpCode);
                 
-                var references = GetAssemblyReferences();
+                var references = GetAssemblyReferences(_stdLibPath);
                 
                 var compilation = CSharpCompilation.Create(
                     "GeneratedAssembly",
@@ -328,7 +390,7 @@ namespace uhigh.Net.CodeGen
                 // Extract source information
                 var sourceInfo = ExtractSourceInfo(syntaxTree);
                 
-                var references = GetAssemblyReferences();
+                var references = GetAssemblyReferences(_stdLibPath);
                 
                 // Use extracted info or provided parameters or defaults
                 var actualRootNamespace = rootNamespace ?? sourceInfo.Namespace ?? "Generated";
@@ -407,8 +469,30 @@ namespace uhigh.Net.CodeGen
         
         private async Task CopyRequiredAssemblies(string buildDir)
         {
-            // No assembly copying needed - let runtime handle dependencies
-            Console.WriteLine("Skipping assembly copying - using framework dependencies");
+            // Copy standard library DLLs to build directory
+            if (Directory.Exists(_stdLibPath))
+            {
+                var stdLibDlls = Directory.GetFiles(_stdLibPath, "*.dll", SearchOption.AllDirectories);
+                foreach (var dll in stdLibDlls)
+                {
+                    try
+                    {
+                        var fileName = Path.GetFileName(dll);
+                        var destPath = Path.Combine(buildDir, fileName);
+                        if (!File.Exists(destPath))
+                        {
+                            File.Copy(dll, destPath);
+                            Console.WriteLine($"Copied standard library: {fileName}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Warning: Could not copy standard library {Path.GetFileName(dll)}: {ex.Message}");
+                    }
+                }
+            }
+            
+            Console.WriteLine("Standard library assemblies copied to build directory");
         }
         
         private async Task CreateRuntimeConfigAsync(string executablePath)

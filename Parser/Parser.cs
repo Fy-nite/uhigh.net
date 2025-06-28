@@ -84,7 +84,83 @@ namespace uhigh.Net.Parser
                     // Check for external attribute - skip registration if found
                     var hasExternalAttribute = attributes.Any(attr => attr.IsExternal);
 
-                    if (Check(TokenType.Func))
+                    // Parse modifiers
+                    var modifiers = new List<string>();
+                    while (IsModifierToken(Peek()))
+                    {
+                        modifiers.Add(Advance().Value);
+                    }
+
+                    if (Check(TokenType.Class))
+                    {
+                        Advance(); // Skip 'class'
+
+                        var classNameToken = Consume(TokenType.Identifier, "Expected class name");
+
+                        // Skip external classes
+                        if (hasExternalAttribute)
+                        {
+                            _diagnostics.ReportInfo($"Skipping registration for external class: {classNameToken.Value}");
+                            // Skip to end of class declaration
+                            while (!Check(TokenType.LeftBrace) && !IsAtEnd())
+                            {
+                                Advance();
+                            }
+                            if (Check(TokenType.LeftBrace))
+                            {
+                                Advance(); // Skip opening brace
+                                var braceCount = 1;
+                                while (braceCount > 0 && !IsAtEnd())
+                                {
+                                    if (Check(TokenType.LeftBrace)) braceCount++;
+                                    else if (Check(TokenType.RightBrace)) braceCount--;
+                                    Advance();
+                                }
+                            }
+                            continue;
+                        }
+
+                        // Create a temporary class declaration for registration
+                        var tempClassDecl = new ClassDeclaration
+                        {
+                            Name = classNameToken.Value,
+                            Modifiers = modifiers,
+                            Members = new List<Statement>()
+                        };
+
+                        var location = new SourceLocation(classNameToken.Line, classNameToken.Column);
+                        _methodChecker.RegisterClass(tempClassDecl, location);
+
+                        // Skip to class body and register methods
+                        while (!Check(TokenType.LeftBrace) && !IsAtEnd())
+                        {
+                            Advance();
+                        }
+
+                        if (Check(TokenType.LeftBrace))
+                        {
+                            Advance(); // Skip '{'
+
+                            // Register methods in class
+                            while (!Check(TokenType.RightBrace) && !IsAtEnd())
+                            {
+                                if (Check(TokenType.Func))
+                                {
+                                    Advance(); // Skip 'func'
+                                    var methodNameToken = Consume(TokenType.Identifier, "Expected method name");
+
+                                    var method = new MethodDeclaration { Name = methodNameToken.Value };
+                                    var methodLocation = new SourceLocation(methodNameToken.Line, methodNameToken.Column);
+                                    _methodChecker.RegisterMethod(method, classNameToken.Value, methodLocation);
+                                }
+                                else
+                                {
+                                    Advance();
+                                }
+                            }
+                        }
+                    }
+                    else if (Check(TokenType.Func))
                     {
                         var funcToken = Advance();
                         var nameToken = Consume(TokenType.Identifier, "Expected function name");
@@ -1111,6 +1187,7 @@ namespace uhigh.Net.Parser
             {
                 var op = Previous().Type;
                 var value = ParseAssignment();
+                return new AssignmentExpression { Target = expr, Operator = op, Value = value };
             }
 
             return expr;
@@ -1231,6 +1308,13 @@ namespace uhigh.Net.Parser
                 return new UnaryExpression { Operator = op, Operand = expr };
             }
 
+            // Handle match expressions
+            if (Check(TokenType.Match))
+            {
+                Advance(); // consume 'match'
+                return ParseMatchExpression(expr);
+            }
+
             return expr;
         }
 
@@ -1347,16 +1431,6 @@ namespace uhigh.Net.Parser
             if (Match(TokenType.New))
             {
                 var className = Consume(TokenType.Identifier, "Expected class name after 'new'").Value;
-
-                if (!Check(TokenType.LeftParen))
-                {
-                    _diagnostics.ReportError("Expected '(' after class name in constructor call", Peek().Line, Peek().Column, "UH007");
-                    return new ConstructorCallExpression
-                    {
-                        ClassName = className,
-                        Arguments = new List<Expression>()
-                    };
-                }
 
                 Consume(TokenType.LeftParen, "Expected '(' after class name");
 

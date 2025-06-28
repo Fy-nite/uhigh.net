@@ -56,7 +56,7 @@
 
 1. Clone the repository:
      ```bash
-     git clone https://github.com/your-username/uhigh.net
+     git clone https://github.com/fy-nite/uhigh.net
      cd uhigh.net
      ```
 
@@ -74,7 +74,7 @@
 
 Create a file named `hello.uh`:
 
-```go
+```uhigh
 func main() {
     print("Hello, μHigh!")
 }
@@ -83,22 +83,21 @@ func main() {
 Compile and run it:
 
 ```bash
-dotnet run hello.uh
-# This creates hello.exe which you can run directly
-./hello.exe
+uhigh hello.uh
+# This creates and runs the program in memory
 ```
 
 ### Create a Project
 
 ```bash
 # Create an executable project
-dotnet run create MyApp --type Exe
+uhigh create MyApp --type Exe
 
 # Create a library project
-dotnet run create MyLibrary --type Library
+uhigh create MyLibrary --type Library
 
 # Build the project
-dotnet run build MyApp/MyApp.uhighproj
+uhigh build MyApp/MyApp.uhighproj
 ```
 
 ## Usage
@@ -106,15 +105,15 @@ dotnet run build MyApp/MyApp.uhighproj
 ### Compile a single file
 
 ```bash
-dotnet run source.uh
+uhigh source.uh
 ```
 
-This will generate a `source.exe` file with the compiled executable.
+This will compile and run the program in memory.
 
 ### Specify output file
 
 ```bash
-dotnet run source.uh output.exe
+uhigh source.uh output.exe
 ```
 
 This will compile `source.uh` and create `output.exe`.
@@ -123,13 +122,13 @@ This will compile `source.uh` and create `output.exe`.
 
 ```bash
 # Create a new project
-dotnet run create MyProject --type Exe --author "Your Name"
+uhigh create MyProject --type Exe --author "Your Name"
 
 # Build the project
-dotnet run build MyProject/MyProject.uhighproj
+uhigh build MyProject/MyProject.uhighproj
 
 # Build to specific output
-dotnet run build MyProject/MyProject.uhighproj MyProject.exe
+uhigh build MyProject/MyProject.uhighproj MyProject.exe
 ```
 
 ## Language Reference

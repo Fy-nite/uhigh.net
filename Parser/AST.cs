@@ -379,4 +379,9 @@ namespace uhigh.Net.Parser
         public string Name { get; set; } = "";
         public List<TypeAnnotation> TypeArguments { get; set; } = new();
     }
+
+    public class BlockExpression : Expression
+    {
+        public List<Statement> Statements { get; set; } = new();
+    }
 }

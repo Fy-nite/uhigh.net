@@ -1,7 +1,19 @@
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
-    "configurations": []
+    "configurations": [
+        {
+            "name": ".NET Launch μHigh Compiler",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build", // optional, if you have a build task
+            "program": "${workspaceFolder}/bin/Debug/net8.0/uhigh.dll", // adjust for your output path and target framework
+            "args": [
+                // Add any command-line arguments you want to test here, e.g.:
+                "testing/main.uh"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "stopAtEntry": false
+        }
+    ]
 }

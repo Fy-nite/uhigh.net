@@ -173,6 +173,8 @@ namespace uhigh.Net.Testing
 
             Assert.AreEqual("Person", ctorCall.ClassName);
             Assert.AreEqual(2, ctorCall.Arguments.Count);
+            Assert.AreEqual("John", ((LiteralExpression)ctorCall.Arguments[0]).Value);
+            Assert.AreEqual(25, ((LiteralExpression)ctorCall.Arguments[1]).Value);
         }
 
         [Test]
