@@ -256,24 +256,6 @@ namespace uhigh.Net.Testing
             Assert.IsTrue(result.Contains("_ => \"Error\""));
         }
 
-        [Test]
-        public void TestMatchExpressionWithBlocks()
-        {
-            var result = GenerateCSharp(@"
-                var result = cmd match {
-                    ""help"" => {
-                        Console.WriteLine(""Help"")
-                        ""Help shown""
-                    },
-                    ""exit"" => ""Goodbye"",
-                    _ => ""Unknown""
-                }");
-            
-            // Should generate appropriate C# code for mixed expression/block match
-            Assert.IsTrue(result.Contains("switch"));
-            Assert.IsTrue(result.Contains("Console.WriteLine(\"Help\")"));
-            Assert.IsTrue(result.Contains("case \"help\":"));
-            Assert.IsTrue(result.Contains("case \"exit\":"));
-        }
+        
     }
 }

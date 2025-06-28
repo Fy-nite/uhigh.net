@@ -10,7 +10,6 @@ namespace uhigh.Net.Parser
         private int _current = 0;
         private readonly DiagnosticsReporter _diagnostics;
         private readonly MethodChecker _methodChecker;
-        private bool _verboseMode = false; // Add a flag for verbose mode
 
         public Parser(List<Token> tokens, DiagnosticsReporter? diagnostics = null)
         {
@@ -299,90 +298,6 @@ namespace uhigh.Net.Parser
                         _methodChecker.RegisterMethod(func, location);
 
                         _diagnostics.ReportInfo($"Registered function: {functionName} with {parameters.Count} parameters");
-                    }
-                    else if (Check(TokenType.Class))
-                    {
-                        Advance(); // Skip 'class'
-
-                        var classNameToken = Consume(TokenType.Identifier, "Expected class name");
-
-                        // Skip external classes
-                        if (hasExternalAttribute)
-                        {
-                            _diagnostics.ReportInfo($"Skipping registration for external class: {classNameToken.Value}");
-                            // Skip to end of class declaration
-                            while (!Check(TokenType.LeftBrace) && !IsAtEnd())
-                            {
-                                Advance();
-                            }
-                            if (Check(TokenType.LeftBrace))
-                            {
-                                Advance(); // Skip opening brace
-                                var braceCount = 1;
-                                while (braceCount > 0 && !IsAtEnd())
-                                {
-                                    if (Check(TokenType.LeftBrace)) braceCount++;
-                                    else if (Check(TokenType.RightBrace)) braceCount--;
-                                    Advance();
-                                }
-                            }
-                            continue;
-                        }
-
-                        // Parse modifiers that came before 'class'
-                        var modifiers = new List<string>();
-                        // Look backwards for modifiers
-                        for (int j = _current - 2; j >= 0; j--)
-                        {
-                            if (IsModifierToken(_tokens[j]))
-                            {
-                                modifiers.Insert(0, _tokens[j].Value);
-                            }
-                            else
-                            {
-                                break;
-                            }
-                        }
-
-                        // Create a temporary class declaration for registration
-                        var tempClassDecl = new ClassDeclaration
-                        {
-                            Name = classNameToken.Value,
-                            Modifiers = modifiers,
-                            Members = new List<Statement>()
-                        };
-
-                        var location = new SourceLocation(classNameToken.Line, classNameToken.Column);
-                        _methodChecker.RegisterClass(tempClassDecl, location);
-
-                        // Skip to class body and register methods
-                        while (!Check(TokenType.LeftBrace) && !IsAtEnd())
-                        {
-                            Advance();
-                        }
-
-                        if (Check(TokenType.LeftBrace))
-                        {
-                            Advance(); // Skip '{'
-
-                            // Register methods in class
-                            while (!Check(TokenType.RightBrace) && !IsAtEnd())
-                            {
-                                if (Check(TokenType.Func))
-                                {
-                                    Advance(); // Skip 'func'
-                                    var methodNameToken = Consume(TokenType.Identifier, "Expected method name");
-
-                                    var method = new MethodDeclaration { Name = methodNameToken.Value };
-                                    var methodLocation = new SourceLocation(methodNameToken.Line, methodNameToken.Column);
-                                    _methodChecker.RegisterMethod(method, classNameToken.Value, methodLocation);
-                                }
-                                else
-                                {
-                                    Advance();
-                                }
-                            }
-                        }
                     }
                     else
                     {
@@ -1368,14 +1283,13 @@ namespace uhigh.Net.Parser
 
             var rightParen = Consume(TokenType.RightParen, "Expected ')' after arguments");
 
-            // Only treat as constructor call if it's a simple identifier (not qualified) 
-            // that starts with uppercase and doesn't contain dots
+            // Only treat capitalized identifiers as constructor calls if they don't have dots
+            // and we're not already handling a 'new' expression
             if (callee is IdentifierExpression identExpr &&
                 char.IsUpper(identExpr.Name[0]) &&
-                !identExpr.Name.Contains('.') &&
-                identExpr.Name.Length > 1) // Avoid single letter identifiers
+                !identExpr.Name.Contains('.'))
             {
-                // This is a constructor call - convert to ConstructorCallExpression
+                // This is a constructor call without 'new' keyword - convert to ConstructorCallExpression
                 _methodChecker.ValidateConstructorCall(identExpr.Name, arguments, rightParen);
                 return new ConstructorCallExpression
                 {
@@ -1551,41 +1465,37 @@ namespace uhigh.Net.Parser
 
             Consume(TokenType.Arrow, "Expected '=>' after match pattern");
             
-            // Check if the result is a block or a single expression
+            // Support both expression and block forms
+            Expression result;
             if (Check(TokenType.LeftBrace))
             {
-                // Parse block
-                Consume(TokenType.LeftBrace, "Expected '{' for match arm block");
-                var block = new List<Statement>();
+                // Block form: { statements... }
+                Advance(); // consume '{'
                 
+                var statements = new List<Statement>();
                 while (!Check(TokenType.RightBrace) && !IsAtEnd())
                 {
                     var stmt = ParseStatement();
-                    if (stmt != null) block.Add(stmt);
+                    if (stmt != null) statements.Add(stmt);
                 }
                 
                 Consume(TokenType.RightBrace, "Expected '}' after match arm block");
                 
-                return new MatchArm
-                {
-                    Patterns = patterns,
-                    Block = block,
-                    Result = null,
-                    IsDefault = isDefault
-                };
+                // Wrap the block in a special expression
+                result = new BlockExpression { Statements = statements };
             }
             else
             {
-                // Parse single expression
-                var result = ParseExpression();
-                return new MatchArm
-                {
-                    Patterns = patterns,
-                    Result = result,
-                    Block = null,
-                    IsDefault = isDefault
-                };
+                // Expression form: expression
+                result = ParseExpression();
             }
+
+            return new MatchArm
+            {
+                Patterns = patterns,
+                Result = result,
+                IsDefault = isDefault
+            };
         }
 
         private Expression ParseInterpolatedString()
@@ -1789,30 +1699,16 @@ namespace uhigh.Net.Parser
             while (!Check(TokenType.RightBrace) && !IsAtEnd())
             {
                 var member = ParseStatement();
-                if (member != null) 
-                {
-                    members.Add(member);
-                    if (_verboseMode)
-                    {
-                        _diagnostics.ReportInfo($"Added namespace member: {member.GetType().Name}");
-                    }
-                }
+                if (member != null) members.Add(member);
             }
 
             Consume(TokenType.RightBrace, "Expected '}' after namespace body");
 
-            var nsDecl = new NamespaceDeclaration
+            return new NamespaceDeclaration
             {
                 Name = name,
                 Members = members
             };
-            
-            if (_verboseMode)
-            {
-                _diagnostics.ReportInfo($"Parsed namespace '{name}' with {members.Count} members");
-            }
-
-            return nsDecl;
         }
 
         private Statement ParseClassDeclaration()
@@ -1987,41 +1883,6 @@ namespace uhigh.Net.Parser
             // include "filename.uh"
             var fileToken = Consume(TokenType.String, "Expected file name after include");
             return new IncludeStatement { FileName = fileToken.Value };
-        }
-
-        private Program ProcessIncludes(Program ast, DiagnosticsReporter diagnostics, HashSet<string> includedFiles)
-        {
-            var newStatements = new List<Statement>();
-            foreach (var stmt in ast.Statements)
-            {
-                if (stmt is IncludeStatement include)
-                {
-                    var filePath = include.FileName.Trim('"');
-                    if (includedFiles.Contains(filePath))
-                    {
-                        diagnostics.ReportError($"Recursive include detected: {filePath}");
-                        continue;
-                    }
-                    if (!File.Exists(filePath))
-                    {
-                        diagnostics.ReportError($"Included file not found: {filePath}");
-                        continue;
-                    }
-                    includedFiles.Add(filePath);
-                    var includedSource = File.ReadAllText(filePath);
-                    var lexer = new Lexer.Lexer(includedSource, diagnostics);
-                    var tokens = lexer.Tokenize();
-                    var parser = new Parser(tokens, diagnostics);
-                    var includedAst = parser.Parse();
-                    var processedAst = ProcessIncludes(includedAst, diagnostics, includedFiles);
-                    newStatements.AddRange(processedAst.Statements);
-                }
-                else
-                {
-                    newStatements.Add(stmt);
-                }
-            }
-            return new Program { Statements = newStatements };
         }
     }
 

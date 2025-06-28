@@ -283,13 +283,8 @@ namespace uhigh.Net.Parser
     public class MatchArm : ASTNode
     {
         public List<Expression> Patterns { get; set; } = new(); // Support multiple patterns like case 1, 2, 3:
-        public Expression? Result { get; set; } // For single expressions
-        public List<Statement>? Block { get; set; } // For statement blocks
+        public Expression Result { get; set; } = null!;
         public bool IsDefault { get; set; } // true for _ pattern
-        
-        // Helper properties
-        public bool HasBlock => Block != null && Block.Count > 0;
-        public bool HasExpression => Result != null;
     }
     
     // Top-level

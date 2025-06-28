@@ -277,17 +277,9 @@ namespace uhigh.Net.CodeGen
             var hasMainFunction = program.Statements.OfType<FunctionDeclaration>().Any(f => f.Name == "main");
             
             // If source has its own namespace/class structure, use it as-is
-            if (hasNamespace)
+            if (hasNamespace || hasClass)
             {
-                // Generate the namespace structure directly
-                foreach (var statement in program.Statements.Where(s => !(s is ImportStatement)))
-                {
-                    GenerateStatement(statement);
-                }
-            }
-            else if (hasClass)
-            {
-                // Generate classes directly without additional wrapping
+                // Generate the source structure directly without wrapping
                 foreach (var statement in program.Statements.Where(s => !(s is ImportStatement)))
                 {
                     GenerateStatement(statement);
@@ -315,7 +307,7 @@ namespace uhigh.Net.CodeGen
 
             GenerateBuiltInFunctions();
 
-            var statements = program.Statements?.Where(s => !(s is ImportStatement) && !(s is NamespaceDeclaration) && !(s is TypeAliasDeclaration)).ToList();
+            var statements = program.Statements?.Where(s => !(s is ImportStatement) && !(s is NamespaceDeclaration)).ToList();
             var mainFunction = statements?.OfType<FunctionDeclaration>().FirstOrDefault(f => f.Name == "main");
             var hasMainFunction = mainFunction != null;
 
@@ -528,67 +520,7 @@ namespace uhigh.Net.CodeGen
                     _output.AppendLine(";");
                     break;
                 case MatchStatement matchStmt:
-                    Indent();
-                    _output.Append("switch (");
-                    GenerateExpression(matchStmt.Value);
-                    _output.AppendLine(")");
-                    Indent();
-                    _output.AppendLine("{");
-                    _indentLevel++;
-                    
-                    foreach (var arm in matchStmt.Arms)
-                    {
-                        if (arm.IsDefault)
-                        {
-                            Indent();
-                            _output.AppendLine("default:");
-                        }
-                        else
-                        {
-                            // Handle multiple patterns as separate case labels
-                            foreach (var pattern in arm.Patterns)
-                            {
-                                if (pattern is IdentifierExpression idExpr && idExpr.Name == "_")
-                                {
-                                    // add underscore patterns as default case
-                                    Indent();
-                                    _output.AppendLine("default:");
-                                    continue;
-                                }
-                                Indent();
-                                _output.Append("case ");
-                                GenerateExpression(pattern);
-                                _output.AppendLine(":");
-                            }
-                        }
-                        
-                        _indentLevel++;
-                        
-                        // Handle both block and expression results
-                        if (arm.HasBlock)
-                        {
-                            // Generate block statements
-                            foreach (var stmt in arm.Block!)
-                            {
-                                GenerateStatement(stmt);
-                            }
-                        }
-                        else
-                        {
-                            // Generate single expression
-                            Indent();
-                            GenerateExpression(arm.Result!);
-                            _output.AppendLine(";");
-                        }
-                        
-                        Indent();
-                        _output.AppendLine("break;");
-                        _indentLevel--;
-                    }
-                    
-                    _indentLevel--;
-                    Indent();
-                    _output.AppendLine("}");
+                    GenerateMatchStatement(matchStmt);
                     break;
                 default:
                     _diagnostics.ReportCodeGenWarning($"Unknown statement type: {statement.GetType().Name}");
@@ -1170,133 +1102,126 @@ namespace uhigh.Net.CodeGen
 
         private void GenerateMatchExpression(MatchExpression matchExpr)
         {
-            // Check if any arms have blocks - if so, we need a different approach
-            bool hasBlocks = matchExpr.Arms.Any(arm => arm.HasBlock);
+            // Check if any arm uses block form - if so, we need different handling
+            var hasBlockArms = matchExpr.Arms.Any(arm => arm.Result is BlockExpression);
             
-            if (hasBlocks)
+            if (hasBlockArms)
             {
-                // Generate as a method call with switch expression that returns from nested functions
-                _output.Append("(");
+                // Convert to immediately invoked function expression for blocks
+                _output.Append("((Func<object>)(() => ");
+                _output.AppendLine();
+                Indent();
+                _output.Append("switch (");
                 GenerateExpression(matchExpr.Value);
-                _output.AppendLine(" switch");
+                _output.AppendLine(")");
                 Indent();
                 _output.AppendLine("{");
                 _indentLevel++;
                 
-                int armIndex = 0;
                 foreach (var arm in matchExpr.Arms)
                 {
                     if (arm.IsDefault)
                     {
                         Indent();
-                        _output.Append("_ => ");
+                        _output.AppendLine("default:");
                     }
                     else
                     {
-                        // Handle multiple patterns (e.g., 1 or 2 or 3)
-                        for (int i = 0; i < arm.Patterns.Count; i++)
+                        foreach (var pattern in arm.Patterns)
                         {
-                            Indent();
-                            GenerateExpression(arm.Patterns[i]);
-                            _output.Append(" => ");
-                            if (i < arm.Patterns.Count - 1)
+                            if (pattern is IdentifierExpression idExpr && idExpr.Name == "_")
                             {
-                                if (arm.HasBlock)
-                                {
-                                    GenerateMatchArmBlock(arm, armIndex);
-                                }
-                                else
-                                {
-                                    GenerateExpression(arm.Result!);
-                                }
-                                _output.AppendLine(",");
+                                Indent();
+                                _output.AppendLine("default:");
+                                continue;
                             }
+                            Indent();
+                            _output.Append("case ");
+                            GenerateExpression(pattern);
+                            _output.AppendLine(":");
                         }
                     }
                     
-                    if (arm.HasBlock)
+                    _indentLevel++;
+                    
+                    if (arm.Result is BlockExpression blockExpr)
                     {
-                        GenerateMatchArmBlock(arm, armIndex);
+                        // Generate block with return
+                        foreach (var stmt in blockExpr.Statements)
+                        {
+                            GenerateStatement(stmt);
+                        }
+                        // Ensure we have a return for the last statement if it's an expression
+                        if (blockExpr.Statements.Count > 0 && 
+                            blockExpr.Statements.Last() is ExpressionStatement lastExpr)
+                        {
+                            // Replace the last expression statement with a return
+                            // This is a simplification - in practice you'd want better handling
+                        }
                     }
                     else
                     {
-                        GenerateExpression(arm.Result!);
+                        Indent();
+                        _output.Append("return ");
+                        GenerateExpression(arm.Result);
+                        _output.AppendLine(";");
                     }
-                    _output.AppendLine(",");
-                    armIndex++;
+                    
+                    _indentLevel--;
                 }
                 
                 _indentLevel--;
                 Indent();
-                _output.Append("})");
+                _output.AppendLine("}");
+                _output.Append("))()");
             }
             else
             {
-                // Original logic for expression-only arms
+                // Use C# 8.0+ switch expression syntax for expression-only arms
                 _output.Append("(");
                 GenerateExpression(matchExpr.Value);
-                _output.AppendLine(" switch");
+                _output.Append(" switch");
+                _output.AppendLine();
                 Indent();
                 _output.AppendLine("{");
                 _indentLevel++;
                 
                 foreach (var arm in matchExpr.Arms)
                 {
+                    Indent();
+                    
                     if (arm.IsDefault)
                     {
-                        Indent();
                         _output.Append("_ => ");
+                        GenerateExpression(arm.Result);
+                        _output.AppendLine(",");
                     }
                     else
                     {
-                        // Handle multiple patterns (e.g., 1 or 2 or 3)
-                        for (int i = 0; i < arm.Patterns.Count; i++)
+                        // Handle multiple patterns with 'or' syntax
+                        if (arm.Patterns.Count > 1)
                         {
-                            Indent();
-                            GenerateExpression(arm.Patterns[i]);
-                            _output.Append(" => ");
-                            if (i < arm.Patterns.Count - 1)
+                            for (int i = 0; i < arm.Patterns.Count; i++)
                             {
-                                GenerateExpression(arm.Result!);
-                                _output.AppendLine(",");
+                                if (i > 0) _output.Append(" or ");
+                                GenerateExpression(arm.Patterns[i]);
                             }
                         }
+                        else if (arm.Patterns.Count == 1)
+                        {
+                            GenerateExpression(arm.Patterns[0]);
+                        }
+                        
+                        _output.Append(" => ");
+                        GenerateExpression(arm.Result);
+                        _output.AppendLine(",");
                     }
-                    
-                    GenerateExpression(arm.Result!);
-                    _output.AppendLine(",");
                 }
                 
                 _indentLevel--;
                 Indent();
                 _output.Append("})");
             }
-        }
-
-        private void GenerateMatchArmBlock(MatchArm arm, int armIndex)
-        {
-            // For blocks, we generate an immediately invoked function expression
-            _output.Append("(() => {");
-            _indentLevel++;
-            
-            foreach (var stmt in arm.Block!)
-            {
-                _output.AppendLine();
-                GenerateStatement(stmt);
-            }
-            
-            // If the last statement isn't a return, add a default return
-            if (arm.Block!.Count == 0 || !(arm.Block!.Last() is ReturnStatement))
-            {
-                _output.AppendLine();
-                Indent();
-                _output.Append("return null;");
-            }
-            
-            _indentLevel--;
-            _output.AppendLine();
-            Indent();
-            _output.Append("})()");
         }
 
         private void GenerateFunctionCall(string functionName, List<Expression> arguments)

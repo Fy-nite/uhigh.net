@@ -6,9 +6,9 @@ namespace uhigh.Net.Lexer
         Number,
         String,
         Identifier,
-        New,
         
         // Keywords
+        New,
         Var, Const, Func, Return, If, Else, While, For, In,
         Print, Include, Try, Catch, Throw, Field, Match, Type, // Added Type
         True, False, Int, Float, StringType, Bool, Void,

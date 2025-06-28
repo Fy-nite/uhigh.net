@@ -529,6 +529,9 @@ namespace uhigh.Net
                 var projectRootNamespace = project.RootNamespace ?? project.Name;
                 var projectClassName = project.ClassName ?? "Program";
 
+                // Define projectDir for resolving relative paths
+                var projectDir = Path.GetDirectoryName(projectPath) ?? "";
+
                 foreach (var sourceFile in project.SourceFiles)
                 {
                     // Resolve relative path
@@ -543,7 +546,7 @@ namespace uhigh.Net
                     }
 
                     diagnostics.ReportInfo($"Processing source file: {sourceFile}");
-                    var source = await File.ReadAllTextAsync(sourceFile);
+                    var source = await File.ReadAllTextAsync(fullSourcePath);
                     
                     // Parse to AST
                     var lexer = new Lexer.Lexer(source, diagnostics);
