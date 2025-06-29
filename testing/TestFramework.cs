@@ -5,10 +5,19 @@ using uhigh.Net.Lexer;  // Add this using statement
 
 namespace uhigh.Net.Testing
 {
+    public enum TestStatus
+    {
+        Passed,
+        Failed,
+        Skipped,
+        Error
+    }
+
     public class TestResult
     {
         public string TestName { get; set; } = "";
         public bool Passed { get; set; }
+        public TestStatus Status => Passed ? TestStatus.Passed : TestStatus.Failed;
         public string? ErrorMessage { get; set; }
         public TimeSpan Duration { get; set; }
         public Exception? Exception { get; set; }

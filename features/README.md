@@ -118,6 +118,22 @@ uhigh source.uh output.exe
 
 This will compile `source.uh` and create `output.exe`.
 
+### Interactive Development
+
+```bash
+# Start the REPL for interactive development
+uhigh repl
+
+# Start REPL with verbose output
+uhigh repl --verbose
+```
+
+The REPL (Read-Eval-Print Loop) allows you to:
+- Test μHigh expressions immediately
+- Define variables and functions interactively
+- Experiment with language features
+- Debug code snippets quickly
+
 ### Create and build projects
 
 ```bash
@@ -128,7 +144,7 @@ uhigh create MyProject --type Exe --author "Your Name"
 uhigh build MyProject/MyProject.uhighproj
 
 # Build to specific output
-uhigh build MyProject/MyProject.uhighproj MyProject.exe
+uhigh build MyProject/MyProject.uhrighproj MyProject.exe
 ```
 
 ## Language Reference

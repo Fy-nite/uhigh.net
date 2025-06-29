@@ -358,13 +358,15 @@ namespace uhigh.Net.CodeGen
             Indent();
             _output.AppendLine("public static double @float(int i) => (double)i;");
             Indent();
-            _output.AppendLine("public static string @string(object obj) => obj.ToString() ?? \"\";");
+            _output.AppendLine("public static string @string(object obj) => obj?.ToString() ?? \"\";");
             Indent();
             _output.AppendLine("public static bool @bool(object obj) => obj != null && !obj.Equals(0) && !obj.Equals(\"\");");
             
-            // Special functions that don't map directly to .NET
+            // Special functions that don't map directly to .NET - these return void
             Indent();
             _output.AppendLine("public static void print(object value) => Console.WriteLine(value);");
+            Indent();
+            _output.AppendLine("public static void println(object value) => Console.WriteLine(value);");
             Indent();
             _output.AppendLine("public static string input() => Console.ReadLine() ?? \"\";");
             

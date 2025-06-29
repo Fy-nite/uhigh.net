@@ -5,6 +5,7 @@ using Microsoft.CodeAnalysis.Emit;
 using System.Reflection;
 using System.Runtime.Loader;
 using System.Runtime.InteropServices;
+using System.Collections.Concurrent;
 
 namespace uhigh.Net.CodeGen
 {
@@ -12,6 +13,11 @@ namespace uhigh.Net.CodeGen
     {
         private static readonly string DefaultStdLibPath = Path.Combine(AppContext.BaseDirectory, "stdlib");
         private readonly string _stdLibPath;
+        
+        // Add caching for assemblies and references
+        private static readonly ConcurrentDictionary<string, byte[]> _assemblyCache = new();
+        private static readonly ConcurrentDictionary<string, MetadataReference[]> _referenceCache = new();
+        private static readonly object _compilationLock = new object();
 
         public InMemoryCompiler(string? stdLibPath = null)
         {
@@ -29,6 +35,14 @@ namespace uhigh.Net.CodeGen
 
         private static MetadataReference[] GetAssemblyReferences(string? stdLibPath = null, List<string>? additionalAssemblies = null)
         {
+            // Create cache key
+            var cacheKey = $"{stdLibPath ?? "default"}:{string.Join(";", additionalAssemblies ?? new List<string>())}";
+            
+            if (_referenceCache.TryGetValue(cacheKey, out var cachedReferences))
+            {
+                return cachedReferences;
+            }
+            
             var references = new List<MetadataReference>();
             
             // Use only the basic, compatible references
@@ -36,16 +50,13 @@ namespace uhigh.Net.CodeGen
             {
                 MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(Console).Assembly.Location),
-                // add mscorlib and system assemblies
                 MetadataReference.CreateFromFile(typeof(System.Runtime.GCSettings).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(System.Collections.IEnumerable).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(System.Collections.Generic.List<>).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(System.Linq.Enumerable).Assembly.Location),
-                // MetadataReference.CreateFromFile(typeof(System.Text.StringBuilder).Assembly.Location),
-                // MetadataReference.CreateFromFile(typeof(System.ComponentModel.Component).Assembly.Location)
             });
 
-            // Add standard library references
+            // Add standard library references with caching
             var stdLibReferences = GetStandardLibraryReferences(stdLibPath);
             references.AddRange(stdLibReferences);
             
@@ -59,30 +70,34 @@ namespace uhigh.Net.CodeGen
                         if (File.Exists(assembly))
                         {
                             references.Add(MetadataReference.CreateFromFile(assembly));
-                            Console.WriteLine($"Added NuGet assembly: {Path.GetFileName(assembly)}");
                         }
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"Warning: Could not load NuGet assembly {Path.GetFileName(assembly)}: {ex.Message}");
+                        Console.WriteLine($"Warning: Could not load assembly {Path.GetFileName(assembly)}: {ex.Message}");
                     }
                 }
             }
             
-            // Add additional assemblies if they exist
+            // Add additional system assemblies safely
+            TryAddSystemAssembly(references, "System.Runtime");
+            TryAddSystemAssembly(references, "System.Collections");
+            
+            var referencesArray = references.ToArray();
+            _referenceCache[cacheKey] = referencesArray;
+            return referencesArray;
+        }
+
+        private static void TryAddSystemAssembly(List<MetadataReference> references, string assemblyName)
+        {
             try
             {
-                references.Add(MetadataReference.CreateFromFile(Assembly.Load("System.Runtime").Location));
+                references.Add(MetadataReference.CreateFromFile(Assembly.Load(assemblyName).Location));
             }
-            catch { }
-            
-            try
+            catch
             {
-                references.Add(MetadataReference.CreateFromFile(Assembly.Load("System.Collections").Location));
+                // Ignore if assembly cannot be loaded
             }
-            catch { }
-            
-            return references.ToArray();
         }
 
         private static List<MetadataReference> GetStandardLibraryReferences(string? stdLibPath = null)
@@ -112,7 +127,8 @@ namespace uhigh.Net.CodeGen
 
                 if (!Directory.Exists(libsPath))
                 {
-                    Console.WriteLine($"Warning: Standard library directory not found at: {libsPath}");
+                    // Don't show warning for REPL - it's expected that stdlib might not exist
+                    // Console.WriteLine($"Warning: Standard library directory not found at: {libsPath}");
                     return references;
                 }
             }
@@ -124,11 +140,11 @@ namespace uhigh.Net.CodeGen
                 {
                     var reference = MetadataReference.CreateFromFile(dllFile);
                     references.Add(reference);
-                    Console.WriteLine($"Added standard library: {Path.GetFileName(dllFile)}");
+                    // Console.WriteLine($"Added standard library: {Path.GetFileName(dllFile)}");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Warning: Could not load standard library {Path.GetFileName(dllFile)}: {ex.Message}");
+                    // Console.WriteLine($"Warning: Could not load standard library {Path.GetFileName(dllFile)}: {ex.Message}");
                 }
             }
 
@@ -139,144 +155,186 @@ namespace uhigh.Net.CodeGen
         {
             try
             {
-                // Parse the C# code
+                // Create hash for caching
+                var codeHash = csharpCode.GetHashCode().ToString();
+                var cacheKey = $"{codeHash}:{rootNamespace}:{className}";
+                
+                byte[] assemblyBytes;
+                
+                // Check cache first for identical code
+                if (_assemblyCache.TryGetValue(cacheKey, out var cachedBytes))
+                {
+                    assemblyBytes = cachedBytes;
+                }
+                else
+                {
+                    // Compile with better error handling
+                    lock (_compilationLock)
+                    {
+                        assemblyBytes = CompileToAssemblyBytes(csharpCode, rootNamespace, className, outputType, additionalAssemblies);
+                        if (assemblyBytes == null) return false;
+                        
+                        // Cache successful compilation
+                        _assemblyCache[cacheKey] = assemblyBytes;
+                    }
+                }
+                
+                // Save to file if requested
+                if (outputPath != null)
+                {
+                    await File.WriteAllBytesAsync(outputPath, assemblyBytes);
+                    var fileType = outputType.Equals("Library", StringComparison.OrdinalIgnoreCase) ? "Library" : "Executable";
+                    Console.WriteLine($"{fileType} saved to: {outputPath}");
+                    
+                    if (outputType.Equals("Exe", StringComparison.OrdinalIgnoreCase))
+                    {
+                        await CreateRuntimeConfigAsync(outputPath);
+                    }
+                    
+                    if (!OperatingSystem.IsWindows() && outputType.Equals("Exe", StringComparison.OrdinalIgnoreCase))
+                    {
+                        File.SetUnixFileMode(outputPath, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+                    }
+                }
+                
+                // Execute if it's an executable
+                if (outputType.Equals("Exe", StringComparison.OrdinalIgnoreCase))
+                {
+                    return await ExecuteAssembly(assemblyBytes, rootNamespace, className);
+                }
+                
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Compilation/execution error: {ex.Message}");
+                return false;
+            }
+        }
+
+        private byte[]? CompileToAssemblyBytes(string csharpCode, string? rootNamespace, string? className, string outputType, List<string>? additionalAssemblies)
+        {
+            try
+            {
                 var syntaxTree = CSharpSyntaxTree.ParseText(csharpCode);
-                
-                // Extract source information
                 var sourceInfo = ExtractSourceInfo(syntaxTree);
-                
-                // Get references to required assemblies (including standard libraries and NuGet packages)
                 var references = GetAssemblyReferences(_stdLibPath, additionalAssemblies);
                 
-                // Use extracted info or provided parameters or defaults
                 var actualRootNamespace = rootNamespace ?? sourceInfo.Namespace;
                 var actualClassName = className ?? sourceInfo.MainClassName ?? "Program";
-                var mainTypeName = actualRootNamespace != null 
-                    ? $"{actualRootNamespace}.{actualClassName}"
-                    : actualClassName;
                 
-                // Determine output kind based on outputType
+                string? mainTypeName = null;
+                if (actualRootNamespace != null)
+                {
+                    mainTypeName = $"{actualRootNamespace}.{actualClassName}";
+                }
+                else
+                {
+                    mainTypeName = actualClassName;
+                }
+                
                 var outputKind = outputType.Equals("Library", StringComparison.OrdinalIgnoreCase) 
                     ? OutputKind.DynamicallyLinkedLibrary 
                     : OutputKind.ConsoleApplication;
                 
-                // Create compilation
+                // Use unique assembly name to avoid conflicts
+                var uniqueAssemblyName = $"GeneratedAssembly_{DateTime.Now.Ticks}_{Guid.NewGuid().ToString("N")[..8]}";
+                
                 var compilation = CSharpCompilation.Create(
-                    Path.GetFileNameWithoutExtension(outputPath ?? "GeneratedProgram"),
+                    uniqueAssemblyName,
                     new[] { syntaxTree },
                     references,
                     new CSharpCompilationOptions(
                         outputKind,
-                        mainTypeName: outputKind == OutputKind.ConsoleApplication && sourceInfo.HasMainMethod ? mainTypeName : null));
+                        mainTypeName: outputKind == OutputKind.ConsoleApplication && sourceInfo.HasMainMethod ? mainTypeName : null,
+                        optimizationLevel: OptimizationLevel.Release)); // Use release mode for better performance
                 
-                // Compile to memory stream
                 using var memoryStream = new MemoryStream();
                 var emitResult = compilation.Emit(memoryStream);
                 
                 if (!emitResult.Success)
                 {
                     Console.WriteLine("Compilation failed:");
-                    foreach (var diagnostic in emitResult.Diagnostics)
+                    foreach (var diagnostic in emitResult.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error))
                     {
-                        if (diagnostic.Severity == DiagnosticSeverity.Error)
+                        Console.WriteLine($"  Error: {diagnostic.GetMessage()}");
+                    }
+                    return null;
+                }
+                
+                return memoryStream.ToArray();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Compilation failed: {ex.Message}");
+                return null;
+            }
+        }
+
+        private async Task<bool> ExecuteAssembly(byte[] assemblyBytes, string? rootNamespace, string? className)
+        {
+            try
+            {
+                using var memoryStream = new MemoryStream(assemblyBytes);
+                var assembly = AssemblyLoadContext.Default.LoadFromStream(memoryStream);
+                
+                var actualClassName = className ?? "Program";
+                var mainTypeName = rootNamespace != null ? $"{rootNamespace}.{actualClassName}" : actualClassName;
+                
+                var programType = assembly.GetType(mainTypeName);
+                if (programType == null)
+                {
+                    // Try to find any class with a Main method
+                    foreach (var type in assembly.GetTypes())
+                    {
+                        var mainMethod = type.GetMethod("Main", BindingFlags.Public | BindingFlags.Static);
+                        if (mainMethod != null)
                         {
-                            Console.WriteLine($"  Error: {diagnostic.GetMessage()}");
+                            programType = type;
+                            break;
                         }
                     }
+                }
+                
+                if (programType == null)
+                {
+                    Console.WriteLine($"Could not find {mainTypeName} type or any type with Main method");
                     return false;
                 }
                 
-                // If output path is specified, save to file
-                if (outputPath != null)
+                var mainMethods = programType.GetMethod("Main", BindingFlags.Public | BindingFlags.Static);
+                if (mainMethods == null)
                 {
-                    await File.WriteAllBytesAsync(outputPath, memoryStream.ToArray());
-                    var fileType = outputType.Equals("Library", StringComparison.OrdinalIgnoreCase) ? "Library" : "Executable";
-                    Console.WriteLine($"{fileType} saved to: {outputPath}");
-                    
-                    // Create runtime configuration file only for executables
-                    if (outputKind == OutputKind.ConsoleApplication)
-                    {
-                        await CreateRuntimeConfigAsync(outputPath);
-                    }
-                    
-                    // Make the file executable on Unix systems (only for executables)
-                    if (!OperatingSystem.IsWindows() && outputKind == OutputKind.ConsoleApplication)
-                    {
-                        File.SetUnixFileMode(outputPath, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
-                    }
+                    Console.WriteLine("Could not find Main method");
+                    return false;
                 }
-                
-                // Only try to execute if it's an executable and has a Main method
-                if (outputKind == OutputKind.ConsoleApplication && sourceInfo.HasMainMethod)
-                {
-                    // Load and execute the assembly
-                    memoryStream.Seek(0, SeekOrigin.Begin);
-                    var assembly = AssemblyLoadContext.Default.LoadFromStream(memoryStream);
-                    
-                    // Find and invoke the Main method using the correct type name
-                    var programType = assembly.GetType(mainTypeName);
-                    if (programType == null)
-                    {
-                        // Try to find any class with a Main method
-                        foreach (var type in assembly.GetTypes())
-                        {
-                            var mainMethodz = type.GetMethod("Main", BindingFlags.Public | BindingFlags.Static);
-                            if (mainMethodz != null)
-                            {
-                                programType = type;
-                                break;
-                            }
-                        }
-                    }
-                    
-                    if (programType == null)
-                    {
-                        Console.WriteLine($"Could not find {mainTypeName} type or any type with Main method");
-                        return false;
-                    }
-                    
-                    var mainMethod = programType.GetMethod("Main", BindingFlags.Public | BindingFlags.Static);
-                    if (mainMethod == null)
-                    {
-                        Console.WriteLine("Could not find Main method");
-                        return false;
-                    }
-                    // should never need this, but just in case
-                    if (!mainMethod.IsStatic)
-                    {
-                        Console.WriteLine("Main method must be static, cannot execute.");
-                        return false;
-                    }
-                    //Console.WriteLine("Executing compiled program:");
-                    //Console.WriteLine("------------------------");
 
-                    // Execute the Main method
-                    var parameters = mainMethod.GetParameters();
+                // Execute with timeout protection
+                var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                
+                await Task.Run(() =>
+                {
+                    var parameters = mainMethods.GetParameters();
                     if (parameters.Length == 0)
                     {
-                        mainMethod.Invoke(null, null);
+                        mainMethods.Invoke(null, null);
                     }
                     else if (parameters.Length == 1 && parameters[0].ParameterType == typeof(string[]))
                     {
-                        mainMethod.Invoke(null, new object[] { new string[0] });
+                        mainMethods.Invoke(null, new object[] { new string[0] });
                     }
                     else
                     {
-                        Console.WriteLine("Unsupported Main method signature");
-                        return false;
+                        throw new InvalidOperationException("Unsupported Main method signature");
                     }
-                    
-                    //Console.WriteLine("------------------------");
-                    //Console.WriteLine("Program execution completed");
-                }
-                else
-                {
-                    Console.WriteLine(outputKind == OutputKind.DynamicallyLinkedLibrary 
-                        ? "Library compiled successfully" 
-                        : "Executable compiled successfully (no Main method found)");
-                }
+                }, cancellationTokenSource.Token);
                 
                 return true;
+            }
+            catch (OperationCanceledException)
+            {
+                Console.WriteLine("Execution timed out after 30 seconds");
+                return false;
             }
             catch (Exception ex)
             {

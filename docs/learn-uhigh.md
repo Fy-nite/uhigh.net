@@ -22,11 +22,16 @@ Welcome to the official μHigh tutorial! This guide will teach you the μHigh pr
 Before we begin coding, make sure you have μHigh set up:
 
 1. Clone the repository and build the compiler
-2. Create a new file with the `.uh` extension
+2. Create a new file with the `.uh` extension, or use the interactive REPL
 3. Run the provided install script to set up your environment
 4. Open your favorite text editor or IDE (like Visual Studio Code)
 5. Start writing your μHigh programs!
 6. Run the compiler to see your code in action with `uhigh yourfile.uh`
+7. Or experiment interactively with `uhigh repl`
+
+**Quick Start with REPL**: If you want to try μHigh immediately without creating files, start the interactive REPL with `uhigh repl` and begin typing μHigh expressions and statements.
+
+**Multi-line Input in REPL**: When using the REPL, you can create multi-line blocks by pressing Ctrl+Enter for newlines. This is especially useful for if statements, loops, functions, and classes. Press Enter alone to execute your code.
 
 Note: μHigh is designed to be similar to C# and Java, so if you have experience with those languages, you'll find μHigh familiar.
 Another Note: This tutorial assumes the μHigh compiler has fully implemented the features discussed here, so make sure you have the latest version.
@@ -106,7 +111,7 @@ public static func input(prompt: string): string {
     if (prompt != null) {
         Console.Write(prompt)
     }
-    return Console.ReadLine()
+    return Console.ReadLine() ?? ""
 }
 
 // Usage

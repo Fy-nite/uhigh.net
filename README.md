@@ -176,6 +176,56 @@ uhigh create --help
 uhigh build --help
 ```
 
+### Interactive REPL
+
+Start an interactive session to experiment with μHigh:
+
+```bash
+# Start REPL
+uhigh repl
+
+# Start REPL with verbose mode
+uhigh repl --verbose
+
+# Start REPL with custom standard library path
+uhigh repl --stdlib-path /path/to/stdlib
+```
+
+REPL Commands:
+- `:help` - Show available commands
+- `:exit` - Exit the REPL
+- `:clear` - Clear screen
+- `:reset` - Reset session
+- `:vars` - Show defined variables
+- `:code` - Show generated C# code
+- `:save <file>` - Save session
+- `:load <file>` - Load session
+- `:verbose` - Toggle verbose mode
+
+REPL Features:
+- **Variable persistence** - Variables defined in one command are available in subsequent commands
+- **Expression evaluation** - Type expressions to see their values immediately
+- **Multi-line input** - REPL detects incomplete statements and prompts for continuation
+- **Error recovery** - Compilation errors don't crash the session
+- **Built-in functions** - Access to `print()`, `input()`, type conversion functions
+
+```bash
+μh> var x = 42
+μh> print(x)
+42
+μh> func greet(name) { print("Hello, " + name) }
+μh> greet("World")
+Hello, World
+μh> x + 10
+52
+μh> :vars
+Defined variables:
+  x = 42 (Int32)
+μh> :exit
+```
+
+**Note**: The REPL currently works with basic μHigh syntax and will continue to improve as more language features are implemented.
+
 ## Language Reference
 
 For detailed syntax documentation and examples, see [LANGUAGE.md](LANGUAGE.md).

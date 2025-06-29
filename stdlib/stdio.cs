@@ -6,5 +6,9 @@ namespace uhigh.Net.StdLib
         {
             Console.WriteLine(message);
         }
+        public static void meow()
+        {
+            Console.WriteLine("Meow!");
+        }
     }
 }

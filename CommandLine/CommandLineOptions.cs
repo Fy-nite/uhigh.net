@@ -24,6 +24,17 @@ namespace uhigh.Net.CommandLine
         public string? SaveCSharpTo { get; set; }
     }
 
+    [Verb("repl", HelpText = "Start a REPL (Read-Eval-Print Loop) for μHigh")]
+    public class ReplOptions
+    {
+        [Option('v', "verbose", Required = false, HelpText = "Enable verbose output")]
+        public bool Verbose { get; set; } = false;  
+        [Option("stdlib-path", Required = false, HelpText = "Path to μHigh standard library")]
+        public string? StdLibPath { get; set; }
+        [Option("save-cs", Required = false, HelpText = "Save generated C# code to the specified folder")]
+        public string? SaveCSharpTo { get; set; }
+    }
+
     [Verb("create", HelpText = "Create a new μHigh project")]
     public class CreateOptions
     {
