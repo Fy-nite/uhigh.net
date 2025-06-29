@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace UHigh.StandardLibrary
+namespace uhigh.StdLib
 {
     /// <summary>
     /// Represents a slice/view of an array starting from a specific index

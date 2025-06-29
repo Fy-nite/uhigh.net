@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Text.Json;
 
-namespace UHigh.StandardLibrary
+namespace uhigh.StdLib
 {
     /// <summary>
     /// Represents a snapshot of an object at a specific point in time

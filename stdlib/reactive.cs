@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 
-namespace UHigh.StandardLibrary
+namespace uhigh.StdLib
 {
     /// <summary>
     /// Observable value that can be watched for changes

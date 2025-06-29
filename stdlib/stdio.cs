@@ -1,4 +1,4 @@
-namespace uhigh.Net.StdLib
+namespace uhigh.StdLib
 {
     public static class StdLib
     {

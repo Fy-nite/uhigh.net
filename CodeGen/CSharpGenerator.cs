@@ -1383,7 +1383,7 @@ namespace uhigh.Net.CodeGen
                 "bool" => "bool",
                 "void" => "void",
                 "array" => "object[]",
-                "arrayIndice" => "UHigh.StandardLibrary.ArrayIndice<object>",
+                "arrayIndice" => "uhigh.StdLib.ArrayIndice<object>",
                 _ => "object"
             };
         }
