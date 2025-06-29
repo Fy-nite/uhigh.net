@@ -6,6 +6,17 @@ public class EntryPoint
 {
     public static async Task Main(string[] args)
     {
+        // Handle the case where user provides a file directly without a verb
+        if (args.Length > 0 && !args[0].StartsWith("-") && 
+            (args[0].EndsWith(".uh") || args[0].EndsWith(".uhigh")) &&
+            !IsKnownVerb(args[0]))
+        {
+            // Convert to compile command
+            var compileArgs = new List<string> { "compile" };
+            compileArgs.AddRange(args);
+            args = compileArgs.ToArray();
+        }
+
         await Parser.Default.ParseArguments<
             CompileOptions, 
             CreateOptions, 
@@ -40,6 +51,16 @@ public class EntryPoint
                 (ReplOptions opts) => HandleReplCommand(opts),
                 
                 errors => HandleParseError(errors));
+    }
+
+    private static bool IsKnownVerb(string arg)
+    {
+        var knownVerbs = new[] { 
+            "compile", "create", "build", "run", "info", "add-file", 
+            "add-package", "install-packages", "search-packages", 
+            "list-packages", "restore-packages", "ast", "lsp", "test", "repl" 
+        };
+        return knownVerbs.Contains(arg.ToLower());
     }
 
     private static async Task<int> HandleCompileCommand(CompileOptions options)

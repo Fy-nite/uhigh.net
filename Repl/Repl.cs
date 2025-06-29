@@ -94,6 +94,12 @@ namespace uhigh.Net.Repl
                     continue;
                 }
                 
+                // If we're in multi-line mode and user enters empty line with regular Enter, exit multi-line mode
+                if (isMultiLine && string.IsNullOrWhiteSpace(line))
+                {
+                    break;
+                }
+                
                 lines.Add(line);
                 
                 // Check if we need more input based on syntax
