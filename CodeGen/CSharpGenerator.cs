@@ -247,6 +247,7 @@ namespace uhigh.Net.CodeGen
             _usings.Add("System");
             _usings.Add("System.Collections.Generic");
             _usings.Add("System.Linq");
+            _usings.Add("System.Threading.Tasks");
         }
 
         private void ProcessImportStatement(ImportStatement import)
