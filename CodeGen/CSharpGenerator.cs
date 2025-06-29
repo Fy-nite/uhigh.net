@@ -473,6 +473,7 @@ namespace uhigh.Net.CodeGen
                 case NamespaceDeclaration nsDecl:
                     GenerateNamespaceDeclaration(nsDecl);
                     break;
+                
                 case ClassDeclaration classDecl:
                     GenerateClassDeclaration(classDecl);
                     break;
@@ -514,13 +515,15 @@ namespace uhigh.Net.CodeGen
                 case SharpBlock sharpBlock:
                     GenerateSharpBlock(sharpBlock);
                     break;
-                case ExpressionStatement exprStmt:
-                    Indent();
-                    GenerateExpression(exprStmt.Expression);
-                    _output.AppendLine(";");
-                    break;
                 case MatchStatement matchStmt:
                     GenerateMatchStatement(matchStmt);
+                    break;
+                case ExpressionStatement exprStmt:
+                    Indent();
+                    // check if it's a using statement
+ 
+                    GenerateExpression(exprStmt.Expression);
+                    _output.AppendLine(";");
                     break;
                 default:
                     _diagnostics.ReportCodeGenWarning($"Unknown statement type: {statement.GetType().Name}");
@@ -972,15 +975,24 @@ namespace uhigh.Net.CodeGen
                     if (callExpr.Function is IdentifierExpression funcIdExpr)
                     {
                         var functionName = funcIdExpr.Name;
-
-                        // If this is a capitalized name, it should have been converted to ConstructorCallExpression
-                        // If we reach here, treat it as a regular function call
                         GenerateFunctionCall(functionName, callExpr.Arguments);
                     }
                     else if (callExpr.Function is QualifiedIdentifierExpression qualifiedFuncExpr)
                     {
                         var functionName = qualifiedFuncExpr.Name;
                         GenerateFunctionCall(functionName, callExpr.Arguments);
+                    }
+                    else if (callExpr.Function is MemberAccessExpression memberAccessExpr)
+                    {
+                        // Handle method calls like object.Method()
+                        GenerateExpression(memberAccessExpr.Object);
+                        _output.Append($".{memberAccessExpr.MemberName}(");
+                        for (int i = 0; i < callExpr.Arguments.Count; i++)
+                        {
+                            if (i > 0) _output.Append(", ");
+                            GenerateExpression(callExpr.Arguments[i]);
+                        }
+                        _output.Append(")");
                     }
                     else
                     {
@@ -994,6 +1006,7 @@ namespace uhigh.Net.CodeGen
                         _output.Append(")");
                     }
                     break;
+                
                 case ArrayExpression arrayExpr:
                     _output.Append("new object[] { ");
                     for (int i = 0; i < arrayExpr.Elements.Count; i++)

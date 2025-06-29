@@ -25,6 +25,13 @@ namespace uhigh.Net
                     return null;
                 }
 
+                // Check if this is actually a project file by extension
+                if (!projectPath.EndsWith(".uhighproj", StringComparison.OrdinalIgnoreCase))
+                {
+                    diagnostics?.ReportError($"Invalid project file extension. Expected .uhighproj, got: {Path.GetExtension(projectPath)}");
+                    return null;
+                }
+
                 using var stream = new FileStream(projectPath, FileMode.Open, FileAccess.Read);
                 var project = (uhighProject?)Serializer.Deserialize(stream);
                 
@@ -34,11 +41,10 @@ namespace uhigh.Net
                     return null;
                 }
 
-                // Resolve relative paths
+                // Resolve relative paths relative to the project directory
                 var projectDir = Path.GetDirectoryName(projectPath) ?? "";
                 for (int i = 0; i < project.SourceFiles.Count; i++)
                 {
-                    
                     if (!Path.IsPathRooted(project.SourceFiles[i]))
                     {
                         project.SourceFiles[i] = Path.Combine(projectDir, project.SourceFiles[i]);

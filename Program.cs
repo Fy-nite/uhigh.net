@@ -18,6 +18,7 @@ public class EntryPoint
             SearchPackagesOptions,
             ListPackagesOptions,
             RestorePackagesOptions,
+            AstOptions,
             LspOptions, 
             TestOptions>(args)
             .MapResult(
@@ -32,6 +33,7 @@ public class EntryPoint
                 (SearchPackagesOptions opts) => HandleSearchPackagesCommand(opts),
                 (ListPackagesOptions opts) => HandleListPackagesCommand(opts),
                 (RestorePackagesOptions opts) => HandleRestorePackagesCommand(opts),
+                (AstOptions opts) => HandleAstCommand(opts),
                 (LspOptions opts) => HandleLspCommand(opts),
                 (TestOptions opts) => HandleTestCommand(opts),
                 
@@ -455,6 +457,32 @@ public class EntryPoint
         catch (Exception ex)
         {
             WriteError($"Test execution failed: {ex.Message}");
+            return 1;
+        }
+    }
+
+    private static async Task<int> HandleAstCommand(AstOptions options)
+    {
+        try
+        {
+            var compiler = new Compiler(options.Verbose, options.StdLibPath);
+
+            if (!File.Exists(options.SourceFile))
+            {
+                WriteError($"Source file '{options.SourceFile}' not found");
+                return 1;
+            }
+
+            var success = await compiler.PrintAST(options.SourceFile);
+            return success ? 0 : 1;
+        }
+        catch (Exception ex)
+        {
+            WriteError($"AST generation failed: {ex.Message}");
+            if (options.Verbose)
+            {
+                Console.WriteLine($"Stack trace:\n{ex.StackTrace}");
+            }
             return 1;
         }
     }

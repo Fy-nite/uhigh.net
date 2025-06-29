@@ -198,5 +198,18 @@ namespace uhigh.Net.CommandLine
         public bool Verbose { get; set; }
     }
 
+    [Verb("ast", HelpText = "Print the Abstract Syntax Tree of a μHigh source file")]
+    public class AstOptions
+    {
+        [Value(0, Required = true, HelpText = "Path to the source file")]
+        public string SourceFile { get; set; } = "";
+
+        [Option('v', "verbose", Required = false, HelpText = "Enable verbose output")]
+        public bool Verbose { get; set; } = false;
+
+        [Option("stdlib-path", Required = false, HelpText = "Path to μHigh standard library")]
+        public string? StdLibPath { get; set; }
+    }
+
     
 }

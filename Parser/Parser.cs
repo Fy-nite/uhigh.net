@@ -317,14 +317,14 @@ namespace uhigh.Net.Parser
         {
             try
             {
-                // Check for attributes
+                // Gather attributes
                 var attributes = new List<AttributeDeclaration>();
                 while (Check(TokenType.LeftBracket))
                 {
                     attributes.Add(ParseAttribute());
                 }
 
-                // Parse modifiers for top-level declarations
+                // Gather modifiers
                 var modifiers = new List<string>();
                 while (IsModifierToken(Peek()))
                 {
@@ -334,6 +334,7 @@ namespace uhigh.Net.Parser
                 if (Match(TokenType.Type)) return ParseTypeAliasDeclaration(modifiers);
                 if (Match(TokenType.Include)) return ParseIncludeStatement();
                 if (Match(TokenType.Import)) return ParseImportStatement();
+                if (Match(TokenType.Using)) return ParseUsingStatement();
                 if (Match(TokenType.Namespace)) return ParseNamespaceDeclaration();
                 if (Match(TokenType.Enum)) return ParseEnumDeclaration(modifiers);
                 if (Match(TokenType.Interface)) return ParseInterfaceDeclaration(modifiers);
@@ -369,6 +370,32 @@ namespace uhigh.Net.Parser
                 // Support top-level match statement
                 if (Match(TokenType.Match)) return ParseMatchStatement();
 
+                // Check for using statements without the 'using' keyword (legacy support)
+                // Look ahead to see if this is "Using System" pattern
+                if (Check(TokenType.Identifier) && Peek().Value.Equals("Using", StringComparison.OrdinalIgnoreCase))
+                {
+                    Advance(); // consume "Using"
+                    
+                    if (Check(TokenType.Identifier))
+                    {
+                        var namespaceName = Consume(TokenType.Identifier, "Expected namespace name after Using").Value;
+                        
+                        // Handle qualified namespace names (e.g., System.Collections.Generic or Newtonsoft.Json)
+                        while (Match(TokenType.Dot))
+                        {
+                            namespaceName += "." + Consume(TokenType.Identifier, "Expected identifier after '.'").Value;
+                        }
+
+                        // Optional semicolon
+                        if (Check(TokenType.Semicolon)) Advance();
+
+                        return new ImportStatement
+                        {
+                            ClassName = namespaceName,
+                            AssemblyName = namespaceName // For using statements, class name and assembly are the same
+                        };
+                    }
+                }
 
                 // if (Match(TokenType.Switch)) return ParseSwitchStatement();
                 // if (Match(TokenType.Struct)) return ParseStructDeclaration();
@@ -387,10 +414,31 @@ namespace uhigh.Net.Parser
             catch (Exception ex)
             {
                 // For unexpected exceptions, report them
-                _diagnostics.ReportError($"Unexpected parse error: {ex.Message}", Peek().Line, Peek().Column, "UH100", ex);
+                _diagnostics.ReportParseError($"Unexpected error: {ex.Message}", Peek());
                 Synchronize();
                 return null;
             }
+        }
+
+        // Add method to parse using statements
+        private Statement ParseUsingStatement()
+        {
+            var identifier = Consume(TokenType.Identifier, "Expected namespace or type name after 'using'").Value;
+            
+            // Handle qualified names (e.g., System.Collections.Generic)
+            while (Match(TokenType.Dot))
+            {
+                identifier += "." + Consume(TokenType.Identifier, "Expected identifier after '.'").Value;
+            }
+
+            // Optional semicolon
+            if (Check(TokenType.Semicolon)) Advance();
+
+            return new ImportStatement
+            {
+                ClassName = identifier,
+                AssemblyName = identifier // For using statements, class name and assembly are the same
+            };
         }
 
         private Statement ParseEnumDeclaration(List<string> modifiers)
@@ -1318,45 +1366,45 @@ namespace uhigh.Net.Parser
                 return new ThisExpression();
 
             if (Match(TokenType.True))
-                return new LiteralExpression { Value = true, Type = TokenType.Boolean };
+                return new LiteralExpression { Value = true, Type = TokenType.True };
 
             if (Match(TokenType.False))
-                return new LiteralExpression { Value = false, Type = TokenType.Boolean };
+                return new LiteralExpression { Value = false, Type = TokenType.False };
 
             if (Match(TokenType.Number))
             {
                 var value = Previous().Value;
-                try
+                if (value.Contains('.'))
                 {
-                    if (value.Contains('.'))
-                        return new LiteralExpression { Value = double.Parse(value), Type = TokenType.Number };
-                    else
-                        return new LiteralExpression { Value = int.Parse(value), Type = TokenType.Number };
+                    return new LiteralExpression { Value = double.Parse(value), Type = TokenType.Number };
                 }
-                catch (FormatException)
+                else
                 {
-                    _diagnostics.ReportError($"Invalid number format: {value}", Previous().Line, Previous().Column, "UH006");
-                    return new LiteralExpression { Value = 0, Type = TokenType.Number };
+                    return new LiteralExpression { Value = int.Parse(value), Type = TokenType.Number };
                 }
             }
 
             if (Match(TokenType.String))
                 return new LiteralExpression { Value = Previous().Value, Type = TokenType.String };
 
-            // Handle interpolated strings
             if (Match(TokenType.InterpolatedStringStart))
             {
                 return ParseInterpolatedString();
             }
-
-            // Handle 'new' keyword for constructor calls
+            
             if (Match(TokenType.New))
             {
                 var className = Consume(TokenType.Identifier, "Expected class name after 'new'").Value;
-
+                
+                // Handle qualified class names (e.g., microshell.shell)
+                while (Match(TokenType.Dot))
+                {
+                    className += "." + Consume(TokenType.Identifier, "Expected identifier after '.'").Value;
+                }
+                
                 Consume(TokenType.LeftParen, "Expected '(' after class name");
-
                 var arguments = new List<Expression>();
+
                 if (!Check(TokenType.RightParen))
                 {
                     do
@@ -1365,10 +1413,8 @@ namespace uhigh.Net.Parser
                     } while (Match(TokenType.Comma));
                 }
 
-                var rightParen = Consume(TokenType.RightParen, "Expected ')' after constructor arguments");
-
-                _methodChecker.ValidateConstructorCall(className, arguments, rightParen);
-
+                Consume(TokenType.RightParen, "Expected ')' after constructor arguments");
+                
                 return new ConstructorCallExpression
                 {
                     ClassName = className,
@@ -1379,13 +1425,16 @@ namespace uhigh.Net.Parser
             if (Match(TokenType.Identifier))
             {
                 var identifier = Previous().Value;
-
+                
+                // Check for qualified identifiers (e.g., object.method)
                 if (identifier.Contains('.'))
                 {
                     return new QualifiedIdentifierExpression { Name = identifier };
                 }
-
-                return new IdentifierExpression { Name = identifier };
+                else
+                {
+                    return new IdentifierExpression { Name = identifier };
+                }
             }
 
             if (Match(TokenType.LeftParen))
@@ -1411,8 +1460,7 @@ namespace uhigh.Net.Parser
                 return new ArrayExpression { Elements = elements };
             }
 
-            _diagnostics.ReportUnexpectedToken(Peek(), "expression");
-            throw new Exception($"Unexpected token {Peek().Type}");
+            throw new ParseException($"Unexpected token: {Peek().Value}");
         }
 
         private Expression ParseMatchExpression(Expression? value = null)

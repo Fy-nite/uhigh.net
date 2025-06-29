@@ -18,10 +18,12 @@
     <PackageProjectUrl>https://github.com/fy-nite/uhigh.net</PackageProjectUrl>
     <RepositoryUrl>https://github.com/fy-nite/uhigh.net</RepositoryUrl>
   </PropertyGroup>
+  
   <ItemGroup>
     <PackageReference Include="CommandLineParser" Version="2.9.1" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.5.0" />
     <PackageReference Include="System.Text.Json" Version="8.0.0" />
     <PackageReference Include="System.IO.Compression" Version="4.3.0" />
   </ItemGroup>
+
 </Project>

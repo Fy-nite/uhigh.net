@@ -514,6 +514,14 @@ namespace uhigh.Net
             
             try
             {
+                // Validate that this is actually a project file
+                if (!projectPath.EndsWith(".uhighproj", StringComparison.OrdinalIgnoreCase))
+                {
+                    diagnostics.ReportError($"Expected a .uhighproj file, but got: {projectPath}");
+                    diagnostics.PrintSummary();
+                    return false;
+                }
+
                 // Load project file
                 var project = await ProjectFile.LoadAsync(projectPath, diagnostics);
                 if (project == null)
@@ -558,6 +566,20 @@ namespace uhigh.Net
                     if (!File.Exists(fullSourcePath))
                     {
                         diagnostics.ReportError($"Source file not found: {fullSourcePath}");
+                        continue;
+                    }
+
+                    // Make sure we're not trying to compile the project file itself
+                    if (fullSourcePath.EndsWith(".uhighproj", StringComparison.OrdinalIgnoreCase))
+                    {
+                        diagnostics.ReportWarning($"Skipping project file in source files: {fullSourcePath}");
+                        continue;
+                    }
+
+                    // Only compile .uh files
+                    if (!fullSourcePath.EndsWith(".uh", StringComparison.OrdinalIgnoreCase))
+                    {
+                        diagnostics.ReportWarning($"Skipping non-μHigh source file: {fullSourcePath}");
                         continue;
                     }
 

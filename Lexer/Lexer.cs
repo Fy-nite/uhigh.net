@@ -16,7 +16,7 @@ namespace uhigh.Net.Lexer
             { "new", TokenType.New },
             { "const", TokenType.Const },
             { "var", TokenType.Var },
-            { "field", TokenType.Field }, // Added field keyword
+            { "field", TokenType.Field },
             { "if", TokenType.If },
             { "else", TokenType.Else },
             { "while", TokenType.While },
@@ -43,6 +43,7 @@ namespace uhigh.Net.Lexer
             { "class", TokenType.Class },
             { "namespace", TokenType.Namespace },
             { "import", TokenType.Import },
+            { "using", TokenType.Using },
             { "from", TokenType.From },
             { "this", TokenType.This },
             { "enum", TokenType.Enum },
@@ -331,39 +332,66 @@ namespace uhigh.Net.Lexer
         {
             var start = _position;
             
+            // Read the first identifier part
             while (_position < _source.Length && (char.IsLetterOrDigit(_source[_position]) || _source[_position] == '_'))
             {
                 _position++;
                 _column++;
             }
             
-            // Check if this is a dotted identifier (namespace.class or class.method)
             var value = _source.Substring(start, _position - start);
             
-            // Look ahead for dots followed by identifiers
-            var tempPos = _position;
-            var tempCol = _column;
-            
-            while (tempPos < _source.Length && _source[tempPos] == '.' && 
-                   tempPos + 1 < _source.Length && (char.IsLetter(_source[tempPos + 1]) || _source[tempPos + 1] == '_'))
+            // Handle dotted identifiers (namespace.class.method, System.Collections.Generic, etc.)
+            while (_position < _source.Length && _source[_position] == '.')
             {
-                tempPos++; // Skip dot
-                tempCol++;
-                
-                // Read the next identifier part
-                while (tempPos < _source.Length && (char.IsLetterOrDigit(_source[tempPos]) || _source[tempPos] == '_'))
+                // Look ahead to see if there's an identifier after the dot
+                if (_position + 1 < _source.Length && 
+                    (char.IsLetter(_source[_position + 1]) || _source[_position + 1] == '_'))
                 {
-                    tempPos++;
-                    tempCol++;
+                    // Add the dot
+                    value += ".";
+                    _position++; // Skip dot
+                    _column++;
+                    
+                    // Read the next identifier part
+                    var identifierStart = _position;
+                    while (_position < _source.Length && 
+                           (char.IsLetterOrDigit(_source[_position]) || _source[_position] == '_'))
+                    {
+                        _position++;
+                        _column++;
+                    }
+                    
+                    // Add the identifier part after the dot
+                    if (_position > identifierStart)
+                    {
+                        value += _source.Substring(identifierStart, _position - identifierStart);
+                    }
+                    else
+                    {
+                        // If no identifier after dot, back up and break
+                        _position--;
+                        _column--;
+                        value = value.Substring(0, value.Length - 1); // Remove the dot
+                        break;
+                    }
                 }
-                
-                // Update the value to include the dotted part
-                value = _source.Substring(start, tempPos - start);
-                _position = tempPos;
-                _column = tempCol;
+                else
+                {
+                    // No identifier after dot, stop here
+                    break;
+                }
             }
             
-            var tokenType = Keywords.ContainsKey(value) ? Keywords[value] : TokenType.Identifier;
+            // Check if this is a keyword (only check the base identifier for keywords)
+            var baseIdentifier = value.Contains('.') ? value.Split('.')[0] : value;
+            var tokenType = Keywords.ContainsKey(baseIdentifier) ? Keywords[baseIdentifier] : TokenType.Identifier;
+            
+            // For dotted identifiers, always treat as Identifier regardless of the first part being a keyword
+            if (value.Contains('.'))
+            {
+                tokenType = TokenType.Identifier;
+            }
             
             return new Token(tokenType, value, line, column);
         }

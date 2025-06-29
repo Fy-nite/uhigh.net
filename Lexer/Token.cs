@@ -4,6 +4,7 @@ namespace uhigh.Net.Lexer
     {
         // Literals
         Number,
+        Using,
         String,
         Identifier,
         
@@ -14,7 +15,7 @@ namespace uhigh.Net.Lexer
         True, False, Int, Float, StringType, Bool, Void,
         Sharp, Range,
         Break, Continue, // Add break and continue support
-        Class, Namespace, Import, From, This, // New keywords
+        Class, Namespace, Import,  From, This, // Add Using token
         Get, Set, // Add getter/setter keywords
         Enum, Interface, Extension, Record, // New feature keywords
         Switch, Case, Default, // Example: switch statement keywords

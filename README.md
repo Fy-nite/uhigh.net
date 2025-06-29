@@ -127,7 +127,13 @@ This will compile `source.uh` and create `output.exe`.
 uhigh compile source.uh --run
 
 # Save generated C# code
-uhigh compile source.uh --save ./generated
+uhigh compile source.uh --save-cs ./generated
+
+# Save C# code from build command
+uhigh build MyProject/MyProject.uhighproj --save-cs ./generated
+
+# Print Abstract Syntax Tree
+uhigh ast source.uh
 
 # Verbose output
 uhigh compile source.uh --verbose
