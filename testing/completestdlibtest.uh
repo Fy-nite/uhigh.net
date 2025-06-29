@@ -1,0 +1,31 @@
+func main() {
+    // Basic temporal tracking
+    var data = [1, 2, 3].toTemporal()
+    data.add(4, "user added item")
+    
+    // Check what the array looked like 30 seconds ago
+    var oldData = data.getSecondsAgo(30)
+    print("30 seconds ago:", oldData)
+    
+    // Advanced collections
+    var numbers = range(1, 100)
+    var chunks = numbers.chunk(10)  // [[1-10], [11-20], ...]
+    var rotated = numbers.rotate(5) // Rotate by 5 positions
+    
+    // Reactive programming
+    var counter = observable(0, true)  // true = track history
+    counter.subscribe((old, new) => {
+        print("Counter changed from", old, "to", new)
+    })
+    
+    counter.value = 42  // Triggers subscriber
+    var oldCounter = counter.getMinutesAgo(1)
+    
+    // Event streams
+    var eventStream = EventStream<string>()
+    eventStream.subscribe(msg => Console.WriteLine("Event: " + msg))
+    eventStream.emit("Something happened!")
+    
+    var recentEvents = eventStream.getEventsInLastSeconds(60)
+    Console.WriteLine("Events in last minute: " + recentEvents.length)
+}

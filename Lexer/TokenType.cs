@@ -1,4 +1,0 @@
-namespace uhigh.Net.Lexer
-{
-
-}

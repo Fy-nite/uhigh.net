@@ -57,6 +57,7 @@ namespace uhigh.Net.Parser
     {
         public Expression Function { get; set; } = null!;
         public List<Expression> Arguments { get; set; } = new();
+        public bool SupportsVariableArguments { get; set; } // For functions like print that can take multiple args
     }
     
     public class ConstructorCallExpression : Expression 
@@ -68,6 +69,16 @@ namespace uhigh.Net.Parser
     public class ArrayExpression : Expression 
     {
         public List<Expression> Elements { get; set; } = new();
+        
+        // Add support for typed arrays
+        public string? ElementType { get; set; }
+        
+        // Add support for array method chaining
+        public List<MethodCallChain> MethodCalls { get; set; } = new();
+        
+        // Add support for array indices
+        public bool IsIndice { get; set; }
+        public Expression? StartOffset { get; set; }
     }
     
     public class IndexExpression : Expression 
@@ -383,5 +394,51 @@ namespace uhigh.Net.Parser
     public class BlockExpression : Expression
     {
         public List<Statement> Statements { get; set; } = new();
+    }
+
+    // Add lambda expression support
+    public class LambdaExpression : Expression
+    {
+        public List<Parameter> Parameters { get; set; } = new();
+        public Expression? Body { get; set; } // For expression lambdas
+        public List<Statement> Statements { get; set; } = new(); // For block lambdas
+        public bool IsAsync { get; set; }
+        
+        public bool IsExpressionLambda => Body != null;
+        public bool IsBlockLambda => Statements.Count > 0;
+    }
+
+    // Add new AST nodes for array operations
+    public class ArrayIndiceExpression : Expression
+    {
+        public Expression SourceArray { get; set; } = null!;
+        public Expression StartOffset { get; set; } = null!;
+        public string? ElementType { get; set; }
+    }
+
+    public class ArrayMethodCallExpression : Expression
+    {
+        public Expression Array { get; set; } = null!;
+        public string MethodName { get; set; } = "";
+        public List<Expression> Arguments { get; set; } = new();
+    }
+
+    public class ArrayCollectExpression : Expression
+    {
+        public Expression Array { get; set; } = null!;
+        public List<Expression> Indices { get; set; } = new();
+    }
+
+    public class ArrayAtExpression : Expression
+    {
+        public Expression Array { get; set; } = null!;
+        public Expression Index { get; set; } = null!;
+    }
+
+    // Add method call chain for array methods
+    public class MethodCallChain : ASTNode
+    {
+        public string MethodName { get; set; } = "";
+        public List<Expression> Arguments { get; set; } = new();
     }
 }

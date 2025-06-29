@@ -106,6 +106,70 @@ append(numbers, 6)
 var first = pop(numbers, 0)
 ```
 
+### Array Indices
+
+Create slices and views of arrays with offset tracking:
+
+```go
+// Declare array and indice
+var list: array<string> = ["a", "b", "c", "d", "e", "f"]
+var item: arrayIndice<string>
+
+// Set value at global index 5
+list[5] = "hello"
+
+// Create indice starting at index 5
+item = list.createIndice(5)
+
+// Collect item from source array at global index 5
+list.collect(item).at(5)  // returns "hello"
+
+// Convert indice to regular array (maps to local indices starting from 0)
+var localArray = item.mapToArray()
+
+// Add items to the indice
+item.add("meow")
+item.add("world")
+
+// Collect all items from source starting at offset
+item.collectAll()
+
+// Return all items back to source array at their global positions
+item.return(list)
+
+// Access items using global indices
+var value = item.at(5)    // Access at global index 5
+var local = item[0]       // Access at local index 0 (maps to global index 5)
+```
+
+### Array Indice Operations
+
+```go
+func main() {
+    var data = [10, 20, 30, 40, 50, 60, 70, 80]
+    
+    // Create a slice starting from index 3
+    var slice = data.createIndice(3)
+    
+    // Collect specific items
+    slice.collect(3).collect(4).collect(5)  // Gets items at indices 3, 4, 5
+    
+    // Add new items to the slice
+    slice.add(90)
+    slice.add(100)
+    
+    // Map to local array (indices 0, 1, 2, 3, 4)
+    var localData = slice.mapToArray()
+    print localData  // [40, 50, 60, 90, 100]
+    
+    // Modify slice and return to original
+    slice[1] = 55  // Modify local index 1 (global index 4)
+    slice.return(data)  // Updates original array
+    
+    print data  // [10, 20, 30, 40, 55, 60, 90, 100]
+}
+```
+
 ### String Operations
 
 String manipulation and operations:

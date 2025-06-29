@@ -140,6 +140,7 @@ namespace uhigh.Net.Parser
     {
         private readonly DiagnosticsReporter _diagnostics;
         private readonly ReflectionMethodResolver _reflectionResolver;
+        private readonly ReflectionTypeResolver _typeResolver; // Add this
         private readonly Dictionary<string, List<MethodSignature>> _methods = new();
         private readonly Dictionary<string, List<MethodSignature>> _classMethods = new();
         private readonly Dictionary<string, ClassInfo> _classes = new();
@@ -148,33 +149,20 @@ namespace uhigh.Net.Parser
         {
             _diagnostics = diagnostics;
             _reflectionResolver = new ReflectionMethodResolver(diagnostics);
+            _typeResolver = new ReflectionTypeResolver(diagnostics); // Add this
             RegisterBuiltInMethods();
         }
 
         private void RegisterBuiltInMethods()
         {
-            // Math functions
-            RegisterBuiltIn("abs", new[] { "double" }, "double");
-            RegisterBuiltIn("sqrt", new[] { "double" }, "double");
-            RegisterBuiltIn("pow", new[] { "double", "double" }, "double");
-            RegisterBuiltIn("min", new[] { "double", "double" }, "double");
-            RegisterBuiltIn("max", new[] { "double", "double" }, "double");
-            RegisterBuiltIn("random", new string[0], "double");
+            // Only register essential built-ins that don't map directly to .NET
+            // Let reflection handle the rest
 
-            // String functions
-            RegisterBuiltIn("len", new[] { "string" }, "int");
-            RegisterBuiltIn("len", new[] { "object[]" }, "int");
-            RegisterBuiltIn("uppercase", new[] { "string" }, "string");
-            RegisterBuiltIn("lowercase", new[] { "string" }, "string");
-            RegisterBuiltIn("substring", new[] { "string", "int", "int" }, "string");
-
-            // Array functions
-            RegisterBuiltIn("append", new[] { "object", "object" }, "void");
-            RegisterBuiltIn("pop", new[] { "object", "int" }, "object");
-            RegisterBuiltIn("sort", new[] { "object" }, "void");
-            RegisterBuiltIn("reverse", new[] { "object" }, "void");
-
-            // Type conversion functions
+            // Special μHigh functions that need custom handling
+            RegisterBuiltIn("print", new[] { "object" }, "void");
+            RegisterBuiltIn("input", new string[0], "string");
+            
+            // Type conversion functions with special naming
             RegisterBuiltIn("int", new[] { "string" }, "int");
             RegisterBuiltIn("int", new[] { "double" }, "int");
             RegisterBuiltIn("float", new[] { "string" }, "double");
@@ -182,13 +170,10 @@ namespace uhigh.Net.Parser
             RegisterBuiltIn("string", new[] { "object" }, "string");
             RegisterBuiltIn("bool", new[] { "object" }, "bool");
 
-            // Range function
+            // Range function (common in μHigh)
             RegisterBuiltIn("range", new[] { "int" }, "IEnumerable<int>");
             RegisterBuiltIn("range", new[] { "int", "int" }, "IEnumerable<int>");
-
-            // IO functions
-            RegisterBuiltIn("print", new[] { "object" }, "void");
-            RegisterBuiltIn("input", new string[0], "string");
+            RegisterBuiltIn("range", new[] { "int", "int", "int" }, "IEnumerable<int>");
         }
 
         private void RegisterBuiltIn(string name, string[] paramTypes, string returnType)
@@ -418,85 +403,50 @@ namespace uhigh.Net.Parser
                 return ValidateConstructorCall(functionName, arguments, location);
             }
 
-            // Skip validation for qualified names that might be external references
-            if (functionName.Contains('.'))
-            {
-                var parts = functionName.Split('.');
-                if (parts.Length == 2 && char.IsLower(parts[1][0]))
-                {
-                    // This looks like namespace.function or class.method - allow it
-                    _diagnostics.ReportInfo($"Allowing qualified method call: {functionName}");
-                    return true;
-                }
-            }
-
             _diagnostics.ReportInfo($"Validating call to '{functionName}' with {arguments.Count} arguments");
 
             // First check user-defined functions
             if (_methods.ContainsKey(functionName))
             {
                 var signatures = _methods[functionName];
-                _diagnostics.ReportInfo($"Found {signatures.Count} signature(s) for '{functionName}'");
-                
-                // foreach (var sig in signatures)
-                // {
-                //     _diagnostics.ReportInfo($"  Signature: {sig.GetFullSignature()}");
-                // }
-
                 var matchingSignature = signatures.FirstOrDefault(s => s.MatchesCall(functionName, arguments));
 
                 if (matchingSignature != null)
                 {
-                    _diagnostics.ReportInfo($"Successfully validated call to '{functionName}' with {arguments.Count} arguments");
+                    _diagnostics.ReportInfo($"Successfully validated user-defined call to '{functionName}'");
                     return true;
-                }                // Report parameter count mismatch with better error message
-                var expectedCounts = signatures.Select(s => s.Parameters.Count).Distinct().ToList();
-                
-                // Provide detailed parameter information for debugging
-                var sig = signatures.First();
-                var paramDetails = sig.Parameters.Select((p, i) => $"param {i+1}: {p.Name}:{p.Type ?? "any"}").ToList();
-                var argDetails = arguments.Select((a, i) => $"arg {i+1}: {InferArgumentType(a)}").ToList();
-                
-                _diagnostics.ReportInfo($"Function '{functionName}' signature: ({string.Join(", ", paramDetails)})");
-                _diagnostics.ReportInfo($"Call arguments: ({string.Join(", ", argDetails)})");
-                
-                if (expectedCounts.Count == 1 && expectedCounts[0] == arguments.Count)
-                {
-                    // Same parameter count but type mismatch - report different error
-                    _diagnostics.ReportError(
-                        $"Method '{functionName}' parameter types do not match the provided arguments",
-                        location.Line, location.Column, "UH200");
                 }
-                else
-                {
-                    var expectedCountsStr = expectedCounts.Count == 1 ? 
-                        expectedCounts[0].ToString() : 
-                        string.Join(" or ", expectedCounts);
-                    _diagnostics.ReportError(
-                        $"Method '{functionName}' expects {expectedCountsStr} parameter(s), but {arguments.Count} were provided",
-                        location.Line, location.Column, "UH200");
-                }
-                return false;
             }
 
-            // Then check .NET methods using reflection
-            if (_reflectionResolver.TryResolveStaticMethod(functionName, arguments, out var method))
+            // Then check reflection for .NET methods
+            if (_typeResolver.TryResolveMethod(functionName, arguments, out var method))
             {
-                _diagnostics.ReportInfo($"Resolved .NET method: {functionName}");
+                _diagnostics.ReportInfo($"Successfully validated .NET method call to '{functionName}'");
                 return true;
             }
 
-            // Check if it's a known type method
+            // Check if it's a known type method using the old resolver as fallback
+            if (_reflectionResolver.TryResolveStaticMethod(functionName, arguments, out method))
+            {
+                _diagnostics.ReportInfo($"Successfully validated static .NET method call to '{functionName}'");
+                return true;
+            }
+
+            // Check qualified calls
             var dotIndex = functionName.LastIndexOf('.');
             if (dotIndex > 0)
             {
                 var typeName = functionName.Substring(0, dotIndex);
                 var methodName = functionName.Substring(dotIndex + 1);
 
-                if (_reflectionResolver.TryResolveMethod(typeName, methodName, arguments, out method))
+                if (_typeResolver.TryResolveType(typeName, out var type))
                 {
-                    _diagnostics.ReportInfo($"Resolved .NET method: {typeName}.{methodName}");
-                    return true;
+                    var qualifiedMethodName = $"{type.FullName}.{methodName}";
+                    if (_typeResolver.TryResolveMethod(qualifiedMethodName, arguments, out method))
+                    {
+                        _diagnostics.ReportInfo($"Successfully validated qualified method call to '{functionName}'");
+                        return true;
+                    }
                 }
             }
 
@@ -505,124 +455,77 @@ namespace uhigh.Net.Parser
             return false;
         }
 
-        private bool ValidateQualifiedCall(string qualifiedName, List<Expression> arguments, Token callToken)
-        {
-            var parts = qualifiedName.Split('.');
-            if (parts.Length < 2)
-            {
-                return ValidateCall(qualifiedName, arguments, callToken);
-            }
-
-            var className = string.Join(".", parts.Take(parts.Length - 1));
-            var methodName = parts.Last();
-
-            // Check if this is a known .NET method (like Console.WriteLine)
-            if (IsKnownDotNetMethod(qualifiedName))
-            {
-                _diagnostics.ReportInfo($"Validated .NET method call: {qualifiedName}");
-                return true;
-            }
-
-            // Check class methods
-            return ValidateMethodCall(className, methodName, arguments, callToken);
-        }
-
-        private bool IsKnownDotNetMethod(string qualifiedName)
-        {
-            // List of known .NET methods that we want to allow
-            var knownMethods = new HashSet<string>
-            {
-                "Console.WriteLine",
-                "Console.Write", 
-                "Console.ReadLine",
-                "Math.Abs",
-                "Math.Sqrt",
-                "Math.Pow",
-                "Math.Min",
-                "Math.Max",
-                "String.IsNullOrEmpty",
-                "String.IsNullOrWhiteSpace",
-                "Convert.ToInt32",
-                "Convert.ToDouble",
-                "Convert.ToString"
-            };
-
-            return knownMethods.Contains(qualifiedName);
-        }
-
-        public bool ValidateMethodCall(string className, string methodName, List<Expression> arguments, Token callToken)
-        {
-            var key = $"{className}.{methodName}";
-            
-            if (_classMethods.ContainsKey(key))
-            {
-                var signatures = _classMethods[key];
-                var matchingSignature = signatures.FirstOrDefault(s => s.MatchesCall(methodName, arguments));
-                
-                if (matchingSignature != null)
-                    return true;
-
-                var expectedCounts = signatures.Select(s => s.Parameters.Count).Distinct();
-                _diagnostics.ReportError(
-                    $"Method '{className}.{methodName}' expects {string.Join(" or ", expectedCounts)} parameter(s), but {arguments.Count} were provided",
-                    callToken.Line, callToken.Column, "UH202");
-                return false;
-            }
-
-            _diagnostics.ReportError(
-                $"Method '{methodName}' is not defined in class '{className}'",
-                callToken.Line, callToken.Column, "UH203");
-            return false;
-        }
+       
 
         private void SuggestSimilarMethods(string methodName, Token callToken)
         {
-            var allMethods = _methods.Keys.Concat(_classMethods.Keys).ToList();
-            var suggestions = allMethods
+            // Get suggestions from both user-defined and reflected methods
+            var userMethods = _methods.Keys.Concat(_classMethods.Keys).ToList();
+            var reflectedMethods = _typeResolver.GetSimilarMethods(methodName);
+            
+            var allSuggestions = userMethods.Concat(reflectedMethods)
                 .Where(name => LevenshteinDistance(methodName, name) <= 2)
-                .Take(3)
+                .Distinct()
+                .Take(5)
                 .ToList();
 
-            if (suggestions.Any())
+            if (allSuggestions.Any())
             {
                 _diagnostics.ReportWarning(
-                    $"Did you mean: {string.Join(", ", suggestions)}?",
+                    $"Did you mean: {string.Join(", ", allSuggestions)}?",
                     callToken.Line, callToken.Column, "UH204");
             }
         }
 
-        private static int LevenshteinDistance(string a, string b)
+        // Add method to validate types
+        public bool ValidateType(string typeName, Token location)
         {
-            if (string.IsNullOrEmpty(a)) return b?.Length ?? 0;
-            if (string.IsNullOrEmpty(b)) return a.Length;
-
-            var matrix = new int[a.Length + 1, b.Length + 1];
-
-            for (int i = 0; i <= a.Length; i++)
-                matrix[i, 0] = i;
-            for (int j = 0; j <= b.Length; j++)
-                matrix[0, j] = j;
-
-            for (int i = 1; i <= a.Length; i++)
+            // Check if it's a user-defined type
+            if (_classes.ContainsKey(typeName))
             {
-                for (int j = 1; j <= b.Length; j++)
-                {
-                    int cost = (a[i - 1] == b[j - 1]) ? 0 : 1;
-                    matrix[i, j] = Math.Min(Math.Min(
-                        matrix[i - 1, j] + 1,
-                        matrix[i, j - 1] + 1),
-                        matrix[i - 1, j - 1] + cost);
-                }
+                return true;
             }
 
-            return matrix[a.Length, b.Length];
+            // Check if it's a .NET type via reflection
+            if (_typeResolver.IsValidType(typeName))
+            {
+                return true;
+            }
+
+            // Check built-in type aliases
+            var builtInTypes = new[] { "int", "float", "string", "bool", "void", "array", "object" };
+            if (builtInTypes.Contains(typeName))
+            {
+                return true;
+            }
+
+            _diagnostics.ReportError($"Unknown type: {typeName}", location.Line, location.Column, "UH301");
+            
+            // Suggest similar types
+            var suggestions = _typeResolver.GetSimilarTypes(typeName);
+            if (suggestions.Any())
+            {
+                _diagnostics.ReportWarning(
+                    $"Did you mean: {string.Join(", ", suggestions)}?",
+                    location.Line, location.Column, "UH302");
+            }
+
+            return false;
+        }
+
+        // Add method to get type resolver for other components
+        public ReflectionTypeResolver GetTypeResolver()
+        {
+            return _typeResolver;
         }
 
         public void PrintMethodSummary()
         {
-            _diagnostics.ReportInfo($"Registered {_classes.Count} classes");
-            _diagnostics.ReportInfo($"Registered {_methods.Values.Sum(list => list.Count)} global methods");
-            _diagnostics.ReportInfo($"Registered {_classMethods.Values.Sum(list => list.Count)} class methods");
+            _diagnostics.ReportInfo($"Registered {_classes.Count} user-defined classes");
+            _diagnostics.ReportInfo($"Registered {_methods.Values.Sum(list => list.Count)} user-defined global methods");
+            _diagnostics.ReportInfo($"Registered {_classMethods.Values.Sum(list => list.Count)} user-defined class methods");
+            _diagnostics.ReportInfo($"Discovered {_typeResolver.GetAllTypeNames().Count()} types via reflection");
+            _diagnostics.ReportInfo($"Discovered {_typeResolver.GetAllMethodNames().Count()} methods via reflection");
         }
 
         public ClassInfo? GetClassInfo(string className)
@@ -689,5 +592,33 @@ namespace uhigh.Net.Parser
             return op is TokenType.Equal or TokenType.NotEqual or TokenType.Less or TokenType.Greater 
                 or TokenType.LessEqual or TokenType.GreaterEqual;
         }
+        
+        private int LevenshteinDistance(string s, string t)
+        {
+            // Levenshtein distance algorithm to find the edit distance between two strings
+            var n = s.Length;
+            var m = t.Length;
+            var d = new int[n + 1, m + 1];
+
+            if (n == 0) return m;
+            if (m == 0) return n;
+
+            for (var i = 0; i <= n; i++) d[i, 0] = i;
+            for (var j = 0; j <= m; j++) d[0, j] = j;
+
+            for (var i = 1; i <= n; i++)
+            {
+                for (var j = 1; j <= m; j++)
+                {
+                    var cost = (t[j - 1] == s[i - 1]) ? 0 : 1;
+                    d[i, j] = Math.Min(
+                        Math.Min(d[i - 1, j] + 1, d[i, j - 1] + 1),
+                        d[i - 1, j - 1] + cost);
+                }
+            }
+
+            return d[n, m];
+        }
     }
 }
+ 

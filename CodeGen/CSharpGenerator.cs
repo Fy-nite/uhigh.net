@@ -1011,20 +1011,9 @@ namespace uhigh.Net.CodeGen
                     break;
                 
                 case ArrayExpression arrayExpr:
-                    _output.Append("new object[] { ");
-                    for (int i = 0; i < arrayExpr.Elements.Count; i++)
-                    {
-                        if (i > 0) _output.Append(", ");
-                        GenerateExpression(arrayExpr.Elements[i]);
-                    }
-                    _output.Append(" }");
+                    GenerateArrayExpression(arrayExpr);
                     break;
-                case IndexExpression indexExpr:
-                    GenerateExpression(indexExpr.Object);
-                    _output.Append("[");
-                    GenerateExpression(indexExpr.Index);
-                    _output.Append("]");
-                    break;
+                
                 case BlockExpression blockExpr:
                     GenerateBlockExpression(blockExpr);
                     break;
@@ -1114,6 +1103,17 @@ namespace uhigh.Net.CodeGen
             _indentLevel--;
             Indent();
             _output.AppendLine("}");
+        }
+
+        private void GenerateArrayExpression(ArrayExpression arrayExpr)
+        {
+            _output.Append("new[] { ");
+            for (int i = 0; i < arrayExpr.Elements.Count; i++)
+            {
+                if (i > 0) _output.Append(", ");
+                GenerateExpression(arrayExpr.Elements[i]);
+            }
+            _output.Append(" }");
         }
 
         private void GenerateMatchExpression(MatchExpression matchExpr)
@@ -1339,7 +1339,14 @@ namespace uhigh.Net.CodeGen
 
         private string ConvertType(string type)
         {
-            // Handle generic types like array<string>, list<int>, etc.
+            // // First try reflection to see if it's a known .NET type
+            // if (MethodChecker?.GetTypeResolver()?.TryResolveType(type, out var reflectedType) == true)
+            // {
+            //     // Use the actual .NET type name
+            //     return GetCSharpTypeName(reflectedType);
+            // }
+
+            // Handle generic types
             if (type.Contains('<') && type.Contains('>'))
             {
                 var genericMatch = System.Text.RegularExpressions.Regex.Match(type, @"^(\w+)<(.+)>$");
@@ -1367,38 +1374,59 @@ namespace uhigh.Net.CodeGen
                 }
             }
             
-            var converted = type switch
+            // Fallback to manual mapping for μHigh-specific types
+            return type switch
             {
                 "int" => "int",
-                "float" => "double",
+                "float" => "double", 
                 "string" => "string",
                 "bool" => "bool",
                 "void" => "void",
-                "object" => "object",
-                "any" => "object",
-                "number" => "double",
-                "integer" => "int",
-                "double" => "double",
-                "char" => "char",
-                "list" => "List<object>",
                 "array" => "object[]",
-                "map" => "Dictionary<object, object>",
-                "function" => "Func<object[], object>", // Generic function type
-                "promise" => "Task<object>", // Async promise type
-                "set" => "HashSet<object>",
-                "tuple" => "Tuple<object, object>", // Simple tuple type
-                "date" => "DateTime",
-                "json" => "string", // JSON is typically represented as a string
-                "stream" => "Stream", // Stream type for file operations
+                "arrayIndice" => "UHigh.StandardLibrary.ArrayIndice<object>",
                 _ => "object"
             };
+        }
 
-            if (converted == "object" && type != "object")
+        private string GetCSharpTypeName(Type type)
+        {
+            // Handle special C# type names
+            if (type == typeof(int)) return "int";
+            if (type == typeof(double)) return "double";
+            if (type == typeof(float)) return "float";
+            if (type == typeof(string)) return "string";
+            if (type == typeof(bool)) return "bool";
+            if (type == typeof(void)) return "void";
+            if (type == typeof(object)) return "object";
+
+            // Handle generic types
+            if (type.IsGenericType)
             {
-                _diagnostics.ReportCodeGenWarning($"Unknown type '{type}' converted to 'object'", type);
+                var genericTypeDef = type.GetGenericTypeDefinition();
+                var typeArgs = type.GetGenericArguments();
+                
+                if (genericTypeDef == typeof(List<>))
+                {
+                    return $"List<{GetCSharpTypeName(typeArgs[0])}>";
+                }
+                if (genericTypeDef == typeof(Dictionary<,>))
+                {
+                    return $"Dictionary<{GetCSharpTypeName(typeArgs[0])}, {GetCSharpTypeName(typeArgs[1])}>";
+                }
+                
+                // Generic type with multiple arguments
+                var argNames = typeArgs.Select(GetCSharpTypeName);
+                return $"{type.Name.Split('`')[0]}<{string.Join(", ", argNames)}>";
             }
 
-            return converted;
+            // Array types
+            if (type.IsArray)
+            {
+                return GetCSharpTypeName(type.GetElementType()) + "[]";
+            }
+
+            // Use full name for other types
+            return type.FullName ?? type.Name;
         }
 
         private void Indent()

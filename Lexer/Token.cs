@@ -4,6 +4,7 @@ namespace uhigh.Net.Lexer
     {
         // Literals
         Number,
+        Array,
         Using,
         String,
         Identifier,
@@ -51,7 +52,7 @@ namespace uhigh.Net.Lexer
         Equal, NotEqual, Less, Greater, LessEqual, GreaterEqual,
         And, Or, Not, Increment, Decrement,
         PlusAssign, MinusAssign, MultiplyAssign, DivideAssign,
-        Arrow, // => for match arms
+        Arrow, // => for match arms and lambda expressions
         Underscore, // _ for default case
         
         // Punctuation

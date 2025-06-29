@@ -594,8 +594,14 @@ namespace uhigh.Net.Parser
         {
             string typeName;
             
-            // Handle built-in type keywords
-            if (Check(TokenType.StringType))
+            // Handle built-in type keywords including array
+            if (Check(TokenType.Array))
+            {
+                typeName = "array";
+                Advance();
+            }
+           
+            else if (Check(TokenType.StringType))
             {
                 typeName = "string";
                 Advance();
@@ -642,6 +648,13 @@ namespace uhigh.Net.Parser
         private string ParseTypeName()
         {
             var typeAnn = ParseTypeAnnotation();
+            
+            // Validate the type using reflection
+            if (!_methodChecker.ValidateType(typeAnn.Name, Peek()))
+            {
+                _diagnostics.ReportWarning($"Type '{typeAnn.Name}' may not be valid", Peek().Line, Peek().Column, "UH300");
+            }
+            
             // For backward compatibility, return the name for simple types
             if (typeAnn.TypeArguments.Count == 0)
                 return typeAnn.Name;
@@ -1306,7 +1319,33 @@ namespace uhigh.Net.Parser
                 else if (Match(TokenType.Dot))
                 {
                     var name = Consume(TokenType.Identifier, "Expected property name after '.'").Value;
-                    expr = new MemberAccessExpression { Object = expr, MemberName = name };
+                    
+                    // Check for array-specific method calls
+                    if (Check(TokenType.LeftParen) && IsArrayMethod(name))
+                    {
+                        Advance(); // consume '('
+                        var arguments = new List<Expression>();
+                        
+                        if (!Check(TokenType.RightParen))
+                        {
+                            do
+                            {
+                                arguments.Add(ParseExpression());
+                            } while (Match(TokenType.Comma));
+                        }
+                        
+                        Consume(TokenType.RightParen, "Expected ')' after arguments");
+                        expr = new ArrayMethodCallExpression 
+                        { 
+                            Array = expr, 
+                            MethodName = name, 
+                            Arguments = arguments 
+                        };
+                    }
+                    else
+                    {
+                        expr = new MemberAccessExpression { Object = expr, MemberName = name };
+                    }
                 }
                 else
                 {
@@ -1317,47 +1356,14 @@ namespace uhigh.Net.Parser
             return expr;
         }
 
-        private Expression FinishCall(Expression callee)
+        private bool IsArrayMethod(string methodName)
         {
-            var arguments = new List<Expression>();
-
-            if (!Check(TokenType.RightParen))
-            {
-                do
-                {
-                    arguments.Add(ParseExpression());
-                } while (Match(TokenType.Comma));
-            }
-
-            var rightParen = Consume(TokenType.RightParen, "Expected ')' after arguments");
-
-            // Only treat capitalized identifiers as constructor calls if they don't have dots
-            // and we're not already handling a 'new' expression
-            if (callee is IdentifierExpression identExpr &&
-                char.IsUpper(identExpr.Name[0]) &&
-                !identExpr.Name.Contains('.'))
-            {
-                // This is a constructor call without 'new' keyword - convert to ConstructorCallExpression
-                _methodChecker.ValidateConstructorCall(identExpr.Name, arguments, rightParen);
-                return new ConstructorCallExpression
-                {
-                    ClassName = identExpr.Name,
-                    Arguments = arguments
-                };
-            }
-
-            // Validate regular method calls
-            if (callee is IdentifierExpression identExpr2)
-            {
-                _methodChecker.ValidateCall(identExpr2.Name, arguments, rightParen);
-            }
-            else if (callee is MemberAccessExpression memberExpr &&
-                     memberExpr.Object is IdentifierExpression objIdent)
-            {
-                _methodChecker.ValidateMethodCall(objIdent.Name, memberExpr.MemberName, arguments, rightParen);
-            }
-
-            return new CallExpression { Function = callee, Arguments = arguments };
+            var arrayMethods = new[] { 
+                "createIndice", "collect", "mapToArray", "collectAll", 
+                "at", "add", "return", "append", "pop", "sort", "reverse",
+                "chunk", "flatten", "rotate", "slidingWindow", "mostFrequent", "diff"
+            };
+            return arrayMethods.Contains(methodName);
         }
 
         private Expression ParsePrimary()
@@ -1550,14 +1556,35 @@ namespace uhigh.Net.Parser
         {
             var parts = new List<InterpolationPart>();
             var currentText = "";
-
+    
             // This is a simplified version - a full implementation would need
             // more sophisticated tokenization for interpolated strings
             var stringValue = Previous().Value;
-
+    
             // Parse the interpolated string format $"text{expr}text"
             // For now, convert to string concatenation
             return new LiteralExpression { Value = stringValue, Type = TokenType.String };
+        }
+        
+        private Expression FinishCall(Expression callee)
+        {
+            var arguments = new List<Expression>();
+            
+            if (!Check(TokenType.RightParen))
+            {
+                do
+                {
+                    arguments.Add(ParseExpression());
+                } while (Match(TokenType.Comma));
+            }
+            
+            Consume(TokenType.RightParen, "Expected ')' after arguments");
+            
+            return new CallExpression 
+            { 
+               
+                Arguments = arguments 
+            };
         }
 
         private string ConvertTokenTypeToString(TokenType tokenType)
