@@ -505,7 +505,14 @@ namespace uhigh.Net.CodeGen
                     GenerateForStatement(forStmt);
                     break;
                 case ReturnStatement returnStmt:
-                    GenerateReturnStatement(returnStmt);
+                    Indent();
+                    _output.Append("return");
+                    if (returnStmt.Value != null)
+                    {
+                        _output.Append(" ");
+                        GenerateExpression(returnStmt.Value);
+                    }
+                    _output.AppendLine(";");
                     break;
                 case BreakStatement:
                     Indent();
@@ -887,20 +894,62 @@ namespace uhigh.Net.CodeGen
         private void GenerateForStatement(ForStatement forStmt)
         {
             Indent();
-            _output.Append("for (");
             
-            if (forStmt.Initializer != null)
-                GenerateStatement(forStmt.Initializer);
-            _output.Append("; ");
+            if (forStmt.IsForInLoop)
+            {
+                // Generate foreach loop
+                _output.Append($"foreach (var {forStmt.IteratorVariable} in ");
+                
+                // Handle different iterable types
+                if (forStmt.IterableExpression is RangeExpression rangeExpr)
+                {
+                    GenerateRangeIterable(rangeExpr);
+                }
+                else
+                {
+                    GenerateExpression(forStmt.IterableExpression!);
+                }
+                
+                _output.AppendLine(")");
+            }
+            else
+            {
+                // Traditional for loop
+                _output.Append("for (");
+                
+                if (forStmt.Initializer != null)
+                {
+                    // Remove the semicolon from the initializer since we're adding it manually
+                    var initOutput = _output.ToString();
+                    var currentLength = _output.Length;
+                    GenerateStatement(forStmt.Initializer);
+                    var newContent = _output.ToString().Substring(currentLength);
+                    if (newContent.EndsWith(";\n") || newContent.EndsWith(";"))
+                    {
+                        _output.Length = _output.Length - (newContent.EndsWith(";\n") ? 2 : 1);
+                    }
+                }
+                _output.Append("; ");
+                
+                if (forStmt.Condition != null)
+                    GenerateExpression(forStmt.Condition);
+                _output.Append("; ");
+                
+                if (forStmt.Increment != null)
+                {
+                    // Generate increment without semicolon
+                    var currentLength = _output.Length;
+                    GenerateStatement(forStmt.Increment);
+                    var newContent = _output.ToString().Substring(currentLength);
+                    if (newContent.EndsWith(";\n") || newContent.EndsWith(";"))
+                    {
+                        _output.Length = _output.Length - (newContent.EndsWith(";\n") ? 2 : 1);
+                    }
+                }
+                
+                _output.AppendLine(")");
+            }
             
-            if (forStmt.Condition != null)
-                GenerateExpression(forStmt.Condition);
-            _output.Append("; ");
-            
-            if (forStmt.Increment != null)
-                GenerateStatement(forStmt.Increment);
-            
-            _output.AppendLine(")");
             Indent();
             _output.AppendLine("{");
             _indentLevel++;
@@ -915,23 +964,33 @@ namespace uhigh.Net.CodeGen
             _output.AppendLine("}");
         }
 
-        private void GenerateReturnStatement(ReturnStatement returnStmt)
+        private void GenerateRangeIterable(RangeExpression rangeExpr)
         {
-            Indent();
-            _output.Append("return");
-            
-            if (returnStmt.Value != null)
+            if (rangeExpr.IsSimpleRange && rangeExpr.End != null)
             {
-                _output.Append(" ");
-                GenerateExpression(returnStmt.Value);
+                // Generate Enumerable.Range(0, n)
+                _output.Append("Enumerable.Range(0, ");
+                GenerateExpression(rangeExpr.End);
+                _output.Append(")");
             }
-            
-            _output.AppendLine(";");
+            else if (rangeExpr.Start != null && rangeExpr.End != null)
+            {
+                // Generate Enumerable.Range(start, end - start)
+                _output.Append("Enumerable.Range(");
+                GenerateExpression(rangeExpr.Start);
+                _output.Append(", ");
+                GenerateExpression(rangeExpr.End);
+                _output.Append(" - ");
+                GenerateExpression(rangeExpr.Start);
+                _output.Append(")");
+            }
+            else
+            {
+                _output.Append("new int[0]"); // Empty range fallback
+            }
         }
 
-        private void
-
-        GenerateExpression(ASTNode expression)
+        private void GenerateExpression(ASTNode expression)
         {
             switch (expression)
             {
@@ -973,6 +1032,9 @@ namespace uhigh.Net.CodeGen
                         GenerateExpression(constructorExpr.Arguments[i]);
                     }
                     _output.Append(")");
+                    break;
+                case RangeExpression rangeExpr:
+                    GenerateRangeIterable(rangeExpr);
                     break;
                 case CallExpression callExpr:
                     if (callExpr.Function is IdentifierExpression funcIdExpr)

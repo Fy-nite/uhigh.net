@@ -142,6 +142,11 @@ namespace uhigh.Net.Parser
         public Expression? Condition { get; set; }
         public Statement? Increment { get; set; }
         public List<Statement> Body { get; set; } = new();
+        
+        // Add support for for-in loops
+        public string? IteratorVariable { get; set; }
+        public Expression? IterableExpression { get; set; }
+        public bool IsForInLoop => IteratorVariable != null && IterableExpression != null;
     }
     
     public class ReturnStatement : Statement 
@@ -283,6 +288,9 @@ namespace uhigh.Net.Parser
         public Expression? Start { get; set; }
         public Expression? End { get; set; }
         public bool IsExclusive { get; set; } // true for ..<, false for ..
+        
+        // Add support for simple range(n) calls
+        public bool IsSimpleRange => Start == null && End != null;
     }
 
     public class MatchExpression : Expression

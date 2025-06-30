@@ -74,57 +74,18 @@ namespace uhigh.Net.Repl
 
         private string ReadMultiLineInput()
         {
-            var lines = new List<string>();
+            var lines = new List<string> { "" };
+            var currentLineIndex = 0;
+            var cursorPosition = 0;
             var isMultiLine = false;
-            var prompt = "μhigh> ";
-
-            while (true)
-            {
-                Console.Write(prompt);
-                
-                var line = ReadLineWithCtrlEnter();
-                
-                // Check if user pressed Ctrl+Enter (indicated by special marker)
-                if (line.EndsWith("\x01CTRL_ENTER\x01"))
-                {
-                    line = line.Replace("\x01CTRL_ENTER\x01", "");
-                    lines.Add(line);
-                    isMultiLine = true;
-                    prompt = "    ...> ";
-                    continue;
-                }
-                
-                // If we're in multi-line mode and user enters empty line with regular Enter, exit multi-line mode
-                if (isMultiLine && string.IsNullOrWhiteSpace(line))
-                {
-                    break;
-                }
-                
-                lines.Add(line);
-                
-                // Check if we need more input based on syntax
-                var currentInput = string.Join("\n", lines);
-                
-                if (isMultiLine || NeedsMoreInput(currentInput))
-                {
-                    if (!isMultiLine)
-                    {
-                        isMultiLine = true;
-                        prompt = "    ...> ";
-                    }
-                    continue;
-                }
-                
-                break;
-            }
+            var basePrompt = "μhigh> ";
+            var continuationPrompt = "    ...> ";
             
-            return string.Join("\n", lines);
-        }
+            // Display initial prompt
+            Console.Write(basePrompt);
+            var startTop = Console.CursorTop;
+            var startLeft = basePrompt.Length;
 
-        private string ReadLineWithCtrlEnter()
-        {
-            var input = new StringBuilder();
-            
             while (true)
             {
                 var key = Console.ReadKey(true);
@@ -133,97 +94,408 @@ namespace uhigh.Net.Repl
                 {
                     if (key.Modifiers == ConsoleModifiers.Control)
                     {
-                        // Ctrl+Enter - add newline marker and return
-                        Console.WriteLine();
-                        return input.ToString() + "\x01CTRL_ENTER\x01";
+                        // Ctrl+Enter - add new line and continue
+                        lines.Add("");
+                        currentLineIndex++;
+                        cursorPosition = 0;
+                        isMultiLine = true;
+                        RedrawMultiLineInput(lines, currentLineIndex, cursorPosition, basePrompt, continuationPrompt, startTop);
+                        continue;
                     }
                     else
                     {
-                        // Regular Enter - end input
-                        Console.WriteLine();
-                        return input.ToString();
+                        // Regular Enter - check if we need more input
+                        var fullInput = string.Join("\n", lines.Where(l => !string.IsNullOrWhiteSpace(l) || lines.Count == 1));
+                        
+                        if (isMultiLine && string.IsNullOrWhiteSpace(lines[currentLineIndex]) && !NeedsMoreInput(fullInput))
+                        {
+                            // Empty line in multiline mode and no more input needed - execute
+                            Console.WriteLine();
+                            return fullInput.Trim();
+                        }
+                        else if (!isMultiLine && !NeedsMoreInput(fullInput))
+                        {
+                            // Single line complete - execute
+                            Console.WriteLine();
+                            return fullInput.Trim();
+                        }
+                        else
+                        {
+                            // Need more input - add new line
+                            if (!string.IsNullOrWhiteSpace(lines[currentLineIndex]))
+                            {
+                                lines.Add("");
+                                currentLineIndex++;
+                                cursorPosition = 0;
+                            }
+                            isMultiLine = true;
+                            RedrawMultiLineInput(lines, currentLineIndex, cursorPosition, basePrompt, continuationPrompt, startTop);
+                            continue;
+                        }
                     }
                 }
                 else if (key.Key == ConsoleKey.Backspace)
                 {
-                    if (input.Length > 0)
+                    if (cursorPosition > 0)
                     {
-                        input.Length--;
-                        Console.Write("\b \b");
+                        // Remove character before cursor in current line
+                        lines[currentLineIndex] = lines[currentLineIndex].Remove(cursorPosition - 1, 1);
+                        cursorPosition--;
                     }
+                    else if (currentLineIndex > 0)
+                    {
+                        // Backspace at beginning of line - merge with previous line
+                        cursorPosition = lines[currentLineIndex - 1].Length;
+                        lines[currentLineIndex - 1] += lines[currentLineIndex];
+                        lines.RemoveAt(currentLineIndex);
+                        currentLineIndex--;
+                        if (lines.Count == 1 && currentLineIndex == 0)
+                        {
+                            isMultiLine = false;
+                        }
+                    }
+                    RedrawMultiLineInput(lines, currentLineIndex, cursorPosition, basePrompt, continuationPrompt, startTop);
+                }
+                else if (key.Key == ConsoleKey.Delete)
+                {
+                    if (cursorPosition < lines[currentLineIndex].Length)
+                    {
+                        // Remove character at cursor in current line
+                        lines[currentLineIndex] = lines[currentLineIndex].Remove(cursorPosition, 1);
+                    }
+                    else if (currentLineIndex < lines.Count - 1)
+                    {
+                        // Delete at end of line - merge with next line
+                        lines[currentLineIndex] += lines[currentLineIndex + 1];
+                        lines.RemoveAt(currentLineIndex + 1);
+                        if (lines.Count == 1)
+                        {
+                            isMultiLine = false;
+                        }
+                    }
+                    RedrawMultiLineInput(lines, currentLineIndex, cursorPosition, basePrompt, continuationPrompt, startTop);
+                }
+                else if (key.Key == ConsoleKey.LeftArrow)
+                {
+                    if (cursorPosition > 0)
+                    {
+                        cursorPosition--;
+                    }
+                    else if (currentLineIndex > 0)
+                    {
+                        // Move to end of previous line
+                        currentLineIndex--;
+                        cursorPosition = lines[currentLineIndex].Length;
+                    }
+                    RedrawMultiLineInput(lines, currentLineIndex, cursorPosition, basePrompt, continuationPrompt, startTop);
+                }
+                else if (key.Key == ConsoleKey.RightArrow)
+                {
+                    if (cursorPosition < lines[currentLineIndex].Length)
+                    {
+                        cursorPosition++;
+                    }
+                    else if (currentLineIndex < lines.Count - 1)
+                    {
+                        // Move to beginning of next line
+                        currentLineIndex++;
+                        cursorPosition = 0;
+                    }
+                    RedrawMultiLineInput(lines, currentLineIndex, cursorPosition, basePrompt, continuationPrompt, startTop);
+                }
+                else if (key.Key == ConsoleKey.UpArrow)
+                {
+                    if (currentLineIndex > 0)
+                    {
+                        currentLineIndex--;
+                        // Try to maintain cursor position, but clamp to line length
+                        cursorPosition = Math.Min(cursorPosition, lines[currentLineIndex].Length);
+                        RedrawMultiLineInput(lines, currentLineIndex, cursorPosition, basePrompt, continuationPrompt, startTop);
+                    }
+                }
+                else if (key.Key == ConsoleKey.DownArrow)
+                {
+                    if (currentLineIndex < lines.Count - 1)
+                    {
+                        currentLineIndex++;
+                        // Try to maintain cursor position, but clamp to line length
+                        cursorPosition = Math.Min(cursorPosition, lines[currentLineIndex].Length);
+                        RedrawMultiLineInput(lines, currentLineIndex, cursorPosition, basePrompt, continuationPrompt, startTop);
+                    }
+                }
+                else if (key.Key == ConsoleKey.Home)
+                {
+                    if (key.Modifiers == ConsoleModifiers.Control)
+                    {
+                        // Ctrl+Home - go to beginning of entire input
+                        currentLineIndex = 0;
+                        cursorPosition = 0;
+                    }
+                    else
+                    {
+                        // Home - go to beginning of current line
+                        cursorPosition = 0;
+                    }
+                    RedrawMultiLineInput(lines, currentLineIndex, cursorPosition, basePrompt, continuationPrompt, startTop);
+                }
+                else if (key.Key == ConsoleKey.End)
+                {
+                    if (key.Modifiers == ConsoleModifiers.Control)
+                    {
+                        // Ctrl+End - go to end of entire input
+                        currentLineIndex = lines.Count - 1;
+                        cursorPosition = lines[currentLineIndex].Length;
+                    }
+                    else
+                    {
+                        // End - go to end of current line
+                        cursorPosition = lines[currentLineIndex].Length;
+                    }
+                    RedrawMultiLineInput(lines, currentLineIndex, cursorPosition, basePrompt, continuationPrompt, startTop);
                 }
                 else if (key.Key == ConsoleKey.Escape)
                 {
                     // Escape cancels current input
+                    ClearMultiLineInput(lines.Count, startTop);
                     Console.WriteLine();
                     return "";
                 }
+                else if (key.Key == ConsoleKey.Tab)
+                {
+                    // Tab - insert 4 spaces
+                    var spaces = "    ";
+                    lines[currentLineIndex] = lines[currentLineIndex].Insert(cursorPosition, spaces);
+                    cursorPosition += spaces.Length;
+                    RedrawMultiLineInput(lines, currentLineIndex, cursorPosition, basePrompt, continuationPrompt, startTop);
+                }
+                else if (key.Key == ConsoleKey.PageUp)
+                {
+                    // Page Up - go to first line
+                    currentLineIndex = 0;
+                    cursorPosition = Math.Min(cursorPosition, lines[currentLineIndex].Length);
+                    RedrawMultiLineInput(lines, currentLineIndex, cursorPosition, basePrompt, continuationPrompt, startTop);
+                }
+                else if (key.Key == ConsoleKey.PageDown)
+                {
+                    // Page Down - go to last line
+                    currentLineIndex = lines.Count - 1;
+                    cursorPosition = Math.Min(cursorPosition, lines[currentLineIndex].Length);
+                    RedrawMultiLineInput(lines, currentLineIndex, cursorPosition, basePrompt, continuationPrompt, startTop);
+                }
                 else if (char.IsControl(key.KeyChar))
                 {
+                    // Handle other control characters
+                    if (key.Key == ConsoleKey.C && key.Modifiers == ConsoleModifiers.Control)
+                    {
+                        // Ctrl+C - cancel input
+                        ClearMultiLineInput(lines.Count, startTop);
+                        Console.WriteLine("^C");
+                        return "";
+                    }
+                    else if (key.Key == ConsoleKey.A && key.Modifiers == ConsoleModifiers.Control)
+                    {
+                        // Ctrl+A - go to beginning of line
+                        cursorPosition = 0;
+                        RedrawMultiLineInput(lines, currentLineIndex, cursorPosition, basePrompt, continuationPrompt, startTop);
+                    }
+                    else if (key.Key == ConsoleKey.E && key.Modifiers == ConsoleModifiers.Control)
+                    {
+                        // Ctrl+E - go to end of line
+                        cursorPosition = lines[currentLineIndex].Length;
+                        RedrawMultiLineInput(lines, currentLineIndex, cursorPosition, basePrompt, continuationPrompt, startTop);
+                    }
                     // Ignore other control characters
                     continue;
                 }
                 else
                 {
-                    input.Append(key.KeyChar);
-                    Console.Write(key.KeyChar);
+                    // Insert character at cursor position
+                    lines[currentLineIndex] = lines[currentLineIndex].Insert(cursorPosition, key.KeyChar.ToString());
+                    cursorPosition++;
+                    RedrawMultiLineInput(lines, currentLineIndex, cursorPosition, basePrompt, continuationPrompt, startTop);
                 }
             }
         }
 
+        private void RedrawMultiLineInput(List<string> lines, int currentLineIndex, int cursorPosition, 
+            string basePrompt, string continuationPrompt, int startTop)
+        {
+            try
+            {
+                // Save current position
+                var currentTop = Console.CursorTop;
+                
+                // Clear existing lines - be more conservative about clearing
+                var maxLinesToClear = Math.Max(lines.Count, currentTop - startTop + 1);
+                for (int i = 0; i < maxLinesToClear && (startTop + i) < Console.BufferHeight; i++)
+                {
+                    try
+                    {
+                        Console.SetCursorPosition(0, startTop + i);
+                        Console.Write(new string(' ', Math.Min(Console.WindowWidth - 1, 120)));
+                    }
+                    catch (ArgumentOutOfRangeException)
+                    {
+                        // Ignore cursor position errors near buffer boundaries
+                        break;
+                    }
+                }
+                
+                // Redraw all lines
+                for (int i = 0; i < lines.Count; i++)
+                {
+                    try
+                    {
+                        var targetTop = startTop + i;
+                        if (targetTop >= Console.BufferHeight) break;
+                        
+                        Console.SetCursorPosition(0, targetTop);
+                        var prompt = i == 0 ? basePrompt : continuationPrompt;
+                        var lineContent = prompt + lines[i];
+                        
+                        // Truncate if line is too long for console
+                        if (lineContent.Length >= Console.WindowWidth)
+                        {
+                            lineContent = lineContent.Substring(0, Console.WindowWidth - 1);
+                        }
+                        
+                        Console.Write(lineContent);
+                    }
+                    catch (ArgumentOutOfRangeException)
+                    {
+                        // Handle console boundary issues gracefully
+                        break;
+                    }
+                }
+                
+                // Position cursor correctly
+                try
+                {
+                    var targetTop = startTop + currentLineIndex;
+                    var prompt = currentLineIndex == 0 ? basePrompt : continuationPrompt;
+                    var targetLeft = prompt.Length + cursorPosition;
+                    
+                    // Ensure cursor position is within bounds
+                    if (targetTop < Console.BufferHeight && targetLeft < Console.WindowWidth)
+                    {
+                        Console.SetCursorPosition(targetLeft, targetTop);
+                    }
+                }
+                catch (ArgumentOutOfRangeException)
+                {
+                    // Fallback to a safe position
+                    try
+                    {
+                        Console.SetCursorPosition(0, Math.Min(startTop + currentLineIndex, Console.BufferHeight - 1));
+                    }
+                    catch
+                    {
+                        // Ultimate fallback - just continue
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // If all else fails, don't crash the REPL
+                // Just continue without redrawing
+            }
+        }
+
+        private void ClearMultiLineInput(int lineCount, int startTop)
+        {
+            try
+            {
+                for (int i = 0; i < lineCount && (startTop + i) < Console.BufferHeight; i++)
+                {
+                    Console.SetCursorPosition(0, startTop + i);
+                    Console.Write(new string(' ', Math.Min(Console.WindowWidth - 1, 120)));
+                }
+                Console.SetCursorPosition(0, startTop);
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                // Ignore positioning errors
+            }
+        }
+
+        private string GetCurrentPrompt()
+        {
+            // This should match the prompt being used in ReadMultiLineInput
+            // We'll need to track this better, but for now use a simple heuristic
+            if (Console.CursorLeft > 10) // Likely a continuation prompt
+                return "    ...> ";
+            else
+                return "μhigh> ";
+        }
+
+        /// <summary>
+        /// Determines if the input is incomplete and needs more lines (e.g., unclosed braces or parentheses).
+        /// </summary>
         private bool NeedsMoreInput(string input)
         {
-            // Simple heuristic to detect incomplete blocks
-            var trimmed = input.Trim();
-            
-            // Check for unclosed braces
-            var openBraces = 0;
-            var inString = false;
-            var escaped = false;
-            
-            foreach (var ch in input)
+            if (string.IsNullOrWhiteSpace(input))
+                return false;
+                
+            int paren = 0, brace = 0, bracket = 0;
+            bool inString = false, inChar = false, escape = false;
+
+            foreach (char c in input)
             {
-                if (escaped)
+                if (escape)
                 {
-                    escaped = false;
+                    escape = false;
                     continue;
                 }
-                
-                if (ch == '\\')
+                if (c == '\\')
                 {
-                    escaped = true;
+                    escape = true;
                     continue;
                 }
-                
-                if (ch == '"')
+                if (inString)
                 {
-                    inString = !inString;
+                    if (c == '"') inString = false;
                     continue;
                 }
-                
-                if (!inString)
+                if (inChar)
                 {
-                    if (ch == '{')
-                        openBraces++;
-                    else if (ch == '}')
-                        openBraces--;
+                    if (c == '\'') inChar = false;
+                    continue;
                 }
+                if (c == '"') { inString = true; continue; }
+                if (c == '\'') { inChar = true; continue; }
+                if (c == '(') paren++;
+                if (c == ')') paren--;
+                if (c == '{') brace++;
+                if (c == '}') brace--;
+                if (c == '[') bracket++;
+                if (c == ']') bracket--;
             }
             
-            // If we have unclosed braces, we need more input
-            if (openBraces > 0)
-                return true;
+            // If any are unclosed, need more input
+            return paren > 0 || brace > 0 || bracket > 0;
+        }
+
+       
+        private void RedrawCurrentLine(string input, int cursorPosition)
+        {
+            var prompt = GetCurrentPrompt();
+            var currentLeft = Console.CursorLeft;
+            var currentTop = Console.CursorTop;
             
-            // Check for incomplete control structures
-            if (trimmed.EndsWith("if") || trimmed.EndsWith("else") || 
-                trimmed.EndsWith("while") || trimmed.EndsWith("for") ||
-                trimmed.EndsWith("func") || trimmed.EndsWith("class") ||
-                trimmed.EndsWith("namespace") || trimmed.Contains(" if ") && !trimmed.Contains("{"))
-            {
-                return true;
-            }
+            // Move to beginning of current line
+            Console.SetCursorPosition(0, currentTop);
             
-            return false;
+            // Clear the line
+            Console.Write(new string(' ', Console.WindowWidth - 1));
+            
+            // Move back to beginning
+            Console.SetCursorPosition(0, currentTop);
+            
+            // Write prompt and input
+            Console.Write(prompt + input);
+            
+            // Position cursor correctly
+            Console.SetCursorPosition(prompt.Length + cursorPosition, currentTop);
         }
 
         private async Task InitializeScriptingEnvironment()
@@ -582,10 +854,27 @@ public static void println(object value) => System.Console.WriteLine(value);
             Console.WriteLine("  :load <f> - Load session from file");
             Console.WriteLine("  :verbose  - Show verbose mode status");
             Console.WriteLine();
-            Console.WriteLine("Multi-line Input:");
-            Console.WriteLine("  Ctrl+Enter - Add a newline (continue input)");
-            Console.WriteLine("  Enter      - Execute the input");
-            Console.WriteLine("  Escape     - Cancel current input");
+            Console.WriteLine("Keyboard Shortcuts:");
+            Console.WriteLine("  Ctrl+Enter     - Add a newline (continue input)");
+            Console.WriteLine("  Enter          - Execute the input");
+            Console.WriteLine("  Escape         - Cancel current input");
+            Console.WriteLine("  Ctrl+C         - Cancel current input");
+            Console.WriteLine("  ←/→ arrows     - Move cursor left/right");
+            Console.WriteLine("  ↑/↓ arrows     - Move up/down between lines");
+            Console.WriteLine("  Home/End       - Move to beginning/end of line");
+            Console.WriteLine("  Ctrl+Home/End  - Move to beginning/end of input");
+            Console.WriteLine("  PageUp/Down    - Jump to first/last line");
+            Console.WriteLine("  Backspace      - Delete character before cursor");
+            Console.WriteLine("  Delete         - Delete character at cursor");
+            Console.WriteLine("  Tab            - Insert 4 spaces");
+            Console.WriteLine("  Ctrl+A         - Go to beginning of line");
+            Console.WriteLine("  Ctrl+E         - Go to end of line");
+            Console.WriteLine();
+            Console.WriteLine("Multi-line editing:");
+            Console.WriteLine("  - Use ↑/↓ arrows to navigate between lines");
+            Console.WriteLine("  - Backspace at line start merges with previous line");
+            Console.WriteLine("  - Delete at line end merges with next line");
+            Console.WriteLine("  - Empty line with Enter exits multi-line mode");
             Console.WriteLine();
             Console.WriteLine("You can enter μHigh expressions or statements directly:");
             Console.WriteLine("  var x = 42");

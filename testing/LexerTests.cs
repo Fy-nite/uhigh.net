@@ -212,5 +212,37 @@ namespace uhigh.Net.Testing
             Assert.AreEqual(TokenType.Arrow, tokens[1].Type);
             Assert.AreEqual(TokenType.Underscore, tokens[2].Type);
         }
+
+        [Test]
+        public void TestRangeKeyword()
+        {
+            var lexer = CreateLexer("range(10)");
+            var tokens = lexer.Tokenize();
+
+            Assert.AreEqual(5, tokens.Count); // range, (, 10, ), EOF
+            Assert.AreEqual(TokenType.Range, tokens[0].Type);
+            Assert.AreEqual(TokenType.LeftParen, tokens[1].Type);
+            Assert.AreEqual(TokenType.Number, tokens[2].Type);
+            Assert.AreEqual(TokenType.RightParen, tokens[3].Type);
+        }
+
+        [Test]
+        public void TestForInSyntax()
+        {
+            var lexer = CreateLexer("for var i in range(5)");
+            var tokens = lexer.Tokenize();
+
+            var expectedTypes = new[]
+            {
+                TokenType.For, TokenType.Var, TokenType.Identifier, TokenType.In,
+                TokenType.Range, TokenType.LeftParen, TokenType.Number, TokenType.RightParen
+            };
+
+            Assert.AreEqual(expectedTypes.Length + 1, tokens.Count); // +1 for EOF
+            for (int i = 0; i < expectedTypes.Length; i++)
+            {
+                Assert.AreEqual(expectedTypes[i], tokens[i].Type);
+            }
+        }
     }
 }

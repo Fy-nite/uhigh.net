@@ -484,6 +484,65 @@ namespace uhigh.Net.Testing
             Assert.AreEqual(2, firstBlock.Statements.Count); // print + return
         }
 
+        [Test]
+        public void TestForInRangeLoop()
+        {
+            var program = ParseSource(@"
+                for var i in range(10) {
+                    print(i)
+                }");
+
+            Assert.AreEqual(1, program.Statements.Count);
+            Assert.IsTrue(program.Statements[0] is ForStatement);
+            
+            var forStmt = (ForStatement)program.Statements[0];
+            Assert.IsTrue(forStmt.IsForInLoop);
+            Assert.AreEqual("i", forStmt.IteratorVariable);
+            Assert.IsTrue(forStmt.IterableExpression is RangeExpression);
+            
+            var rangeExpr = (RangeExpression)forStmt.IterableExpression;
+            Assert.IsTrue(rangeExpr.IsSimpleRange);
+            Assert.IsNotNull(rangeExpr.End);
+        }
+
+        [Test]
+        public void TestForInArrayLoop()
+        {
+            var program = ParseSource(@"
+                for var item in items {
+                    print(item)
+                }");
+
+            Assert.AreEqual(1, program.Statements.Count);
+            Assert.IsTrue(program.Statements[0] is ForStatement);
+            
+            var forStmt = (ForStatement)program.Statements[0];
+            Assert.IsTrue(forStmt.IsForInLoop);
+            Assert.AreEqual("item", forStmt.IteratorVariable);
+            Assert.IsTrue(forStmt.IterableExpression is IdentifierExpression);
+            
+            var identExpr = (IdentifierExpression)forStmt.IterableExpression;
+            Assert.AreEqual("items", identExpr.Name);
+        }
+
+        [Test]
+        public void TestTraditionalForLoop()
+        {
+            var program = ParseSource(@"
+                for (var i = 0; i < 10; i++) {
+                    print(i)
+                }");
+
+            Assert.AreEqual(1, program.Statements.Count);
+            Assert.IsTrue(program.Statements[0] is ForStatement);
+            
+            var forStmt = (ForStatement)program.Statements[0];
+            Assert.IsFalse(forStmt.IsForInLoop);
+            Assert.IsNotNull(forStmt.Initializer);
+            Assert.IsNotNull(forStmt.Condition);
+            Assert.IsNotNull(forStmt.Increment);
+        }
+
        
     }
 }

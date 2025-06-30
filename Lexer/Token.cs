@@ -14,7 +14,7 @@ namespace uhigh.Net.Lexer
         Var, Const, Func, Return, If, Else, While, For, In,
         Print, Include, Try, Catch, Throw, Field, Match, Type, // Added Type
         True, False, Int, Float, StringType, Bool, Void,
-        Sharp, Range,
+        Sharp, Range, // Add Range token
         Break, Continue, // Add break and continue support
         Class, Namespace, Import,  From, This, // Add Using token
         Get, Set, // Add getter/setter keywords

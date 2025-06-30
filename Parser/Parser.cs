@@ -1045,13 +1045,62 @@ namespace uhigh.Net.Parser
 
         private Statement ParseForStatement()
         {
-            // Simplified for loop parsing
-            var init = ParseExpressionStatement();
+            // Check for for-in syntax: for var i in expression
+            if (Check(TokenType.Var) || Check(TokenType.Identifier))
+            {
+                var isNewVariable = Match(TokenType.Var);
+                var iteratorName = Consume(TokenType.Identifier, "Expected iterator variable name").Value;
+                
+                if (Match(TokenType.In))
+                {
+                    // This is a for-in loop
+                    var iterableExpr = ParseExpression();
+                    
+                    Consume(TokenType.LeftBrace, "Expected '{' after for-in expression");
+                    
+                    var body = new List<Statement>();
+                    while (!Check(TokenType.RightBrace) && !IsAtEnd())
+                    {
+                        var stmt = ParseStatement();
+                        if (stmt != null) body.Add(stmt);
+                    }
+                    
+                    Consume(TokenType.RightBrace, "Expected '}' after for loop body");
+                    
+                    return new ForStatement
+                    {
+                        IteratorVariable = iteratorName,
+                        IterableExpression = iterableExpr,
+                        Body = body
+                    };
+                }
+                else
+                {
+                    // Traditional for loop starting with variable declaration
+                    // Put back the tokens and parse as traditional for loop
+                    _current -= isNewVariable ? 2 : 1;
+                    return ParseTraditionalForStatement();
+                }
+            }
+            else
+            {
+                // Traditional for loop
+                return ParseTraditionalForStatement();
+            }
+        }
+
+        private Statement ParseTraditionalForStatement()
+        {
+            // Traditional for loop: for (init; condition; increment)
+            Consume(TokenType.LeftParen, "Expected '(' after 'for'");
+            
+            var init = ParseStatement();
             Consume(TokenType.Semicolon, "Expected ';' after for loop initializer");
             var condition = ParseExpression();
             Consume(TokenType.Semicolon, "Expected ';' after for loop condition");
             var update = ParseExpressionStatement();
-
+            
+            Consume(TokenType.RightParen, "Expected ')' after for loop header");
             Consume(TokenType.LeftBrace, "Expected '{' after for loop header");
 
             var body = new List<Statement>();
@@ -1376,6 +1425,21 @@ namespace uhigh.Net.Parser
 
             if (Match(TokenType.False))
                 return new LiteralExpression { Value = false, Type = TokenType.False };
+
+            // Add support for range expressions
+            if (Match(TokenType.Range))
+            {
+                Consume(TokenType.LeftParen, "Expected '(' after 'range'");
+                var end = ParseExpression();
+                Consume(TokenType.RightParen, "Expected ')' after range expression");
+                
+                return new RangeExpression 
+                { 
+                    Start = new LiteralExpression { Value = 0, Type = TokenType.Number },
+                    End = end,
+                    IsExclusive = false
+                };
+            }
 
             if (Match(TokenType.Number))
             {
