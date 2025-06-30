@@ -1582,7 +1582,7 @@ namespace uhigh.Net.Parser
             
             return new CallExpression 
             { 
-               
+                Function = callee,  // Make sure we set the function property
                 Arguments = arguments 
             };
         }

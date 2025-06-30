@@ -425,33 +425,48 @@ public static void println(object value) => System.Console.WriteLine(value);
             foreach (var line in lines)
             {
                 var trimmedLine = line.Trim();
-                
-                if (trimmedLine.Contains("static void Main"))
+
+                // Detect the start of Main, even if { is on the same line
+                if (!inMainMethod && trimmedLine.Contains("static void Main"))
                 {
                     inMainMethod = true;
+                    // If { is on the same line, increment braceCount
+                    var openBraceIndex = trimmedLine.IndexOf('{');
+                    if (openBraceIndex >= 0)
+                    {
+                        braceCount++;
+                        // If there's code after the opening brace on the same line, extract it
+                        var codeAfterBrace = trimmedLine.Substring(openBraceIndex + 1).Trim();
+                        if (!string.IsNullOrEmpty(codeAfterBrace) && codeAfterBrace != "}")
+                        {
+                            extractedLines.Add(codeAfterBrace);
+                        }
+                    }
                     continue;
                 }
 
                 if (inMainMethod)
                 {
-                    if (trimmedLine == "{")
-                    {
-                        braceCount++;
-                        continue;
-                    }
+                    // Count braces on this line
+                    var openBraces = line.Count(c => c == '{');
+                    var closeBraces = line.Count(c => c == '}');
                     
-                    if (trimmedLine == "}")
-                    {
-                        braceCount--;
-                        if (braceCount == 0)
-                            break;
-                        continue;
-                    }
+                    braceCount += openBraces;
+                    braceCount -= closeBraces;
 
+                    // Only add lines that are inside the Main method body
                     if (braceCount > 0 && !string.IsNullOrWhiteSpace(trimmedLine))
                     {
-                        extractedLines.Add(trimmedLine);
+                        // Exclude standalone opening/closing braces
+                        if (trimmedLine != "{" && trimmedLine != "}")
+                        {
+                            extractedLines.Add(trimmedLine);
+                        }
                     }
+
+                    // If we've closed all opened braces, we're done
+                    if (braceCount == 0)
+                        break;
                 }
             }
 
