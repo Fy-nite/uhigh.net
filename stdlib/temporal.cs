@@ -78,12 +78,32 @@ namespace uhigh.StdLib
         }
 
         /// <summary>
+        /// Get last change made
+        /// </summary>
+        public Snapshot<T>? GetLastChange()
+        {
+            if (_snapshots.IsEmpty) return null;
+
+            Snapshot<T>? lastSnapshot = null;
+
+            foreach (var snapshot in _snapshots)
+            {
+                if (lastSnapshot == null || snapshot.Timestamp > lastSnapshot.Timestamp)
+                {
+                    lastSnapshot = snapshot;
+                }
+            }
+
+            return lastSnapshot;
+        }
+
+        /// <summary>
         /// Get the value at a specific timestamp
         /// </summary>
         public T? GetValueAt(DateTime timestamp)
         {
             Snapshot<T>? bestMatch = null;
-            
+
             foreach (var snapshot in _snapshots)
             {
                 if (snapshot.Timestamp <= timestamp)
@@ -94,8 +114,35 @@ namespace uhigh.StdLib
                     }
                 }
             }
-            
+
             return bestMatch?.Value;
+        }
+        /// <summary>
+        /// Get the Last value before the lastest available snapshot
+        /// </summary>
+        public T? GetLastValueBeforeLatest()
+        {
+            if (_snapshots.IsEmpty) return null;
+
+            Snapshot<T>? lastSnapshot = null;
+
+            foreach (var snapshot in _snapshots)
+            {
+                if (lastSnapshot == null || snapshot.Timestamp > lastSnapshot.Timestamp)
+                {
+                    lastSnapshot = snapshot;
+                }
+            }
+
+            return lastSnapshot?.Value;
+        }
+
+        /// <summary>
+        /// Get the first change made
+        /// </summary>
+        public Snapshot<T>? GetFirstChange()
+        {
+            return _snapshots.OrderBy(s => s.Timestamp).FirstOrDefault();
         }
 
         /// <summary>
