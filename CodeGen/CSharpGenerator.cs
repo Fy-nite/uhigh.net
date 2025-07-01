@@ -14,11 +14,13 @@ namespace uhigh.Net.CodeGen
         private DiagnosticsReporter _diagnostics = new();
         private string _rootNamespace = "Generated";
         private string _className = "Program";
-        private bool _suppressUsings = false; // Add flag to control using generation
+        private bool _suppressUsings = false;
+        private ReflectionTypeResolver _typeResolver; // Add this field
 
         public string Generate(Program program, DiagnosticsReporter? diagnostics = null, string? rootNamespace = null, string? className = null)
         {
             _diagnostics = diagnostics ?? new DiagnosticsReporter();
+            _typeResolver = new ReflectionTypeResolver(_diagnostics); // Initialize type resolver
             _output.Clear();
             _indentLevel = 0;
             _usings.Clear();
@@ -1401,14 +1403,23 @@ namespace uhigh.Net.CodeGen
 
         private string ConvertType(string type)
         {
-            // // First try reflection to see if it's a known .NET type
-            // if (MethodChecker?.GetTypeResolver()?.TryResolveType(type, out var reflectedType) == true)
-            // {
-            //     // Use the actual .NET type name
-            //     return GetCSharpTypeName(reflectedType);
-            // }
+            // First try reflection to see if it's a known .NET type
+            if (_typeResolver?.TryResolveType(type, out var reflectedType) == true)
+            {
+                // Use the actual .NET type name
+                return GetCSharpTypeName(reflectedType);
+            }
 
-            // Handle generic types
+            // Handle generic types with reflection
+            if (_typeResolver?.IsGenericType(type) == true)
+            {
+                if (_typeResolver.TryResolveGenericType(type, out var genericType))
+                {
+                    return GetCSharpTypeName(genericType);
+                }
+            }
+
+            // Handle generic types manually if reflection fails
             if (type.Contains('<') && type.Contains('>'))
             {
                 var genericMatch = System.Text.RegularExpressions.Regex.Match(type, @"^(\w+)<(.+)>$");
@@ -1420,6 +1431,27 @@ namespace uhigh.Net.CodeGen
                     // Handle multiple type arguments (e.g., Dictionary<string, int>)
                     var typeArgsList = typeArgs.Split(',').Select(t => ConvertType(t.Trim())).ToList();
                     
+                    // Try to resolve the base type with reflection first
+                    if (_typeResolver?.TryGetGenericTypeDefinition(baseType, out var genericTypeDef) == true)
+                    {
+                        try
+                        {
+                            var resolvedArgs = typeArgsList.Select(arg => 
+                                _typeResolver.TryResolveType(arg, out var argType) ? argType : typeof(object)).ToArray();
+                            
+                            if (resolvedArgs.Length == genericTypeDef.GetGenericArguments().Length)
+                            {
+                                var constructedType = genericTypeDef.MakeGenericType(resolvedArgs);
+                                return GetCSharpTypeName(constructedType);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _diagnostics.ReportWarning($"Failed to construct generic type {baseType}: {ex.Message}");
+                        }
+                    }
+                    
+                    // Fallback to manual mapping for common types
                     var convertedBaseType = baseType switch
                     {
                         "array" => $"{typeArgsList[0]}[]",
@@ -1434,6 +1466,12 @@ namespace uhigh.Net.CodeGen
                     
                     return convertedBaseType;
                 }
+            }
+
+            // Try to resolve as a simple type through reflection
+            if (_typeResolver?.TryResolveType(type, out var simpleType) == true)
+            {
+                return GetCSharpTypeName(simpleType);
             }
             
             // Fallback to manual mapping for μHigh-specific types

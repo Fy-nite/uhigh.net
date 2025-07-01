@@ -331,6 +331,14 @@ namespace uhigh.Net.Parser
     {
         public string Name { get; set; } = "";
         public string? Type { get; set; }
+        
+        public Parameter() { }
+        
+        public Parameter(string name, string? type = null)
+        {
+            Name = name;
+            Type = type;
+        }
     }
     
     public class Program : ASTNode 

@@ -543,6 +543,32 @@ namespace uhigh.Net.Testing
             Assert.IsNotNull(forStmt.Increment);
         }
 
+        [Test]
+        public void TestGenericConstructorCall()
+        {
+            var program = ParseSource("var list = new List<string>()");
+
+            Assert.AreEqual(1, program.Statements.Count);
+            Assert.IsTrue(program.Statements[0] is VariableDeclaration);
+            
+            var varDecl = (VariableDeclaration)program.Statements[0];
+            Assert.IsTrue(varDecl.Initializer is ConstructorCallExpression);
+            
+            var ctorCall = (ConstructorCallExpression)varDecl.Initializer;
+            Assert.AreEqual("List<string>", ctorCall.ClassName);
+            Assert.AreEqual(0, ctorCall.Arguments.Count);
+        }
+
+        [Test]
+        public void TestMultipleGenericParameters()
+        {
+            var program = ParseSource("var dict = new Dictionary<string, int>()");
+
+            var varDecl = (VariableDeclaration)program.Statements[0];
+            var ctorCall = (ConstructorCallExpression)varDecl.Initializer;
+            Assert.AreEqual("Dictionary<string, int>", ctorCall.ClassName);
+        }
+
        
     }
 }

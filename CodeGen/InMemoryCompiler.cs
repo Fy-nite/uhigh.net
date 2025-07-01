@@ -54,6 +54,8 @@ namespace uhigh.Net.CodeGen
                 MetadataReference.CreateFromFile(typeof(System.Collections.IEnumerable).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(System.Collections.Generic.List<>).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(System.Linq.Enumerable).Assembly.Location),
+                MetadataReference.CreateFromFile(typeof(uhigh.StdLib.Temporal<>).Assembly.Location)
+                
             });
 
             // Add standard library references with caching

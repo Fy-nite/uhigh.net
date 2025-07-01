@@ -28,8 +28,21 @@ namespace uhigh.Net.Parser
             }
             
             // For user-defined methods in μHigh, be more lenient
-            // Just check parameter count for now
-            return Parameters.Count == arguments.Count;
+            // Check parameter count and allow for optional parameters
+            if (Parameters.Count == arguments.Count)
+            {
+                return true;
+            }
+            
+            // Check if we have fewer arguments but remaining parameters have defaults
+            if (arguments.Count < Parameters.Count)
+            {
+                var requiredParams = Parameters.Take(arguments.Count).Count();
+                var optionalParams = Parameters.Skip(arguments.Count).Count(HasDefaultValue);
+                return requiredParams + optionalParams == Parameters.Count;
+            }
+            
+            return false;
         }
 
         private bool HasDefaultValue(Parameter parameter)
@@ -486,10 +499,20 @@ namespace uhigh.Net.Parser
                 return true;
             }
 
-            // Check if it's a .NET type via reflection
+            // Check if it's a .NET type via reflection (including generic types)
             if (_typeResolver.IsValidType(typeName))
             {
                 return true;
+            }
+
+            // Check if it's a generic type that can be resolved
+            if (_typeResolver.IsGenericType(typeName))
+            {
+                if (_typeResolver.TryResolveGenericType(typeName, out var genericType))
+                {
+                    _diagnostics.ReportInfo($"Successfully resolved generic type: {typeName} -> {genericType.FullName}");
+                    return true;
+                }
             }
 
             // Check built-in type aliases
@@ -501,12 +524,18 @@ namespace uhigh.Net.Parser
 
             _diagnostics.ReportError($"Unknown type: {typeName}", location.Line, location.Column, "UH301");
             
-            // Suggest similar types
+            // Suggest similar types (including generic types)
             var suggestions = _typeResolver.GetSimilarTypes(typeName);
-            if (suggestions.Any())
+            var genericSuggestions = _typeResolver.GetAllGenericTypeNames()
+                .Where(name => LevenshteinDistance(typeName, name) <= 2)
+                .Take(3);
+            
+            var allSuggestions = suggestions.Concat(genericSuggestions).Distinct().Take(5).ToList();
+            
+            if (allSuggestions.Any())
             {
                 _diagnostics.ReportWarning(
-                    $"Did you mean: {string.Join(", ", suggestions)}?",
+                    $"Did you mean: {string.Join(", ", allSuggestions)}?",
                     location.Line, location.Column, "UH302");
             }
 
@@ -621,4 +650,3 @@ namespace uhigh.Net.Parser
         }
     }
 }
- 

@@ -649,17 +649,57 @@ namespace uhigh.Net.Parser
         {
             var typeAnn = ParseTypeAnnotation();
             
-            // Validate the type using reflection
-            if (!_methodChecker.ValidateType(typeAnn.Name, Peek()))
+            // Build the full type name including generics
+            var fullTypeName = typeAnn.Name;
+            if (typeAnn.TypeArguments.Count > 0)
             {
-                _diagnostics.ReportWarning($"Type '{typeAnn.Name}' may not be valid", Peek().Line, Peek().Column, "UH300");
+                fullTypeName = $"{typeAnn.Name}<{string.Join(",", typeAnn.TypeArguments.Select(t => BuildTypeString(t)))}>";
             }
             
-            // For backward compatibility, return the name for simple types
+            // Validate the type using reflection - but be more lenient
+            if (!_methodChecker.ValidateType(fullTypeName, Peek()))
+            {
+                // Only warn if it's not a potential type parameter or generic type
+                if (!IsLikelyValidType(fullTypeName))
+                {
+                    _diagnostics.ReportWarning($"Type '{fullTypeName}' may not be valid", Peek().Line, Peek().Column, "UH300");
+                }
+            }
+            
+            return fullTypeName;
+        }
+
+        // Helper method to build type string from TypeAnnotation
+        private string BuildTypeString(TypeAnnotation typeAnn)
+        {
             if (typeAnn.TypeArguments.Count == 0)
                 return typeAnn.Name;
-            // For generic types, reconstruct as e.g. array<string>
-            return $"{typeAnn.Name}<{string.Join(",", typeAnn.TypeArguments.Select(t => t.Name))}>";
+            
+            return $"{typeAnn.Name}<{string.Join(",", typeAnn.TypeArguments.Select(t => BuildTypeString(t)))}>";
+        }
+
+        // Helper method to check if a type name is likely valid
+        private bool IsLikelyValidType(string typeName)
+        {
+            // Allow type parameters (single uppercase letters or T-prefixed names)
+            if (typeName.Length == 1 && char.IsUpper(typeName[0]))
+                return true;
+            
+            if (typeName.StartsWith("T") && typeName.Length <= 10 && char.IsUpper(typeName[0]))
+                return true;
+            
+            // Allow common generic patterns
+            if (typeName.Contains('<') && typeName.Contains('>'))
+                return true;
+            
+            // Allow common framework types
+            var commonTypes = new[] { 
+                "string", "int", "float", "bool", "void", "object", "double", "decimal",
+                "List", "Dictionary", "Array", "IEnumerable", "ICollection", "HashSet",
+                "TimestampedEvent", "Observable", "EventStream"
+            };
+            
+            return commonTypes.Any(ct => typeName.Contains(ct));
         }
 
         private Statement ParseFieldDeclaration()
@@ -1218,7 +1258,17 @@ namespace uhigh.Net.Parser
             {
                 var op = Previous().Type;
                 var value = ParseAssignment();
-                return new AssignmentExpression { Target = expr, Operator = op, Value = value };
+                
+                // Ensure we have a valid assignment target
+                if (expr is IdentifierExpression || expr is MemberAccessExpression || expr is IndexExpression)
+                {
+                    return new AssignmentExpression { Target = expr, Operator = op, Value = value };
+                }
+                else
+                {
+                    _diagnostics.ReportParseError($"Invalid assignment target: {expr?.GetType().Name}", Previous());
+                    return new AssignmentExpression { Target = expr, Operator = op, Value = value };
+                }
             }
 
             return expr;
@@ -1470,6 +1520,24 @@ namespace uhigh.Net.Parser
                 while (Match(TokenType.Dot))
                 {
                     className += "." + Consume(TokenType.Identifier, "Expected identifier after '.'").Value;
+                }
+                
+                // Handle generic type parameters
+                if (Match(TokenType.Less))
+                {
+                    className += "<";
+                    do
+                    {
+                        var typeArg = ParseTypeName();
+                        className += typeArg;
+                        if (Match(TokenType.Comma))
+                        {
+                            className += ", ";
+                        }
+                    } while (!Check(TokenType.Greater) && !IsAtEnd());
+                    
+                    Consume(TokenType.Greater, "Expected '>' after generic type arguments");
+                    className += ">";
                 }
                 
                 Consume(TokenType.LeftParen, "Expected '(' after class name");

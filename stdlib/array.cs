@@ -4,6 +4,52 @@ using System.Linq;
 
 namespace uhigh.StdLib
 {
+
+    [System.Serializable]
+    public class Array<T>
+    {
+        private List<T> _items;
+
+        public Array()
+        {
+            _items = new List<T>();
+        }
+
+        public Array(IEnumerable<T> items)
+        {
+            _items = new List<T>(items);
+        }
+
+        public int Count => _items.Count;
+
+        public T this[int index]
+        {
+            get => _items[index];
+            set => _items[index] = value;
+        }
+
+        public void Add(T item)
+        {
+            _items.Add(item);
+        }
+
+        public void RemoveAt(int index)
+        {
+            _items.RemoveAt(index);
+        }
+
+        public void Clear()
+        {
+            _items.Clear();
+        }
+
+        public IEnumerable<T> GetItems()
+        {
+            return _items.AsEnumerable();
+        }
+    }
+
+
     /// <summary>
     /// Represents a slice/view of an array starting from a specific index
     /// </summary>

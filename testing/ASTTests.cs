@@ -42,8 +42,8 @@ namespace uhigh.Net.Testing
         [Test]
         public void TestFunctionDeclarationStructure()
         {
-            var param1 = new Parameter { Name = "x", Type = "int" };
-            var param2 = new Parameter { Name = "y", Type = "int" };
+            var param1 = new Parameter("x", "int");
+            var param2 = new Parameter("y", "int");
             var returnStmt = new ReturnStatement 
             { 
                 Value = new BinaryExpression 

@@ -46,7 +46,7 @@ namespace uhigh.Net.Parser
                 typeof(System.Threading.Tasks.Task),
                 typeof(System.Threading.Tasks.Task<>),
                 typeof(System.Threading.Thread),
-
+                typeof(System.Reflection.Assembly),
                 typeof(System.Threading.CancellationToken)
             };
 
@@ -61,6 +61,23 @@ namespace uhigh.Net.Parser
 
             // Load current assembly types
             LoadAssembly(Assembly.GetExecutingAssembly());
+            
+            // Try to load uhigh.StdLib assembly
+            try 
+            {
+                var stdLibAssembly = Assembly.LoadFrom("uhigh.StdLib.dll");
+                LoadAssembly(stdLibAssembly);
+            }
+            catch
+            {
+                // Try to find it in current app domain
+                var stdLibAssembly = AppDomain.CurrentDomain.GetAssemblies()
+                    .FirstOrDefault(a => a.GetName().Name?.Contains("uhigh.StdLib") == true);
+                if (stdLibAssembly != null)
+                {
+                    LoadAssembly(stdLibAssembly);
+                }
+            }
         }
 
         public void LoadAssembly(Assembly assembly)

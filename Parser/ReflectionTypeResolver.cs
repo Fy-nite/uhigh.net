@@ -12,6 +12,7 @@ namespace uhigh.Net.Parser
         private readonly Dictionary<string, Type> _discoveredTypes = new();
         private readonly Dictionary<string, List<MethodInfo>> _discoveredMethods = new();
         private readonly HashSet<Assembly> _scannedAssemblies = new();
+        private readonly Dictionary<string, Type> _genericTypeDefinitions = new(); // Add this
 
         public ReflectionTypeResolver(DiagnosticsReporter diagnostics)
         {
@@ -28,6 +29,28 @@ namespace uhigh.Net.Parser
             ScanAssembly(typeof(Enumerable).Assembly);       // System.Linq
             ScanAssembly(typeof(System.IO.File).Assembly);   // System.IO
             ScanAssembly(typeof(System.Text.StringBuilder).Assembly); // System.Text
+            ScanAssembly(typeof(System.Threading.Tasks.Task).Assembly); // System.Threading.Tasks
+            ScanAssembly(typeof(System.Collections.Generic.Dictionary<,>).Assembly); // System.Collections.Generic
+            ScanAssembly(typeof(System.Collections.IEnumerable).Assembly); // System.Collections
+            ScanAssembly(typeof(System.Collections.Generic.List<>).Assembly); // System.Collections.Generic.List
+            ScanAssembly(typeof(System.Collections.Generic.HashSet<>).Assembly); // System.Collections.Generic.HashSet
+            
+            // Try to scan uhigh.StdLib assembly more reliably
+            try 
+            {
+                var stdLibAssembly = Assembly.LoadFrom("uhigh.StdLib.dll");
+                ScanAssembly(stdLibAssembly);
+            }
+            catch
+            {
+                // Try to find it in current app domain
+                var stdLibAssembly = AppDomain.CurrentDomain.GetAssemblies()
+                    .FirstOrDefault(a => a.GetName().Name?.Contains("uhigh.StdLib") == true);
+                if (stdLibAssembly != null)
+                {
+                    ScanAssembly(stdLibAssembly);
+                }
+            }
             
             // Scan current assembly for custom types
             ScanAssembly(Assembly.GetExecutingAssembly());
@@ -44,10 +67,12 @@ namespace uhigh.Net.Parser
 
             try
             {
-                foreach (var type in assembly.GetExportedTypes())
+                var types = assembly.GetExportedTypes();
+                foreach (var type in types)
                 {
                     RegisterType(type);
                 }
+                _diagnostics.ReportInfo($"Scanned assembly {assembly.GetName().Name} - found {types.Length} types");
             }
             catch (Exception ex)
             {
@@ -76,6 +101,26 @@ namespace uhigh.Net.Parser
                 if (!_discoveredTypes.ContainsKey(shortName))
                 {
                     _discoveredTypes[shortName] = type;
+                }
+            }
+
+            // Register generic type definitions
+            if (type.IsGenericTypeDefinition)
+            {
+                var genericName = type.Name.Split('`')[0]; // Remove `1, `2, etc.
+                if (!_genericTypeDefinitions.ContainsKey(genericName))
+                {
+                    _genericTypeDefinitions[genericName] = type;
+                }
+                
+                // Also register with full namespace
+                if (!string.IsNullOrEmpty(type.Namespace))
+                {
+                    var fullGenericName = $"{type.Namespace}.{genericName}";
+                    if (!_genericTypeDefinitions.ContainsKey(fullGenericName))
+                    {
+                        _genericTypeDefinitions[fullGenericName] = type;
+                    }
                 }
             }
 
@@ -120,6 +165,19 @@ namespace uhigh.Net.Parser
 
         public bool TryResolveType(string typeName, out Type type)
         {
+            // Handle type parameters (T, U, etc.) - allow them through
+            if (IsTypeParameter(typeName))
+            {
+                type = typeof(object); // Placeholder for type parameters
+                return true;
+            }
+
+            // Try to resolve generic type first
+            if (TryResolveGenericType(typeName, out type))
+            {
+                return true;
+            }
+
             if (_discoveredTypes.TryGetValue(typeName, out type))
             {
                 return true;
@@ -147,6 +205,183 @@ namespace uhigh.Net.Parser
 
             type = null;
             return false;
+        }
+
+        // Add method to check if a type name is a type parameter
+        private bool IsTypeParameter(string typeName)
+        {
+            // Type parameters are typically single uppercase letters (T, U, V, etc.)
+            // or start with T (TKey, TValue, etc.)
+            return typeName.Length == 1 && char.IsUpper(typeName[0]) ||
+                   typeName.StartsWith("T") && typeName.Length <= 10 && char.IsUpper(typeName[0]);
+        }
+
+        // Add new method for generic type resolution
+        public bool TryResolveGenericType(string typeName, out Type type)
+        {
+            type = null;
+
+            // Check if it's a generic type syntax like "List<string>" or "Dictionary<string, int>"
+            if (!typeName.Contains('<') || !typeName.Contains('>'))
+            {
+                return false;
+            }
+
+            try
+            {
+                var genericMatch = System.Text.RegularExpressions.Regex.Match(typeName, @"^([^<]+)<(.+)>$");
+                if (!genericMatch.Success)
+                {
+                    return false;
+                }
+
+                var baseTypeName = genericMatch.Groups[1].Value.Trim();
+                var typeArgsString = genericMatch.Groups[2].Value.Trim();
+
+                // Find the generic type definition
+                if (!_genericTypeDefinitions.TryGetValue(baseTypeName, out var genericTypeDef))
+                {
+                    // Try with common aliases
+                    var aliasedType = TryResolveTypeAlias(baseTypeName);
+                    if (aliasedType != null && _genericTypeDefinitions.ContainsKey(aliasedType))
+                    {
+                        genericTypeDef = _genericTypeDefinitions[aliasedType];
+                    }
+                    else
+                    {
+                        // Try case-insensitive lookup for generic types
+                        var genericMatch2 = _genericTypeDefinitions.FirstOrDefault(kvp => 
+                            string.Equals(kvp.Key, baseTypeName, StringComparison.OrdinalIgnoreCase));
+                        
+                        if (!genericMatch2.Equals(default(KeyValuePair<string, Type>)))
+                        {
+                            genericTypeDef = genericMatch2.Value;
+                        }
+                        else
+                        {
+                            return false;
+                        }
+                    }
+                }
+
+                // Parse type arguments
+                var typeArgNames = ParseGenericTypeArguments(typeArgsString);
+                var typeArgs = new Type[typeArgNames.Count];
+
+                for (int i = 0; i < typeArgNames.Count; i++)
+                {
+                    // Handle type parameters in generic arguments
+                    if (IsTypeParameter(typeArgNames[i]))
+                    {
+                        typeArgs[i] = typeof(object); // Placeholder for type parameters
+                    }
+                    else if (!TryResolveType(typeArgNames[i], out var argType))
+                    {
+                        return false;
+                    }
+                    else
+                    {
+                        typeArgs[i] = argType;
+                    }
+                }
+
+                // Validate type argument count
+                if (typeArgs.Length != genericTypeDef.GetGenericArguments().Length)
+                {
+                    _diagnostics.ReportWarning($"Generic type {baseTypeName} expects {genericTypeDef.GetGenericArguments().Length} type arguments, but {typeArgs.Length} were provided");
+                    return false;
+                }
+
+                // Create the generic type
+                type = genericTypeDef.MakeGenericType(typeArgs);
+                
+                // Cache the resolved type for future use
+                _discoveredTypes[typeName] = type;
+                
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _diagnostics.ReportWarning($"Failed to resolve generic type '{typeName}': {ex.Message}");
+                return false;
+            }
+        }
+
+        // Add helper method to parse generic type arguments
+        private List<string> ParseGenericTypeArguments(string typeArgsString)
+        {
+            var typeArgs = new List<string>();
+            var current = "";
+            var depth = 0;
+
+            for (int i = 0; i < typeArgsString.Length; i++)
+            {
+                var c = typeArgsString[i];
+                
+                if (c == '<')
+                {
+                    depth++;
+                    current += c;
+                }
+                else if (c == '>')
+                {
+                    depth--;
+                    current += c;
+                }
+                else if (c == ',' && depth == 0)
+                {
+                    if (!string.IsNullOrWhiteSpace(current))
+                    {
+                        typeArgs.Add(current.Trim());
+                    }
+                    current = "";
+                }
+                else if (!char.IsWhiteSpace(c) || depth > 0)
+                {
+                    current += c;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(current))
+            {
+                typeArgs.Add(current.Trim());
+            }
+
+            return typeArgs;
+        }
+
+        // Add method to resolve common type aliases
+        private string TryResolveTypeAlias(string typeName)
+        {
+            return typeName switch
+            {
+                "list" => "List",
+                "dictionary" => "Dictionary",
+                "map" => "Dictionary",
+                "set" => "HashSet",
+                "queue" => "Queue",
+                "stack" => "Stack",
+                "array" => "Array",
+                _ => null
+            };
+        }
+
+        // Add method to get generic type information
+        public bool IsGenericType(string typeName)
+        {
+            return typeName.Contains('<') && typeName.Contains('>');
+        }
+
+        // Add method to get generic type definition
+        public bool TryGetGenericTypeDefinition(string baseTypeName, out Type genericTypeDef)
+        {
+            return _genericTypeDefinitions.TryGetValue(baseTypeName, out genericTypeDef);
+        }
+
+        // Add method to get all generic type definitions
+        public IEnumerable<string> GetAllGenericTypeNames()
+        {
+            return _genericTypeDefinitions.Keys;
         }
 
         public bool TryResolveMethod(string methodName, List<Expression> arguments, out MethodInfo method)

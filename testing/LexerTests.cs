@@ -87,6 +87,21 @@ namespace uhigh.Net.Testing
         }
 
         [Test]
+        public void TestGenericTypes()
+        {
+            var lexer = CreateLexer("TimestampedEvent<string> Dictionary<string, int>");
+            var tokens = lexer.Tokenize();
+
+            // Should tokenize as: TimestampedEvent, <, string, >, Dictionary, <, string, ,, int, >, EOF
+            Assert.IsTrue(tokens.Count >= 11);
+            Assert.AreEqual(TokenType.Identifier, tokens[0].Type);
+            Assert.AreEqual("TimestampedEvent", tokens[0].Value);
+            Assert.AreEqual(TokenType.Less, tokens[1].Type);
+            Assert.AreEqual(TokenType.StringType, tokens[2].Type);
+            Assert.AreEqual(TokenType.Greater, tokens[3].Type);
+        }
+
+        [Test]
         public void TestComments()
         {
             var lexer = CreateLexer("var x = 42 // This is a comment\nvar y = 10");

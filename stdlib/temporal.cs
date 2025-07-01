@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Text.Json;
+using System.Linq;
 
 namespace uhigh.StdLib
 {
@@ -193,5 +194,109 @@ namespace uhigh.StdLib
         }
 
         public IEnumerable<TKey> Keys => _temporalValues.Keys;
+    }
+
+    /// <summary>
+    /// Time-based utility functions
+    /// </summary>
+    public static class TimeUtils
+    {
+        public static DateTime Now => DateTime.UtcNow;
+        public static DateTime Today => DateTime.Today;
+        
+        public static TimeSpan Since(DateTime from) => DateTime.UtcNow - from;
+        public static TimeSpan Between(DateTime start, DateTime end) => end - start;
+        
+        public static string FormatDuration(TimeSpan duration)
+        {
+            if (duration.TotalDays >= 1)
+                return $"{duration.TotalDays:F1} days";
+            if (duration.TotalHours >= 1)
+                return $"{duration.TotalHours:F1} hours";
+            if (duration.TotalMinutes >= 1)
+                return $"{duration.TotalMinutes:F1} minutes";
+            return $"{duration.TotalSeconds:F1} seconds";
+        }
+        
+        public static DateTime RoundToSecond(DateTime dateTime)
+        {
+            return new DateTime(dateTime.Year, dateTime.Month, dateTime.Day, 
+                              dateTime.Hour, dateTime.Minute, dateTime.Second);
+        }
+        
+        public static DateTime RoundToMinute(DateTime dateTime)
+        {
+            return new DateTime(dateTime.Year, dateTime.Month, dateTime.Day, 
+                              dateTime.Hour, dateTime.Minute, 0);
+        }
+        
+        public static DateTime RoundToHour(DateTime dateTime)
+        {
+            return new DateTime(dateTime.Year, dateTime.Month, dateTime.Day, 
+                              dateTime.Hour, 0, 0);
+        }
+    }
+
+    /// <summary>
+    /// Rate limiting and frequency tracking
+    /// </summary>
+    public class RateTracker
+    {
+        private readonly Queue<DateTime> _events = new();
+        private readonly TimeSpan _window;
+        private readonly int _maxEvents;
+
+        public RateTracker(TimeSpan window, int maxEvents)
+        {
+            _window = window;
+            _maxEvents = maxEvents;
+        }
+
+        public bool CanExecute()
+        {
+            CleanOldEvents();
+            return _events.Count < _maxEvents;
+        }
+
+        public bool TryExecute()
+        {
+            if (!CanExecute()) return false;
+            
+            _events.Enqueue(DateTime.UtcNow);
+            return true;
+        }
+
+        public int CurrentCount
+        {
+            get
+            {
+                CleanOldEvents();
+                return _events.Count;
+            }
+        }
+
+        public TimeSpan TimeUntilNextSlot
+        {
+            get
+            {
+                CleanOldEvents();
+                if (_events.Count < _maxEvents) return TimeSpan.Zero;
+                
+                var oldestEvent = _events.Peek();
+                var nextAvailableTime = oldestEvent + _window;
+                return nextAvailableTime > DateTime.UtcNow 
+                    ? nextAvailableTime - DateTime.UtcNow 
+                    : TimeSpan.Zero;
+            }
+        }
+
+        private void CleanOldEvents()
+        {
+            var cutoff = DateTime.UtcNow - _window;
+            while (_events.Count > 0 && _events.Peek() < cutoff)
+            {
+                _events.Dequeue();
+            }
+        }
     }
 }
