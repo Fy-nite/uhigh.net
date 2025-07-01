@@ -1,6 +1,7 @@
 Using uhigh.StdLib.StdLib
 namespace testing
 {
+
     class Program
     {
         static field cat: string = "purr"
