@@ -589,18 +589,96 @@ namespace uhigh.Net.Parser
             };
         }
 
-        // Add this method to parse type annotations with generics
-        private TypeAnnotation ParseTypeAnnotation()
+        // Update this method to use ParseTypeAnnotation for type names
+        private string ParseTypeName()
         {
             string typeName;
             
-            // Handle built-in type keywords including array
+            // Handle built-in type keywords
             if (Check(TokenType.Array))
             {
                 typeName = "array";
                 Advance();
             }
-           
+            else if (Check(TokenType.StringType))
+            {
+                typeName = "string";
+                Advance();
+            }
+            else if (Check(TokenType.Int))
+            {
+                typeName = "int";
+                Advance();
+            }
+            else if (Check(TokenType.Float))
+            {
+                typeName = "float";
+                Advance();
+            }
+            else if (Check(TokenType.Bool))
+            {
+                typeName = "bool";
+                Advance();
+            }
+            else if (Check(TokenType.Void))
+            {
+                typeName = "void";
+                Advance();
+            }
+            else
+            {
+                typeName = Consume(TokenType.Identifier, "Expected type name").Value;
+            }
+            
+            // Handle generic type parameters if not already included in the identifier
+            if (!typeName.Contains('<') && Match(TokenType.Less)) // <
+            {
+                typeName += "<";
+                do
+                {
+                    var typeArg = ParseTypeName();
+                    typeName += typeArg;
+                    if (Match(TokenType.Comma))
+                    {
+                        typeName += ", ";
+                    }
+                } while (!Check(TokenType.Greater) && !IsAtEnd());
+                
+                Consume(TokenType.Greater, "Expected '>' after generic type arguments");
+                typeName += ">";
+                
+                // Handle array syntax after generic parameters if not already included
+                if (!typeName.Contains("[]") && Match(TokenType.LeftBracket))
+                {
+                    Consume(TokenType.RightBracket, "Expected ']' after '['");
+                    typeName += "[]";
+                }
+            }
+            
+            // Validate the type using reflection - but be more lenient
+            if (!_methodChecker.ValidateType(typeName, Peek()))
+            {
+                // Only warn if it's not a potential type parameter or generic type
+                if (!IsLikelyValidType(typeName))
+                {
+                    _diagnostics.ReportWarning($"Type '{typeName}' may not be valid", Peek().Line, Peek().Column, "UH300");
+                }
+            }
+            
+            return typeName;
+        }
+
+        // Add method to parse type annotations with generics and arrays
+        private TypeAnnotation ParseTypeAnnotation()
+        {
+            string typeName;
+            
+            // Handle built-in type keywords
+            if (Check(TokenType.Array))
+            {
+                typeName = "array";
+                Advance();
+            }
             else if (Check(TokenType.StringType))
             {
                 typeName = "string";
@@ -633,6 +711,7 @@ namespace uhigh.Net.Parser
             
             var typeAnn = new TypeAnnotation { Name = typeName };
 
+            // Handle generic type parameters first (e.g., List<string>)
             if (Match(TokenType.Less)) // <
             {
                 do
@@ -641,32 +720,22 @@ namespace uhigh.Net.Parser
                 } while (Match(TokenType.Comma));
                 Consume(TokenType.Greater, "Expected '>' after generic type arguments");
             }
-            return typeAnn;
-        }
 
-        // Update this method to use ParseTypeAnnotation for type names
-        private string ParseTypeName()
-        {
-            var typeAnn = ParseTypeAnnotation();
-            
-            // Build the full type name including generics
-            var fullTypeName = typeAnn.Name;
-            if (typeAnn.TypeArguments.Count > 0)
+            // Handle array syntax after generic parameters (e.g., List<string>[] or string[])
+            if (Match(TokenType.LeftBracket))
             {
-                fullTypeName = $"{typeAnn.Name}<{string.Join(",", typeAnn.TypeArguments.Select(t => BuildTypeString(t)))}>";
-            }
-            
-            // Validate the type using reflection - but be more lenient
-            if (!_methodChecker.ValidateType(fullTypeName, Peek()))
-            {
-                // Only warn if it's not a potential type parameter or generic type
-                if (!IsLikelyValidType(fullTypeName))
+                Consume(TokenType.RightBracket, "Expected ']' after '['");
+                // Build the generic part first, then add array brackets
+                var baseTypeName = typeAnn.Name;
+                if (typeAnn.TypeArguments.Count > 0)
                 {
-                    _diagnostics.ReportWarning($"Type '{fullTypeName}' may not be valid", Peek().Line, Peek().Column, "UH300");
+                    baseTypeName = $"{typeAnn.Name}<{string.Join(", ", typeAnn.TypeArguments.Select(t => BuildTypeString(t)))}>";
                 }
+                typeAnn.Name = baseTypeName + "[]";
+                typeAnn.TypeArguments.Clear(); // Clear since we've built the full name
             }
-            
-            return fullTypeName;
+
+            return typeAnn;
         }
 
         // Helper method to build type string from TypeAnnotation

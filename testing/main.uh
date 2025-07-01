@@ -8,11 +8,14 @@ namespace testing
         static field cats: List<string> 
         static field timestamp: TimestampedEvent<string>
         static field time: Dictionary<string, string>
-        public static func Main(args: array<string>): void 
+        static field temptime: Temporal<string>
+        public static func Main(args: string[]): void 
         {
             var catt = new Program()
             cats = new List<string>()
-            // start a timestamped event
+            temptime = new Temporal<string>("cat sound event")
+            temptime = new Temporal<string>("another cat sound event")
+            Console.WriteLine("Temporal event " + temptime.GetSecondsAgo(1))
             timestamp = new TimestampedEvent<string>("cat sound event")
             Console.WriteLine("Timestamped event started: " + timestamp.Data)
             time = new Dictionary<string, string>()

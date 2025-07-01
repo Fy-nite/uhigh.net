@@ -418,6 +418,12 @@ namespace uhigh.Net.CodeGen
 
         private string ConvertTypeAnnotation(TypeAnnotation typeAnn)
         {
+            // Handle array types first
+            if (typeAnn.Name.EndsWith("[]"))
+            {
+                return typeAnn.Name; // Already in correct format
+            }
+            
             if (typeAnn.Name == "array" && typeAnn.TypeArguments.Count == 1)
             {
                 return $"{ConvertTypeAnnotation(typeAnn.TypeArguments[0])}[]";
@@ -431,6 +437,12 @@ namespace uhigh.Net.CodeGen
 
         private string ConvertType(string type)
         {
+            // Handle array types first
+            if (type.EndsWith("[]"))
+            {
+                return type; // Already in C# format
+            }
+            
             // Handle generic types
             if (type.Contains('<') && type.Contains('>'))
             {

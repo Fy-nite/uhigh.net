@@ -259,5 +259,38 @@ namespace uhigh.Net.Testing
                 Assert.AreEqual(expectedTypes[i], tokens[i].Type);
             }
         }
+
+        [Test]
+        public void TestArrayTypeSyntax()
+        {
+            var lexer = CreateLexer("string[] int[] List<string>[]");
+            var tokens = lexer.Tokenize();
+
+            // Should now tokenize as: string[], int[], List, <, string, >, [], EOF
+            Assert.IsTrue(tokens.Count >= 8);
+            Assert.AreEqual(TokenType.Identifier, tokens[0].Type);
+            Assert.AreEqual("string[]", tokens[0].Value);
+            Assert.AreEqual(TokenType.Identifier, tokens[1].Type);
+            Assert.AreEqual("int[]", tokens[1].Value);
+            Assert.AreEqual(TokenType.Identifier, tokens[2].Type);
+            Assert.AreEqual("List", tokens[2].Value);
+        }
+
+        [Test]
+        public void TestGenericArrayTypes()
+        {
+            var lexer = CreateLexer("List<string>[] Dictionary<string, int>[]");
+            var tokens = lexer.Tokenize();
+
+            // Should properly tokenize generic types with array brackets
+            Assert.IsTrue(tokens.Count >= 12);
+            Assert.AreEqual(TokenType.Identifier, tokens[0].Type);
+            Assert.AreEqual("List", tokens[0].Value);
+            Assert.AreEqual(TokenType.Less, tokens[1].Type);
+            Assert.AreEqual(TokenType.StringType, tokens[2].Type);
+            Assert.AreEqual(TokenType.Greater, tokens[3].Type);
+            Assert.AreEqual(TokenType.LeftBracket, tokens[4].Type);
+            Assert.AreEqual(TokenType.RightBracket, tokens[5].Type);
+        }
     }
 }

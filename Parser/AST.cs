@@ -79,6 +79,9 @@ namespace uhigh.Net.Parser
         // Add support for array indices
         public bool IsIndice { get; set; }
         public Expression? StartOffset { get; set; }
+        
+        // Add array type specification for explicit array types
+        public string? ArrayType { get; set; } // e.g., "string[]", "int[]"
     }
     
     public class IndexExpression : Expression 

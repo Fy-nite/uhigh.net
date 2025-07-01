@@ -165,6 +165,17 @@ namespace uhigh.Net.Parser
 
         public bool TryResolveType(string typeName, out Type type)
         {
+            // Handle array syntax first (e.g., string[], int[])
+            if (typeName.EndsWith("[]"))
+            {
+                var elementTypeName = typeName.Substring(0, typeName.Length - 2);
+                if (TryResolveType(elementTypeName, out var elementType))
+                {
+                    type = elementType.MakeArrayType();
+                    return true;
+                }
+            }
+
             // Handle type parameters (T, U, etc.) - allow them through
             if (IsTypeParameter(typeName))
             {

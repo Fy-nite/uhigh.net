@@ -385,17 +385,52 @@ namespace uhigh.Net.Lexer
                 }
             }
             
+            // Handle array syntax for type identifiers (e.g., string[], List<string>[])
+            // Only if this looks like a type (starts with uppercase or is a known type keyword)
+            if (IsTypeIdentifier(value) && _position < _source.Length && _source[_position] == '[')
+            {
+                // Look ahead to see if it's an array type declaration
+                var nextPos = _position + 1;
+                if (nextPos < _source.Length && _source[nextPos] == ']')
+                {
+                    value += "[]";
+                    _position += 2; // Skip []
+                    _column += 2;
+                }
+            }
+            
             // Check if this is a keyword (only check the base identifier for keywords)
             var baseIdentifier = value.Contains('.') ? value.Split('.')[0] : value;
+            if (value.EndsWith("[]"))
+            {
+                baseIdentifier = baseIdentifier.Replace("[]", "");
+            }
+            
             var tokenType = Keywords.ContainsKey(baseIdentifier) ? Keywords[baseIdentifier] : TokenType.Identifier;
             
-            // For dotted identifiers, always treat as Identifier regardless of the first part being a keyword
-            if (value.Contains('.'))
+            // For dotted identifiers or array types, always treat as Identifier regardless of the first part being a keyword
+            if (value.Contains('.') || value.EndsWith("[]"))
             {
                 tokenType = TokenType.Identifier;
             }
             
             return new Token(tokenType, value, line, column);
+        }
+        
+        private bool IsTypeIdentifier(string identifier)
+        {
+            // Check if this looks like a type name
+            if (string.IsNullOrEmpty(identifier)) return false;
+            
+            // Known built-in types
+            var builtinTypes = new[] { "string", "int", "float", "bool", "void", "object", "double", "decimal" };
+            if (builtinTypes.Contains(identifier)) return true;
+            
+            // Check if it's a generic type (contains < >)
+            if (identifier.Contains('<') && identifier.Contains('>')) return true;
+            
+            // Check if it starts with uppercase (typical for class names)
+            return char.IsUpper(identifier[0]);
         }
 
         private Token? GetTwoCharToken(string twoChar, int line, int column)

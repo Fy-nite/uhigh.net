@@ -1171,7 +1171,20 @@ namespace uhigh.Net.CodeGen
 
         private void GenerateArrayExpression(ArrayExpression arrayExpr)
         {
-            _output.Append("new[] { ");
+            // Check if we have an explicit array type
+            if (!string.IsNullOrEmpty(arrayExpr.ArrayType))
+            {
+                _output.Append($"new {arrayExpr.ArrayType} {{ ");
+            }
+            else if (!string.IsNullOrEmpty(arrayExpr.ElementType))
+            {
+                _output.Append($"new {ConvertType(arrayExpr.ElementType)}[] {{ ");
+            }
+            else
+            {
+                _output.Append("new[] { ");
+            }
+            
             for (int i = 0; i < arrayExpr.Elements.Count; i++)
             {
                 if (i > 0) _output.Append(", ");
@@ -1403,6 +1416,13 @@ namespace uhigh.Net.CodeGen
 
         private string ConvertType(string type)
         {
+            // Handle array types first
+            if (type.EndsWith("[]"))
+            {
+                var elementType = type.Substring(0, type.Length - 2);
+                return $"{ConvertType(elementType)}[]";
+            }
+
             // First try reflection to see if it's a known .NET type
             if (_typeResolver?.TryResolveType(type, out var reflectedType) == true)
             {
@@ -1484,6 +1504,12 @@ namespace uhigh.Net.CodeGen
                 "void" => "void",
                 "array" => "object[]",
                 "arrayIndice" => "uhigh.StdLib.ArrayIndice<object>",
+                // Handle common array types
+                "string[]" => "string[]",
+                "int[]" => "int[]",
+                "bool[]" => "bool[]",
+                "double[]" => "double[]",
+                "object[]" => "object[]",
                 _ => "object"
             };
         }

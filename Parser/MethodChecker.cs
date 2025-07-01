@@ -516,7 +516,7 @@ namespace uhigh.Net.Parser
             }
 
             // Check built-in type aliases
-            var builtInTypes = new[] { "int", "float", "string", "bool", "void", "array", "object" };
+            var builtInTypes = new[] { "int", "float", "string", "bool", "void", "array", "object", "string[]", "int[]", "bool[]", "double[]", "object[]" };
             if (builtInTypes.Contains(typeName))
             {
                 return true;

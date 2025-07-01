@@ -569,6 +569,49 @@ namespace uhigh.Net.Testing
             Assert.AreEqual("Dictionary<string, int>", ctorCall.ClassName);
         }
 
-       
+        [Test]
+        public void TestArrayTypeDeclarations()
+        {
+            var program = ParseSource(@"
+                var names: string[] = [""Alice"", ""Bob""]
+                var numbers: int[] = [1, 2, 3]
+                var flags: bool[] = [true, false]");
+
+            Assert.AreEqual(3, program.Statements.Count);
+            
+            // Test string array - now the type should be parsed as a single token
+            var stringArrayDecl = (VariableDeclaration)program.Statements[0];
+            Assert.AreEqual("string[]", stringArrayDecl.Type);
+            Assert.IsTrue(stringArrayDecl.Initializer is ArrayExpression);
+            
+            // Test int array
+            var intArrayDecl = (VariableDeclaration)program.Statements[1];
+            Assert.AreEqual("int[]", intArrayDecl.Type);
+            
+            // Test bool array
+            var boolArrayDecl = (VariableDeclaration)program.Statements[2];
+            Assert.AreEqual("bool[]", boolArrayDecl.Type);
+        }
+
+        [Test]
+        public void TestFunctionWithArrayParameter()
+        {
+            var program = ParseSource(@"
+                func processItems(items: string[]): void {
+                    for var item in items {
+                        print(item)
+                    }
+                }");
+
+            Assert.AreEqual(1, program.Statements.Count);
+            Assert.IsTrue(program.Statements[0] is FunctionDeclaration);
+            
+            var funcDecl = (FunctionDeclaration)program.Statements[0];
+            Assert.AreEqual("processItems", funcDecl.Name);
+            Assert.AreEqual(1, funcDecl.Parameters.Count);
+            Assert.AreEqual("items", funcDecl.Parameters[0].Name);
+            Assert.AreEqual("string[]", funcDecl.Parameters[0].Type);
+            Assert.AreEqual("void", funcDecl.ReturnType);
+        }
     }
 }
