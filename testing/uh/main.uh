@@ -11,16 +11,12 @@ namespace testing
         static field time: Dictionary<string, string>
         static field temptime: Temporal<string>
 
-        [PrintAttribute("This is a test program for UHigh language features")]
-        func meow(): void
-        {
-            Console.WriteLine("The cat says: " + meow)
-        }
+        
 
         public static func Main(args: string[]): void
         {
             var catt = new Program()
-            catt.meow()
+           
             cats = new List<string>()
             temptime = new Temporal<string>("cat sound event")
             temptime.Update("another cat sound event")
