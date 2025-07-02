@@ -259,33 +259,13 @@ namespace uhigh.Net.Testing
             
             var funcDecl = (FunctionDeclaration)program.Statements[0];
             
-            // Debug output
-            Console.WriteLine($"Function name: {funcDecl.Name}");
-            Console.WriteLine($"Attributes count: {funcDecl.Attributes?.Count ?? 0}");
-            if (funcDecl.Attributes != null)
-            {
-                for (int i = 0; i < funcDecl.Attributes.Count; i++)
-                {
-                    Console.WriteLine($"  Attribute {i}: {funcDecl.Attributes[i].Name}");
-                }
-            }
-            
-            // Test external attribute - be more defensive
             Assert.IsNotNull(funcDecl.Attributes, "Function should have attributes");
-            Assert.IsTrue(funcDecl.Attributes.Count > 0, "Should have at least one attribute");
-            
-            // Find the external attribute specifically
-            var externalAttr = funcDecl.Attributes.FirstOrDefault(attr => 
-                attr.Name.Equals("external", StringComparison.OrdinalIgnoreCase));
-            Assert.IsNotNull(externalAttr, "Should have an external attribute");
-            Assert.IsTrue(externalAttr.IsExternal, "Attribute should be marked as external");
-            
+            Assert.AreEqual(1, funcDecl.Attributes.Count, "Should have exactly one attribute");
+            Assert.AreEqual("external", funcDecl.Attributes[0].Name);
+            Assert.IsTrue(funcDecl.Attributes[0].IsExternal);
             Assert.AreEqual("Console.WriteLine", funcDecl.Name);
         }
 
-        /// <summary>
-        /// Tests that test print attribute parsing
-        /// </summary>
         [Test]
         public void TestPrintAttributeParsing()
         {

@@ -87,19 +87,7 @@ namespace uhigh.Net.Lexer
             { "readonly", TokenType.Readonly },
             { "async", TokenType.Async },
             { "await", TokenType.Await },
-
-            // Common attribute names (optional - they can also be identifiers)
-            { "required", TokenType.Identifier },
-            { "obsolete", TokenType.Identifier },
-            { "deprecated", TokenType.Identifier },
-            { "serializable", TokenType.Identifier },
-            { "jsonproperty", TokenType.Identifier },
-            { "datamember", TokenType.Identifier },
-            { "external", TokenType.Identifier },
-            { "dotnetfunc", TokenType.Identifier },
-            { "printattribute", TokenType.Identifier },
-
-            { "match", TokenType.Match },
+            { "match", TokenType.Match }
             
 
 

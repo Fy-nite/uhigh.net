@@ -364,41 +364,23 @@ namespace uhigh.Net.Parser
         {
             try
             {
-                // Gather attributes FIRST - this is critical
+                // Parse attributes first - this is the critical fix
                 var attributes = new List<AttributeDeclaration>();
                 while (Check(TokenType.LeftBracket))
                 {
                     attributes.Add(ParseAttribute());
                 }
 
-                // Debug: Log what we found after parsing attributes
-                if (attributes.Count > 0)
-                {
-                    _diagnostics.ReportInfo($"Parsed {attributes.Count} attributes, next token: {Peek().Type} '{Peek().Value}'");
-                }
-
-                // Gather modifiers
+                // Parse modifiers
                 var modifiers = new List<string>();
                 while (IsModifierToken(Peek()))
                 {
                     modifiers.Add(Advance().Value);
                 }
 
-                // After parsing attributes and modifiers, we MUST have a valid statement
+                // Now we must have a valid declaration if we have attributes or modifiers
                 if (attributes.Count > 0 || modifiers.Count > 0)
                 {
-                    // We have attributes or modifiers, so we need a declaration
-                    if (Match(TokenType.Type)) return ParseTypeAliasDeclaration(modifiers);
-                    if (Match(TokenType.Class))
-                    {
-                        var classDecl = ParseClassDeclaration() as ClassDeclaration;
-                        if (classDecl != null)
-                        {
-                            classDecl.Modifiers.AddRange(modifiers);
-                            classDecl.Attributes.AddRange(attributes);
-                        }
-                        return classDecl;
-                    }
                     if (Match(TokenType.Func))
                     {
                         var funcDecl = ParseFunctionDeclaration() as FunctionDeclaration;
@@ -409,16 +391,24 @@ namespace uhigh.Net.Parser
                         }
                         return funcDecl;
                     }
-                    if (Match(TokenType.Enum)) return ParseEnumDeclaration(modifiers);
-                    if (Match(TokenType.Interface)) return ParseInterfaceDeclaration(modifiers);
-                    if (Match(TokenType.Namespace)) return ParseNamespaceDeclaration();
+                    if (Match(TokenType.Class))
+                    {
+                        var classDecl = ParseClassDeclaration() as ClassDeclaration;
+                        if (classDecl != null)
+                        {
+                            classDecl.Modifiers.AddRange(modifiers);
+                            classDecl.Attributes.AddRange(attributes);
+                        }
+                        return classDecl;
+                    }
+                    // Add other declaration types as needed
                     
-                    // If we have attributes/modifiers but no valid declaration keyword, that's an error
-                    _diagnostics.ReportParseError($"Expected declaration after attributes/modifiers, but found '{Peek().Value}'", Peek());
+                    // If we have attributes/modifiers but no valid declaration, that's an error
+                    _diagnostics.ReportParseError($"Expected declaration after attributes/modifiers, found '{Peek().Value}'", Peek());
                     return null;
                 }
 
-                // No attributes or modifiers, parse normal statements
+                // Regular statement parsing without attributes/modifiers
                 if (Match(TokenType.Type)) return ParseTypeAliasDeclaration(modifiers);
                 if (Match(TokenType.Include)) return ParseIncludeStatement();
                 if (Match(TokenType.Import)) return ParseImportStatement();
@@ -426,27 +416,10 @@ namespace uhigh.Net.Parser
                 if (Match(TokenType.Namespace)) return ParseNamespaceDeclaration();
                 if (Match(TokenType.Enum)) return ParseEnumDeclaration(modifiers);
                 if (Match(TokenType.Interface)) return ParseInterfaceDeclaration(modifiers);
-                if (Match(TokenType.Class))
-                {
-                    var classDecl = ParseClassDeclaration() as ClassDeclaration;
-                    if (classDecl != null)
-                    {
-                        classDecl.Modifiers.AddRange(modifiers);
-                    }
-                    return classDecl;
-                }
+                if (Match(TokenType.Class)) return ParseClassDeclaration();
                 if (Match(TokenType.Const)) return ParseConstDeclaration();
                 if (Match(TokenType.Var)) return ParseVariableDeclaration();
-                if (Match(TokenType.Func))
-                {
-                    var funcDecl = ParseFunctionDeclaration() as FunctionDeclaration;
-                    if (funcDecl != null)
-                    {
-                        funcDecl.Attributes = attributes;
-                        funcDecl.Modifiers = modifiers;
-                    }
-                    return funcDecl;
-                }
+                if (Match(TokenType.Func)) return ParseFunctionDeclaration();
                 if (Match(TokenType.If)) return ParseIfStatement();
                 if (Match(TokenType.While)) return ParseWhileStatement();
                 if (Match(TokenType.For)) return ParseForStatement();
@@ -454,32 +427,24 @@ namespace uhigh.Net.Parser
                 if (Match(TokenType.Break)) return ParseBreakStatement();
                 if (Match(TokenType.Continue)) return ParseContinueStatement();
                 if (Match(TokenType.Sharp)) return ParseSharpBlock();
-
-                // Support top-level match statement
                 if (Match(TokenType.Match)) return ParseMatchStatement();
 
-                // Check for using statements without the 'using' keyword (legacy support)
+                // Handle legacy using statements
                 if (Check(TokenType.Identifier) && Peek().Value.Equals("Using", StringComparison.OrdinalIgnoreCase))
                 {
-                    Advance(); // consume "Using"
-                    
+                    Advance();
                     if (Check(TokenType.Identifier))
                     {
                         var namespaceName = Consume(TokenType.Identifier, "Expected namespace name after Using").Value;
-                        
-                        // Handle qualified namespace names (e.g., System.Collections.Generic or Newtonsoft.Json)
                         while (Match(TokenType.Dot))
                         {
                             namespaceName += "." + Consume(TokenType.Identifier, "Expected identifier after '.'").Value;
                         }
-
-                        // Optional semicolon
                         if (Check(TokenType.Semicolon)) Advance();
-
                         return new ImportStatement
                         {
                             ClassName = namespaceName,
-                            AssemblyName = namespaceName // For using statements, class name and assembly are the same
+                            AssemblyName = namespaceName
                         };
                     }
                 }
@@ -488,13 +453,11 @@ namespace uhigh.Net.Parser
             }
             catch (ParseException)
             {
-                // ParseException already reported the error, just synchronize
                 Synchronize();
                 return null;
             }
             catch (Exception ex)
             {
-                // For unexpected exceptions, report them
                 _diagnostics.ReportParseError($"Unexpected error: {ex.Message}", Peek());
                 Synchronize();
                 return null;
@@ -2442,26 +2405,8 @@ namespace uhigh.Net.Parser
         {
             Consume(TokenType.LeftBracket, "Expected '['");
             
-            // Be more flexible about attribute names - accept any token that could be an identifier
-            var nameToken = Peek();
-            string name;
-            
-            if (nameToken.Type == TokenType.Identifier)
-            {
-                name = Advance().Value;
-            }
-            else
-            {
-                // Try to handle cases where keywords might be used as attribute names
-                var currentToken = Advance();
-                name = currentToken.Value;
-                
-                // Log for debugging - but be more specific about what we're handling
-                if (currentToken.Type != TokenType.Identifier)
-                {
-                    _diagnostics.ReportInfo($"Using non-identifier token as attribute name: '{name}' (Type: {currentToken.Type})");
-                }
-            }
+            var nameToken = Consume(TokenType.Identifier, "Expected attribute name");
+            var name = nameToken.Value;
 
             var arguments = new List<Expression>();
             if (Match(TokenType.LeftParen))

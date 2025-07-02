@@ -2,8 +2,11 @@ Using uhigh.StdLib.StdLib
 namespace testing
 {
 
+    
+    
     class Program
     {
+        [Serializable]
         static field cat: string = "purr"
         static field meow: string
         static field cats: List<string> 

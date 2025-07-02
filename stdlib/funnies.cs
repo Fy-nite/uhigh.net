@@ -24,6 +24,10 @@ namespace uhigh.StdLib
             public PrintAttribute(string message)
             {
                 Message = message;
+                if (string.IsNullOrEmpty(message))
+                {
+                    throw new System.ArgumentException("Message cannot be null or empty", nameof(message));
+                }
                 System.Console.WriteLine(message);
             }
         }
