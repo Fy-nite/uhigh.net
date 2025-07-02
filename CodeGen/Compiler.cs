@@ -6,11 +6,25 @@ using System.Diagnostics;
 
 namespace uhigh.Net
 {
+    /// <summary>
+    /// The compiler class
+    /// </summary>
     public class Compiler
     {
+        /// <summary>
+        /// The verbose mode
+        /// </summary>
         private readonly bool _verboseMode;
+        /// <summary>
+        /// The std lib path
+        /// </summary>
         private readonly string? _stdLibPath;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Compiler"/> class
+        /// </summary>
+        /// <param name="verboseMode">The verbose mode</param>
+        /// <param name="stdLibPath">The std lib path</param>
         public Compiler(bool verboseMode = false, string? stdLibPath = null)
         {
             _verboseMode = verboseMode;
@@ -18,6 +32,12 @@ namespace uhigh.Net
             _stdLibPath = stdLibPath ?? Path.Combine(AppContext.BaseDirectory, "stdlib");
         }
 
+        /// <summary>
+        /// Compiles the file using the specified source file
+        /// </summary>
+        /// <param name="sourceFile">The source file</param>
+        /// <param name="outputFile">The output file</param>
+        /// <returns>A task containing the bool</returns>
         public async Task<bool> CompileFile(string sourceFile, string? outputFile = null)
         {
             var diagnostics = new DiagnosticsReporter(_verboseMode, sourceFile);
@@ -60,6 +80,12 @@ namespace uhigh.Net
             }
         }
 
+        /// <summary>
+        /// Compiles the to executable using the specified source file
+        /// </summary>
+        /// <param name="sourceFile">The source file</param>
+        /// <param name="outputFile">The output file</param>
+        /// <returns>A task containing the bool</returns>
         public async Task<bool> CompileToExecutable(string sourceFile, string outputFile)
         {
             var diagnostics = new DiagnosticsReporter(_verboseMode, sourceFile);
@@ -95,6 +121,11 @@ namespace uhigh.Net
             }
         }
 
+        /// <summary>
+        /// Compiles the and run in memory using the specified source file
+        /// </summary>
+        /// <param name="sourceFile">The source file</param>
+        /// <returns>A task containing the bool</returns>
         public async Task<bool> CompileAndRunInMemory(string sourceFile)
         {
             var diagnostics = new DiagnosticsReporter(_verboseMode, sourceFile);
@@ -130,6 +161,16 @@ namespace uhigh.Net
             }
         }
 
+        /// <summary>
+        /// Compiles the to cs using the specified source
+        /// </summary>
+        /// <param name="source">The source</param>
+        /// <param name="diagnostics">The diagnostics</param>
+        /// <param name="rootNamespace">The root namespace</param>
+        /// <param name="className">The class name</param>
+        /// <exception cref="Exception">Parsing failed</exception>
+        /// <exception cref="Exception">Tokenization failed</exception>
+        /// <returns>The string</returns>
         public string CompileToCS(string source, DiagnosticsReporter? diagnostics = null, string? rootNamespace = null, string? className = null)
         {
             diagnostics ??= new DiagnosticsReporter(_verboseMode);
@@ -180,6 +221,14 @@ namespace uhigh.Net
         }
 
         // Add new method to compile and return AST
+        /// <summary>
+        /// Compiles the to ast using the specified source
+        /// </summary>
+        /// <param name="source">The source</param>
+        /// <param name="diagnostics">The diagnostics</param>
+        /// <exception cref="Exception">Parsing failed</exception>
+        /// <exception cref="Exception">Tokenization failed</exception>
+        /// <returns>The program</returns>
         public Program CompileToAST(string source, DiagnosticsReporter? diagnostics = null)
         {
             diagnostics ??= new DiagnosticsReporter(_verboseMode);
@@ -226,6 +275,11 @@ namespace uhigh.Net
         }
 
         // Add method to print AST from file
+        /// <summary>
+        /// Prints the ast using the specified source file
+        /// </summary>
+        /// <param name="sourceFile">The source file</param>
+        /// <returns>A task containing the bool</returns>
         public async Task<bool> PrintAST(string sourceFile)
         {
             var diagnostics = new DiagnosticsReporter(_verboseMode, sourceFile);
@@ -258,6 +312,11 @@ namespace uhigh.Net
         }
 
         // Add helper method to recursively print AST nodes
+        /// <summary>
+        /// Prints the ast node using the specified node
+        /// </summary>
+        /// <param name="node">The node</param>
+        /// <param name="depth">The depth</param>
         private void PrintASTNode(ASTNode node, int depth)
         {
             var indent = new string(' ', depth * 2);
@@ -408,6 +467,12 @@ namespace uhigh.Net
             }
         }
 
+        /// <summary>
+        /// Saves the c sharp code using the specified source file
+        /// </summary>
+        /// <param name="sourceFile">The source file</param>
+        /// <param name="outputFolder">The output folder</param>
+        /// <returns>A task containing the bool</returns>
         public async Task<bool> SaveCSharpCode(string sourceFile, string outputFolder)
         {
             var diagnostics = new DiagnosticsReporter(_verboseMode, sourceFile);
@@ -459,6 +524,11 @@ namespace uhigh.Net
             }
         }
         
+        /// <summary>
+        /// Creates the project file using the specified output folder
+        /// </summary>
+        /// <param name="outputFolder">The output folder</param>
+        /// <param name="projectName">The project name</param>
         private async Task CreateProjectFile(string outputFolder, string projectName)
         {
             var projectContent = $@"<Project Sdk=""Microsoft.NET.Sdk"">
@@ -480,6 +550,12 @@ namespace uhigh.Net
             Console.WriteLine($"Run with: dotnet run --project \"{projectPath}\"");
         }
 
+        /// <summary>
+        /// Compiles the c sharp to executable using the specified cs file
+        /// </summary>
+        /// <param name="csFile">The cs file</param>
+        /// <param name="outputFile">The output file</param>
+        /// <returns>A task containing the bool</returns>
         private async Task<bool> CompileCSharpToExecutable(string csFile, string outputFile)
         {
             try
@@ -508,6 +584,12 @@ namespace uhigh.Net
             }
         }
 
+        /// <summary>
+        /// Compiles the project using the specified project path
+        /// </summary>
+        /// <param name="projectPath">The project path</param>
+        /// <param name="outputFile">The output file</param>
+        /// <returns>A task containing the bool</returns>
         public async Task<bool> CompileProject(string projectPath, string? outputFile = null)
         {
             var diagnostics = new DiagnosticsReporter(_verboseMode, projectPath);
@@ -686,6 +768,11 @@ namespace uhigh.Net
         }
 
         // Helper method to check for main methods
+        /// <summary>
+        /// Checks the for main method using the specified program
+        /// </summary>
+        /// <param name="program">The program</param>
+        /// <returns>The has namespace main</returns>
         private bool CheckForMainMethod(Program program)
         {
             // Check for top-level main function
@@ -706,6 +793,16 @@ namespace uhigh.Net
         }
 
         // Add helper method to compile to AST
+        /// <summary>
+        /// Compiles the to ast using the specified source
+        /// </summary>
+        /// <param name="source">The source</param>
+        /// <param name="diagnostics">The diagnostics</param>
+        /// <param name="fileName">The file name</param>
+        /// <exception cref="Exception">Include processing failed for {fileName}</exception>
+        /// <exception cref="Exception">Parsing failed for {fileName}</exception>
+        /// <exception cref="Exception">Tokenization failed for {fileName}</exception>
+        /// <returns>The program</returns>
         private Program CompileToAST(string source, DiagnosticsReporter diagnostics, string fileName = "")
         {
             try
@@ -761,6 +858,11 @@ namespace uhigh.Net
         }
 
         // Add helper method to combine multiple programs
+        /// <summary>
+        /// Combines the programs using the specified programs
+        /// </summary>
+        /// <param name="programs">The programs</param>
+        /// <returns>The program</returns>
         private Program CombinePrograms(List<Program> programs)
         {
             var combinedStatements = new List<Statement>();
@@ -824,6 +926,12 @@ namespace uhigh.Net
             return new Program { Statements = combinedStatements };
         }
 
+        /// <summary>
+        /// Saves the project as c sharp using the specified project path
+        /// </summary>
+        /// <param name="projectPath">The project path</param>
+        /// <param name="outputFolder">The output folder</param>
+        /// <returns>A task containing the bool</returns>
         public async Task<bool> SaveProjectAsCSharp(string projectPath, string outputFolder)
         {
             var diagnostics = new DiagnosticsReporter(_verboseMode, projectPath);
@@ -924,6 +1032,11 @@ namespace uhigh.Net
             }
         }
 
+        /// <summary>
+        /// Creates the project file fromuhigh project using the specified output folder
+        /// </summary>
+        /// <param name="outputFolder">The output folder</param>
+        /// <param name="uhighProject">The uhigh project</param>
         private async Task CreateProjectFileFromuhighProject(string outputFolder, uhighProject uhighProject)
         {
             var dependencies = "";
@@ -956,6 +1069,16 @@ namespace uhigh.Net
             Console.WriteLine($"Run with: dotnet run --project \"{projectPath}\"");
         }
 
+        /// <summary>
+        /// Creates the project using the specified project name
+        /// </summary>
+        /// <param name="projectName">The project name</param>
+        /// <param name="projectDir">The project dir</param>
+        /// <param name="description">The description</param>
+        /// <param name="author">The author</param>
+        /// <param name="outputType">The output type</param>
+        /// <param name="target">The target</param>
+        /// <returns>A task containing the bool</returns>
         public async Task<bool> CreateProject(string projectName, string? projectDir = null, string? description = null, string? author = null, string outputType = "Exe", string target = "net9.0")
         {
             var diagnostics = new DiagnosticsReporter(_verboseMode);
@@ -999,6 +1122,11 @@ namespace uhigh.Net
             }
         }
 
+        /// <summary>
+        /// Lists the project info using the specified project path
+        /// </summary>
+        /// <param name="projectPath">The project path</param>
+        /// <returns>A task containing the bool</returns>
         public async Task<bool> ListProjectInfo(string projectPath)
         {
             var diagnostics = new DiagnosticsReporter(_verboseMode, projectPath);
@@ -1063,6 +1191,13 @@ namespace uhigh.Net
             }
         }
 
+        /// <summary>
+        /// Adds the source file to project using the specified project path
+        /// </summary>
+        /// <param name="projectPath">The project path</param>
+        /// <param name="sourceFile">The source file</param>
+        /// <param name="createFile">The create file</param>
+        /// <returns>A task containing the bool</returns>
         public async Task<bool> AddSourceFileToProject(string projectPath, string sourceFile, bool createFile = false)
         {
             var diagnostics = new DiagnosticsReporter(_verboseMode, projectPath);
@@ -1117,6 +1252,13 @@ namespace uhigh.Net
             }
         }
 
+        /// <summary>
+        /// Adds the package to project using the specified project path
+        /// </summary>
+        /// <param name="projectPath">The project path</param>
+        /// <param name="packageName">The package name</param>
+        /// <param name="version">The version</param>
+        /// <returns>A task containing the bool</returns>
         public async Task<bool> AddPackageToProject(string projectPath, string packageName, string version)
         {
             var diagnostics = new DiagnosticsReporter(_verboseMode, projectPath);
@@ -1166,6 +1308,13 @@ namespace uhigh.Net
         }
 
         // Add this helper method to recursively process includes
+        /// <summary>
+        /// Processes the includes using the specified ast
+        /// </summary>
+        /// <param name="ast">The ast</param>
+        /// <param name="diagnostics">The diagnostics</param>
+        /// <param name="includedFiles">The included files</param>
+        /// <returns>The program</returns>
         private Program ProcessIncludes(Program ast, DiagnosticsReporter diagnostics, HashSet<string> includedFiles)
         {
             var newStatements = new List<Statement>();
@@ -1201,6 +1350,12 @@ namespace uhigh.Net
             return new Program { Statements = newStatements };
         }
 
+        /// <summary>
+        /// Saves the c sharp code from project using the specified project path
+        /// </summary>
+        /// <param name="projectPath">The project path</param>
+        /// <param name="outputFolder">The output folder</param>
+        /// <returns>A task containing the bool</returns>
         public async Task<bool> SaveCSharpCodeFromProject(string projectPath, string outputFolder)
         {
             var diagnostics = new DiagnosticsReporter(_verboseMode, projectPath);
@@ -1290,6 +1445,13 @@ namespace uhigh.Net
             }
         }
 
+        /// <summary>
+        /// Creates the project file fromuhigh project with files using the specified output folder
+        /// </summary>
+        /// <param name="outputFolder">The output folder</param>
+        /// <param name="uhighProject">The uhigh project</param>
+        /// <param name="generatedFiles">The generated files</param>
+        /// <param name="hasMainMethod">The has main method</param>
         private async Task CreateProjectFileFromuhighProjectWithFiles(string outputFolder, uhighProject uhighProject, List<string> generatedFiles, bool hasMainMethod)
         {
             var dependencies = "";

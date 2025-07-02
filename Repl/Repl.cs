@@ -9,18 +9,54 @@ using System.Text;
 
 namespace uhigh.Net.Repl
 {
+    /// <summary>
+    /// The repl session class
+    /// </summary>
     public class ReplSession
     {
+        /// <summary>
+        /// The verbose mode
+        /// </summary>
         private readonly bool _verboseMode;
+        /// <summary>
+        /// The std lib path
+        /// </summary>
         private readonly string? _stdLibPath;
+        /// <summary>
+        /// The save sharp to
+        /// </summary>
         private readonly string? _saveCSharpTo;
+        /// <summary>
+        /// The compiler
+        /// </summary>
         private readonly Compiler _compiler;
+        /// <summary>
+        /// The variables
+        /// </summary>
         private readonly Dictionary<string, object?> _variables = new();
+        /// <summary>
+        /// The session history
+        /// </summary>
         private readonly List<string> _sessionHistory = new();
+        /// <summary>
+        /// The csharp statements
+        /// </summary>
         private readonly List<string> _csharpStatements = new();
+        /// <summary>
+        /// The script state
+        /// </summary>
         private ScriptState<object>? _scriptState;
+        /// <summary>
+        /// The command count
+        /// </summary>
         private int _commandCount = 0;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ReplSession"/> class
+        /// </summary>
+        /// <param name="verboseMode">The verbose mode</param>
+        /// <param name="stdLibPath">The std lib path</param>
+        /// <param name="saveCSharpTo">The save sharp to</param>
         public ReplSession(bool verboseMode = false, string? stdLibPath = null, string? saveCSharpTo = null)
         {
             _verboseMode = verboseMode;
@@ -29,6 +65,9 @@ namespace uhigh.Net.Repl
             _compiler = new Compiler(verboseMode, stdLibPath);
         }
 
+        /// <summary>
+        /// Starts this instance
+        /// </summary>
         public async Task StartAsync()
         {
             Console.WriteLine("μHigh Interactive REPL");
@@ -72,6 +111,10 @@ namespace uhigh.Net.Repl
             }
         }
 
+        /// <summary>
+        /// Reads the multi line input
+        /// </summary>
+        /// <returns>The string</returns>
         private string ReadMultiLineInput()
         {
             var lines = new List<string> { "" };
@@ -317,6 +360,15 @@ namespace uhigh.Net.Repl
             }
         }
 
+        /// <summary>
+        /// Redraws the multi line input using the specified lines
+        /// </summary>
+        /// <param name="lines">The lines</param>
+        /// <param name="currentLineIndex">The current line index</param>
+        /// <param name="cursorPosition">The cursor position</param>
+        /// <param name="basePrompt">The base prompt</param>
+        /// <param name="continuationPrompt">The continuation prompt</param>
+        /// <param name="startTop">The start top</param>
         private void RedrawMultiLineInput(List<string> lines, int currentLineIndex, int cursorPosition, 
             string basePrompt, string continuationPrompt, int startTop)
         {
@@ -401,6 +453,11 @@ namespace uhigh.Net.Repl
             }
         }
 
+        /// <summary>
+        /// Clears the multi line input using the specified line count
+        /// </summary>
+        /// <param name="lineCount">The line count</param>
+        /// <param name="startTop">The start top</param>
         private void ClearMultiLineInput(int lineCount, int startTop)
         {
             try
@@ -418,6 +475,10 @@ namespace uhigh.Net.Repl
             }
         }
 
+        /// <summary>
+        /// Gets the current prompt
+        /// </summary>
+        /// <returns>The string</returns>
         private string GetCurrentPrompt()
         {
             // This should match the prompt being used in ReadMultiLineInput
@@ -476,6 +537,11 @@ namespace uhigh.Net.Repl
         }
 
        
+        /// <summary>
+        /// Redraws the current line using the specified input
+        /// </summary>
+        /// <param name="input">The input</param>
+        /// <param name="cursorPosition">The cursor position</param>
         private void RedrawCurrentLine(string input, int cursorPosition)
         {
             var prompt = GetCurrentPrompt();
@@ -498,6 +564,9 @@ namespace uhigh.Net.Repl
             Console.SetCursorPosition(prompt.Length + cursorPosition, currentTop);
         }
 
+        /// <summary>
+        /// Initializes the scripting environment
+        /// </summary>
         private async Task InitializeScriptingEnvironment()
         {
             try
@@ -595,6 +664,10 @@ public static void println(object value) => System.Console.WriteLine(value);
             }
         }
 
+        /// <summary>
+        /// Processes the input using the specified input
+        /// </summary>
+        /// <param name="input">The input</param>
         private async Task ProcessInput(string input)
         {
             _commandCount++;
@@ -657,6 +730,10 @@ public static void println(object value) => System.Console.WriteLine(value);
             }
         }
 
+        /// <summary>
+        /// Executes the as c sharp using the specified code
+        /// </summary>
+        /// <param name="code">The code</param>
         private async Task ExecuteAsCSharp(string code)
         {
             try
@@ -686,6 +763,11 @@ public static void println(object value) => System.Console.WriteLine(value);
             }
         }
 
+        /// <summary>
+        /// Extracts the executable code using the specified generated c sharp
+        /// </summary>
+        /// <param name="generatedCSharp">The generated sharp</param>
+        /// <returns>The string</returns>
         private string ExtractExecutableCode(string generatedCSharp)
         {
             // Extract executable statements from the generated C# wrapper
@@ -745,6 +827,10 @@ public static void println(object value) => System.Console.WriteLine(value);
             return string.Join("\n", extractedLines);
         }
 
+        /// <summary>
+        /// Saves the generated c sharp using the specified code
+        /// </summary>
+        /// <param name="code">The code</param>
         private async Task SaveGeneratedCSharp(string code)
         {
             if (_saveCSharpTo == null) return;
@@ -775,6 +861,11 @@ public static void println(object value) => System.Console.WriteLine(value);
             }
         }
 
+        /// <summary>
+        /// Handles the command using the specified command
+        /// </summary>
+        /// <param name="command">The command</param>
+        /// <returns>A task containing the bool</returns>
         private async Task<bool> HandleCommand(string command)
         {
             var parts = command.Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -840,6 +931,9 @@ public static void println(object value) => System.Console.WriteLine(value);
             return true;
         }
 
+        /// <summary>
+        /// Shows the help
+        /// </summary>
         private void ShowHelp()
         {
             Console.WriteLine("μHigh REPL Commands:");
@@ -888,6 +982,9 @@ public static void println(object value) => System.Console.WriteLine(value);
             Console.WriteLine("  var list = new List<int> {1, 2, 3};");
         }
 
+        /// <summary>
+        /// Resets the session
+        /// </summary>
         private async Task ResetSession()
         {
             _variables.Clear();
@@ -900,6 +997,9 @@ public static void println(object value) => System.Console.WriteLine(value);
             Console.WriteLine("Session reset");
         }
 
+        /// <summary>
+        /// Shows the variables
+        /// </summary>
         private void ShowVariables()
         {
             if (_scriptState?.Variables.Any() == true)
@@ -918,6 +1018,9 @@ public static void println(object value) => System.Console.WriteLine(value);
             }
         }
 
+        /// <summary>
+        /// Shows the history
+        /// </summary>
         private void ShowHistory()
         {
             if (_sessionHistory.Count == 0)
@@ -933,6 +1036,9 @@ public static void println(object value) => System.Console.WriteLine(value);
             }
         }
 
+        /// <summary>
+        /// Shows the generated code
+        /// </summary>
         private void ShowGeneratedCode()
         {
             if (_csharpStatements.Count == 0)
@@ -950,6 +1056,10 @@ public static void println(object value) => System.Console.WriteLine(value);
             }
         }
 
+        /// <summary>
+        /// Saves the session using the specified filename
+        /// </summary>
+        /// <param name="filename">The filename</param>
         private async Task SaveSession(string filename)
         {
             try
@@ -975,6 +1085,10 @@ public static void println(object value) => System.Console.WriteLine(value);
             }
         }
 
+        /// <summary>
+        /// Loads the session using the specified filename
+        /// </summary>
+        /// <param name="filename">The filename</param>
         private async Task LoadSession(string filename)
         {
             try

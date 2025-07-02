@@ -3,8 +3,14 @@ using uhigh.Net.Lexer;
 
 namespace uhigh.Net.Testing
 {
+    /// <summary>
+    /// The ast tests class
+    /// </summary>
     public class ASTTests
     {
+        /// <summary>
+        /// Tests that test literal expression types
+        /// </summary>
         [Test]
         public void TestLiteralExpressionTypes()
         {
@@ -20,6 +26,9 @@ namespace uhigh.Net.Testing
             Assert.AreEqual(TokenType.Boolean, boolLiteral.Type);
         }
 
+        /// <summary>
+        /// Tests that test binary expression structure
+        /// </summary>
         [Test]
         public void TestBinaryExpressionStructure()
         {
@@ -39,6 +48,9 @@ namespace uhigh.Net.Testing
             Assert.IsTrue(binExpr.Right is LiteralExpression);
         }
 
+        /// <summary>
+        /// Tests that test function declaration structure
+        /// </summary>
         [Test]
         public void TestFunctionDeclarationStructure()
         {
@@ -71,6 +83,9 @@ namespace uhigh.Net.Testing
             Assert.IsTrue(funcDecl.Body[0] is ReturnStatement);
         }
 
+        /// <summary>
+        /// Tests that test class declaration structure
+        /// </summary>
         [Test]
         public void TestClassDeclarationStructure()
         {
@@ -111,6 +126,9 @@ namespace uhigh.Net.Testing
             Assert.AreEqual(2, classDecl.Members.Count);
         }
 
+        /// <summary>
+        /// Tests that test qualified identifier functionality
+        /// </summary>
         [Test]
         public void TestQualifiedIdentifierFunctionality()
         {
@@ -126,6 +144,9 @@ namespace uhigh.Net.Testing
             Assert.AreEqual("WriteLine", qualifiedId.GetMethodName());
         }
 
+        /// <summary>
+        /// Tests that test array expression structure
+        /// </summary>
         [Test]
         public void TestArrayExpressionStructure()
         {
@@ -142,6 +163,9 @@ namespace uhigh.Net.Testing
             Assert.IsTrue(arrayExpr.Elements.All(e => e is LiteralExpression));
         }
 
+        /// <summary>
+        /// Tests that test call expression structure
+        /// </summary>
         [Test]
         public void TestCallExpressionStructure()
         {
@@ -158,6 +182,9 @@ namespace uhigh.Net.Testing
             Assert.AreEqual(argument, callExpr.Arguments[0]);
         }
 
+        /// <summary>
+        /// Tests that test constructor call expression
+        /// </summary>
         [Test]
         public void TestConstructorCallExpression()
         {
@@ -175,6 +202,9 @@ namespace uhigh.Net.Testing
             Assert.AreEqual(25, ((LiteralExpression)ctorCall.Arguments[1]).Value);
         }
 
+        /// <summary>
+        /// Tests that test member access expression
+        /// </summary>
         [Test]
         public void TestMemberAccessExpression()
         {
@@ -189,6 +219,9 @@ namespace uhigh.Net.Testing
             Assert.AreEqual("name", memberAccess.MemberName);
         }
 
+        /// <summary>
+        /// Tests that test property declaration with accessors
+        /// </summary>
         [Test]
         public void TestPropertyDeclarationWithAccessors()
         {
@@ -208,6 +241,9 @@ namespace uhigh.Net.Testing
             Assert.IsFalse(property.HasCustomAccessors);
         }
 
+        /// <summary>
+        /// Tests that test attribute declaration
+        /// </summary>
         [Test]
         public void TestAttributeDeclaration()
         {

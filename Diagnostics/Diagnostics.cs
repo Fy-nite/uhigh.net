@@ -3,20 +3,53 @@ using System.Diagnostics;
 
 namespace uhigh.Net.Diagnostics
 {
+    /// <summary>
+    /// The diagnostic severity enum
+    /// </summary>
     public enum DiagnosticSeverity
     {
+        /// <summary>
+        /// The info diagnostic severity
+        /// </summary>
         Info,
+        /// <summary>
+        /// The warning diagnostic severity
+        /// </summary>
         Warning,
+        /// <summary>
+        /// The error diagnostic severity
+        /// </summary>
         Error,
+        /// <summary>
+        /// The fatal diagnostic severity
+        /// </summary>
         Fatal
     }
 
+    /// <summary>
+    /// The source location class
+    /// </summary>
     public class SourceLocation
     {
+        /// <summary>
+        /// Gets or sets the value of the line
+        /// </summary>
         public int Line { get; set; }
+        /// <summary>
+        /// Gets or sets the value of the column
+        /// </summary>
         public int Column { get; set; }
+        /// <summary>
+        /// Gets or sets the value of the file name
+        /// </summary>
         public string? FileName { get; set; }
         
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SourceLocation"/> class
+        /// </summary>
+        /// <param name="line">The line</param>
+        /// <param name="column">The column</param>
+        /// <param name="fileName">The file name</param>
         public SourceLocation(int line, int column, string? fileName = null)
         {
             Line = line;
@@ -24,25 +57,70 @@ namespace uhigh.Net.Diagnostics
             FileName = fileName;
         }
 
+        /// <summary>
+        /// Returns the string
+        /// </summary>
+        /// <returns>The string</returns>
         public override string ToString()
         {
             return FileName != null ? $"{FileName}:{Line}:{Column}" : $"{Line}:{Column}";
         }
     }
 
+    /// <summary>
+    /// The diagnostic class
+    /// </summary>
     public class Diagnostic
     {
+        /// <summary>
+        /// Gets or sets the value of the severity
+        /// </summary>
         public DiagnosticSeverity Severity { get; set; }
+        /// <summary>
+        /// Gets or sets the value of the message
+        /// </summary>
         public string Message { get; set; }
+        /// <summary>
+        /// Gets or sets the value of the location
+        /// </summary>
         public SourceLocation? Location { get; set; }
+        /// <summary>
+        /// Gets or sets the value of the code
+        /// </summary>
         public string? Code { get; set; }
+        /// <summary>
+        /// Gets or sets the value of the exception
+        /// </summary>
         public Exception? Exception { get; set; }
+        /// <summary>
+        /// Gets or sets the value of the timestamp
+        /// </summary>
         public DateTime Timestamp { get; set; }
+        /// <summary>
+        /// Gets or sets the value of the suggestion
+        /// </summary>
         public string? Suggestion { get; set; }
+        /// <summary>
+        /// Gets or sets the value of the source line
+        /// </summary>
         public string? SourceLine { get; set; }
+        /// <summary>
+        /// Gets or sets the value of the caller info
+        /// </summary>
         public string? CallerInfo { get; set; }
+        /// <summary>
+        /// Gets or sets the value of the stack trace
+        /// </summary>
         public List<string> StackTrace { get; set; } = new();
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Diagnostic"/> class
+        /// </summary>
+        /// <param name="severity">The severity</param>
+        /// <param name="message">The message</param>
+        /// <param name="location">The location</param>
+        /// <param name="code">The code</param>
+        /// <param name="exception">The exception</param>
         public Diagnostic(DiagnosticSeverity severity, string message, SourceLocation? location = null, string? code = null, Exception? exception = null)
         {
             Severity = severity;
@@ -53,6 +131,10 @@ namespace uhigh.Net.Diagnostics
             Timestamp = DateTime.Now;
         }
 
+        /// <summary>
+        /// Returns the string
+        /// </summary>
+        /// <returns>The string</returns>
         public override string ToString()
         {
             var severity = Severity.ToString().ToLower();
@@ -63,14 +145,38 @@ namespace uhigh.Net.Diagnostics
         }
     }
 
+    /// <summary>
+    /// The diagnostics reporter class
+    /// </summary>
     public class DiagnosticsReporter
     {
+        /// <summary>
+        /// The diagnostics
+        /// </summary>
         private readonly List<Diagnostic> _diagnostics = new();
+        /// <summary>
+        /// The verbose mode
+        /// </summary>
         private readonly bool _verboseMode;
+        /// <summary>
+        /// The source file name
+        /// </summary>
         private readonly string? _sourceFileName;
+        /// <summary>
+        /// The source lines
+        /// </summary>
         private readonly Dictionary<int, string> _sourceLines = new();
+        /// <summary>
+        /// The suppress output
+        /// </summary>
         private readonly bool _suppressOutput;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DiagnosticsReporter"/> class
+        /// </summary>
+        /// <param name="verboseMode">The verbose mode</param>
+        /// <param name="sourceFileName">The source file name</param>
+        /// <param name="suppressOutput">The suppress output</param>
         public DiagnosticsReporter(bool verboseMode = false, string? sourceFileName = null, bool suppressOutput = false)
         {
             _verboseMode = verboseMode;
@@ -79,6 +185,9 @@ namespace uhigh.Net.Diagnostics
             LoadSourceLines();
         }
 
+        /// <summary>
+        /// Loads the source lines
+        /// </summary>
         private void LoadSourceLines()
         {
             if (_sourceFileName != null && File.Exists(_sourceFileName))
@@ -105,12 +214,31 @@ namespace uhigh.Net.Diagnostics
             }
         }
 
+        /// <summary>
+        /// Gets the value of the diagnostics
+        /// </summary>
         public IReadOnlyList<Diagnostic> Diagnostics => _diagnostics.AsReadOnly();
+        /// <summary>
+        /// Gets the value of the has errors
+        /// </summary>
         public bool HasErrors => _diagnostics.Any(d => d.Severity >= DiagnosticSeverity.Error);
+        /// <summary>
+        /// Gets the value of the has warnings
+        /// </summary>
         public bool HasWarnings => _diagnostics.Any(d => d.Severity == DiagnosticSeverity.Warning);
+        /// <summary>
+        /// Gets the value of the error count
+        /// </summary>
         public int ErrorCount => _diagnostics.Count(d => d.Severity >= DiagnosticSeverity.Error);
+        /// <summary>
+        /// Gets the value of the warning count
+        /// </summary>
         public int WarningCount => _diagnostics.Count(d => d.Severity == DiagnosticSeverity.Warning);
 
+        /// <summary>
+        /// Adds the caller info to diagnostic using the specified diagnostic
+        /// </summary>
+        /// <param name="diagnostic">The diagnostic</param>
         private void AddCallerInfoToDiagnostic(Diagnostic diagnostic)
         {
             if (!_verboseMode) return;
@@ -148,6 +276,14 @@ namespace uhigh.Net.Diagnostics
             }
         }
 
+        /// <summary>
+        /// Reports the error using the specified message
+        /// </summary>
+        /// <param name="message">The message</param>
+        /// <param name="line">The line</param>
+        /// <param name="column">The column</param>
+        /// <param name="code">The code</param>
+        /// <param name="exception">The exception</param>
         public void ReportError(string message, int line = 0, int column = 0, string? code = null, Exception? exception = null)
         {
             var location = line > 0 ? new SourceLocation(line, column, _sourceFileName) : null;
@@ -163,6 +299,14 @@ namespace uhigh.Net.Diagnostics
             PrintRustStyleDiagnostic(diagnostic);
         }
 
+        /// <summary>
+        /// Reports the fatal using the specified message
+        /// </summary>
+        /// <param name="message">The message</param>
+        /// <param name="line">The line</param>
+        /// <param name="column">The column</param>
+        /// <param name="code">The code</param>
+        /// <param name="exception">The exception</param>
         public void ReportFatal(string message, int line = 0, int column = 0, string? code = null, Exception? exception = null)
         {
             var location = line > 0 ? new SourceLocation(line, column, _sourceFileName) : null;
@@ -178,6 +322,13 @@ namespace uhigh.Net.Diagnostics
             PrintRustStyleDiagnostic(diagnostic);
         }
 
+        /// <summary>
+        /// Reports the warning using the specified message
+        /// </summary>
+        /// <param name="message">The message</param>
+        /// <param name="line">The line</param>
+        /// <param name="column">The column</param>
+        /// <param name="code">The code</param>
         public void ReportWarning(string message, int line = 0, int column = 0, string? code = null)
         {
             var location = line > 0 ? new SourceLocation(line, column, _sourceFileName) : null;
@@ -193,6 +344,13 @@ namespace uhigh.Net.Diagnostics
             PrintRustStyleDiagnostic(diagnostic);
         }
 
+        /// <summary>
+        /// Reports the info using the specified message
+        /// </summary>
+        /// <param name="message">The message</param>
+        /// <param name="line">The line</param>
+        /// <param name="column">The column</param>
+        /// <param name="code">The code</param>
         public void ReportInfo(string message, int line = 0, int column = 0, string? code = null)
         {
             var location = line > 0 ? new SourceLocation(line, column, _sourceFileName) : null;
@@ -206,6 +364,10 @@ namespace uhigh.Net.Diagnostics
             }
         }
 
+        /// <summary>
+        /// Prints the rust style diagnostic using the specified diagnostic
+        /// </summary>
+        /// <param name="diagnostic">The diagnostic</param>
         private void PrintRustStyleDiagnostic(Diagnostic diagnostic)
         {
             if (_suppressOutput) return; // Don't print anything if output is suppressed
@@ -312,11 +474,17 @@ namespace uhigh.Net.Diagnostics
             }
         }
 
+        /// <summary>
+        /// Clears this instance
+        /// </summary>
         public void Clear()
         {
             _diagnostics.Clear();
         }
 
+        /// <summary>
+        /// Prints the summary
+        /// </summary>
         public void PrintSummary()
         {
             if (_suppressOutput) return; // Don't print anything if output is suppressed
@@ -391,6 +559,9 @@ namespace uhigh.Net.Diagnostics
             }
         }
 
+        /// <summary>
+        /// Prints the all
+        /// </summary>
         public void PrintAll()
         {
             foreach (var diagnostic in _diagnostics.OrderBy(d => d.Location?.Line ?? 0).ThenBy(d => d.Location?.Column ?? 0))
@@ -401,18 +572,41 @@ namespace uhigh.Net.Diagnostics
     }
 
     // Extension methods for common diagnostic patterns
+    /// <summary>
+    /// The diagnostics extensions class
+    /// </summary>
     public static class DiagnosticsExtensions
     {
+        /// <summary>
+        /// Reports the token error using the specified diagnostics
+        /// </summary>
+        /// <param name="diagnostics">The diagnostics</param>
+        /// <param name="message">The message</param>
+        /// <param name="token">The token</param>
+        /// <param name="code">The code</param>
         public static void ReportTokenError(this DiagnosticsReporter diagnostics, string message, Token token, string? code = null)
         {
             diagnostics.ReportError(message, token.Line, token.Column, code);
         }
 
+        /// <summary>
+        /// Reports the token warning using the specified diagnostics
+        /// </summary>
+        /// <param name="diagnostics">The diagnostics</param>
+        /// <param name="message">The message</param>
+        /// <param name="token">The token</param>
+        /// <param name="code">The code</param>
         public static void ReportTokenWarning(this DiagnosticsReporter diagnostics, string message, Token token, string? code = null)
         {
             diagnostics.ReportWarning(message, token.Line, token.Column, code);
         }
 
+        /// <summary>
+        /// Reports the unexpected token using the specified diagnostics
+        /// </summary>
+        /// <param name="diagnostics">The diagnostics</param>
+        /// <param name="token">The token</param>
+        /// <param name="expected">The expected</param>
         public static void ReportUnexpectedToken(this DiagnosticsReporter diagnostics, Token token, string expected)
         {
             // Get detailed stack trace for debugging
@@ -459,35 +653,81 @@ namespace uhigh.Net.Diagnostics
             }
         }
 
+        /// <summary>
+        /// Reports the unterminated string using the specified diagnostics
+        /// </summary>
+        /// <param name="diagnostics">The diagnostics</param>
+        /// <param name="line">The line</param>
+        /// <param name="column">The column</param>
         public static void ReportUnterminatedString(this DiagnosticsReporter diagnostics, int line, int column)
         {
             diagnostics.ReportError("Unterminated string literal", line, column, "UH002");
         }
 
+        /// <summary>
+        /// Reports the invalid number using the specified diagnostics
+        /// </summary>
+        /// <param name="diagnostics">The diagnostics</param>
+        /// <param name="value">The value</param>
+        /// <param name="line">The line</param>
+        /// <param name="column">The column</param>
         public static void ReportInvalidNumber(this DiagnosticsReporter diagnostics, string value, int line, int column)
         {
             diagnostics.ReportError($"Invalid number format: '{value}'", line, column, "UH003");
         }
 
+        /// <summary>
+        /// Reports the unknown character using the specified diagnostics
+        /// </summary>
+        /// <param name="diagnostics">The diagnostics</param>
+        /// <param name="character">The character</param>
+        /// <param name="line">The line</param>
+        /// <param name="column">The column</param>
         public static void ReportUnknownCharacter(this DiagnosticsReporter diagnostics, char character, int line, int column)
         {
             diagnostics.ReportError($"Unknown character: '{character}'", line, column, "UH004");
         }
 
+        /// <summary>
+        /// Reports the parse error using the specified diagnostics
+        /// </summary>
+        /// <param name="diagnostics">The diagnostics</param>
+        /// <param name="message">The message</param>
+        /// <param name="token">The token</param>
         public static void ReportParseError(this DiagnosticsReporter diagnostics, string message, Token token)
         {
             diagnostics.ReportTokenError($"Parse error: {message}", token, "UH100");
-        }        public static void ReportCodeGenWarning(this DiagnosticsReporter diagnostics, string message, string? context = null)
+        }        /// <summary>
+/// Reports the code gen warning using the specified diagnostics
+/// </summary>
+/// <param name="diagnostics">The diagnostics</param>
+/// <param name="message">The message</param>
+/// <param name="context">The context</param>
+public static void ReportCodeGenWarning(this DiagnosticsReporter diagnostics, string message, string? context = null)
         {
             diagnostics.ReportWarning($"Code generation: {message}" + (context != null ? $" (Context: {context})" : ""), code: "UH200");
         }
 
         // Method checking errors
+        /// <summary>
+        /// Reports the method not found using the specified diagnostics
+        /// </summary>
+        /// <param name="diagnostics">The diagnostics</param>
+        /// <param name="methodName">The method name</param>
+        /// <param name="token">The token</param>
         public static void ReportMethodNotFound(this DiagnosticsReporter diagnostics, string methodName, Token token)
         {
             diagnostics.ReportTokenError($"Method '{methodName}' is not defined", token, "UH201");
         }
 
+        /// <summary>
+        /// Reports the method parameter mismatch using the specified diagnostics
+        /// </summary>
+        /// <param name="diagnostics">The diagnostics</param>
+        /// <param name="methodName">The method name</param>
+        /// <param name="expected">The expected</param>
+        /// <param name="actual">The actual</param>
+        /// <param name="token">The token</param>
         public static void ReportMethodParameterMismatch(this DiagnosticsReporter diagnostics, string methodName, int expected, int actual, Token token)
         {
             if (expected == actual)
@@ -501,6 +741,12 @@ namespace uhigh.Net.Diagnostics
             }
         }
 
+        /// <summary>
+        /// Reports the method suggestion using the specified diagnostics
+        /// </summary>
+        /// <param name="diagnostics">The diagnostics</param>
+        /// <param name="suggestion">The suggestion</param>
+        /// <param name="token">The token</param>
         public static void ReportMethodSuggestion(this DiagnosticsReporter diagnostics, string suggestion, Token token)
         {
             diagnostics.ReportTokenWarning($"Did you mean: {suggestion}?", token, "UH204");

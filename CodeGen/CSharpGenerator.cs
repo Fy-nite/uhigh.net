@@ -5,18 +5,56 @@ using System.Text;
 
 namespace uhigh.Net.CodeGen
 {
+    /// <summary>
+    /// The sharp generator class
+    /// </summary>
     public class CSharpGenerator
     {
+        /// <summary>
+        /// The output
+        /// </summary>
         private readonly StringBuilder _output = new();
+        /// <summary>
+        /// The indent level
+        /// </summary>
         private int _indentLevel = 0;
+        /// <summary>
+        /// The usings
+        /// </summary>
         private readonly HashSet<string> _usings = new();
+        /// <summary>
+        /// The import mappings
+        /// </summary>
         private readonly Dictionary<string, string> _importMappings = new();
+        /// <summary>
+        /// The diagnostics
+        /// </summary>
         private DiagnosticsReporter _diagnostics = new();
+        /// <summary>
+        /// The root namespace
+        /// </summary>
         private string _rootNamespace = "Generated";
+        /// <summary>
+        /// The class name
+        /// </summary>
         private string _className = "Program";
+        /// <summary>
+        /// The suppress usings
+        /// </summary>
         private bool _suppressUsings = false;
+        /// <summary>
+        /// The type resolver
+        /// </summary>
         private ReflectionTypeResolver _typeResolver; // Add this field
 
+        /// <summary>
+        /// Generates the program
+        /// </summary>
+        /// <param name="program">The program</param>
+        /// <param name="diagnostics">The diagnostics</param>
+        /// <param name="rootNamespace">The root namespace</param>
+        /// <param name="className">The class name</param>
+        /// <returns>The string</returns>
         public string Generate(Program program, DiagnosticsReporter? diagnostics = null, string? rootNamespace = null, string? className = null)
         {
             _diagnostics = diagnostics ?? new DiagnosticsReporter();
@@ -58,6 +96,14 @@ namespace uhigh.Net.CodeGen
         }
 
         // Add method to generate code without using statements (for combining multiple files)
+        /// <summary>
+        /// Generates the without usings using the specified program
+        /// </summary>
+        /// <param name="program">The program</param>
+        /// <param name="diagnostics">The diagnostics</param>
+        /// <param name="rootNamespace">The root namespace</param>
+        /// <param name="className">The class name</param>
+        /// <returns>The string</returns>
         public string GenerateWithoutUsings(Program program, DiagnosticsReporter? diagnostics = null, string? rootNamespace = null, string? className = null)
         {
             _suppressUsings = true;
@@ -65,12 +111,24 @@ namespace uhigh.Net.CodeGen
         }
 
         // Add method to get collected using statements
+        /// <summary>
+        /// Gets the collected usings
+        /// </summary>
+        /// <returns>A hash set of string</returns>
         public HashSet<string> GetCollectedUsings()
         {
             return new HashSet<string>(_usings);
         }
 
         // Add method to generate combined code from multiple programs
+        /// <summary>
+        /// Generates the combined using the specified programs
+        /// </summary>
+        /// <param name="programs">The programs</param>
+        /// <param name="diagnostics">The diagnostics</param>
+        /// <param name="rootNamespace">The root namespace</param>
+        /// <param name="className">The class name</param>
+        /// <returns>The string</returns>
         public string GenerateCombined(List<Program> programs, DiagnosticsReporter? diagnostics = null, string? rootNamespace = null, string? className = null)
         {
             _diagnostics = diagnostics ?? new DiagnosticsReporter();
@@ -222,6 +280,10 @@ namespace uhigh.Net.CodeGen
         }
 
         // Helper method to generate program content without using statements
+        /// <summary>
+        /// Generates the program content without usings using the specified program
+        /// </summary>
+        /// <param name="program">The program</param>
         private void GenerateProgramContentWithoutUsings(Program program)
         {
             if (program.Statements == null) return;
@@ -236,6 +298,10 @@ namespace uhigh.Net.CodeGen
             }
         }
 
+        /// <summary>
+        /// Processes the imports using the specified program
+        /// </summary>
+        /// <param name="program">The program</param>
         private void ProcessImports(Program program)
         {
             if (program.Statements == null) return;
@@ -252,6 +318,10 @@ namespace uhigh.Net.CodeGen
             _usings.Add("System.Threading.Tasks");
         }
 
+        /// <summary>
+        /// Processes the import statement using the specified import
+        /// </summary>
+        /// <param name="import">The import</param>
         private void ProcessImportStatement(ImportStatement import)
         {
             if (import.AssemblyName.EndsWith(".dll"))
@@ -271,6 +341,10 @@ namespace uhigh.Net.CodeGen
             }
         }
 
+        /// <summary>
+        /// Generates the program content using the specified program
+        /// </summary>
+        /// <param name="program">The program</param>
         private void GenerateProgramContent(Program program)
         {
             if (program.Statements == null) return;
@@ -300,6 +374,10 @@ namespace uhigh.Net.CodeGen
             }
         }
 
+        /// <summary>
+        /// Generates the default program using the specified program
+        /// </summary>
+        /// <param name="program">The program</param>
         private void GenerateDefaultProgram(Program program)
         {
             Indent();
@@ -346,6 +424,9 @@ namespace uhigh.Net.CodeGen
             _output.AppendLine("}");
         }
 
+        /// <summary>
+        /// Generates the built in functions
+        /// </summary>
         private void GenerateBuiltInFunctions()
         {
             // Reduce built-in functions since we'll rely more on reflection
@@ -376,6 +457,10 @@ namespace uhigh.Net.CodeGen
             _output.AppendLine();
         }
 
+        /// <summary>
+        /// Generates the main method using the specified statements
+        /// </summary>
+        /// <param name="statements">The statements</param>
         private void GenerateMainMethod(List<ASTNode>? statements)
         {
             Indent();
@@ -398,6 +483,10 @@ namespace uhigh.Net.CodeGen
             _output.AppendLine();
         }
 
+        /// <summary>
+        /// Generates the main function using the specified main func
+        /// </summary>
+        /// <param name="mainFunc">The main func</param>
         private void GenerateMainFunction(FunctionDeclaration mainFunc)
         {
             Indent();
@@ -417,6 +506,10 @@ namespace uhigh.Net.CodeGen
             _output.AppendLine();
         }
 
+        /// <summary>
+        /// Generates the class declaration using the specified class decl
+        /// </summary>
+        /// <param name="classDecl">The class decl</param>
         private void GenerateClassDeclaration(ClassDeclaration classDecl)
         {
             // Check for external attribute on class
@@ -468,6 +561,10 @@ namespace uhigh.Net.CodeGen
         }
 
         // Add method to generate attributes
+        /// <summary>
+        /// Generates the attributes using the specified attributes
+        /// </summary>
+        /// <param name="attributes">The attributes</param>
         private void GenerateAttributes(List<AttributeDeclaration> attributes)
         {
             foreach (var attribute in attributes)
@@ -494,6 +591,10 @@ namespace uhigh.Net.CodeGen
             }
         }
 
+        /// <summary>
+        /// Generates the statement using the specified statement
+        /// </summary>
+        /// <param name="statement">The statement</param>
         private void GenerateStatement(ASTNode statement)
         {
             switch (statement)
@@ -572,6 +673,10 @@ namespace uhigh.Net.CodeGen
             }
         }
 
+        /// <summary>
+        /// Generates the sharp block using the specified sharp block
+        /// </summary>
+        /// <param name="sharpBlock">The sharp block</param>
         private void GenerateSharpBlock(SharpBlock sharpBlock)
         {
             if (string.IsNullOrWhiteSpace(sharpBlock.Code))
@@ -589,6 +694,10 @@ namespace uhigh.Net.CodeGen
             }
         }
 
+        /// <summary>
+        /// Generates the namespace declaration using the specified ns decl
+        /// </summary>
+        /// <param name="nsDecl">The ns decl</param>
         private void GenerateNamespaceDeclaration(NamespaceDeclaration nsDecl)
         {
             Indent();
@@ -609,6 +718,10 @@ namespace uhigh.Net.CodeGen
             _output.AppendLine();
         }
 
+        /// <summary>
+        /// Generates the method declaration using the specified method decl
+        /// </summary>
+        /// <param name="methodDecl">The method decl</param>
         private void GenerateMethodDeclaration(MethodDeclaration methodDecl)
         {
             // Check if method has external or dotnetfunc attribute - don't generate implementation
@@ -669,6 +782,10 @@ namespace uhigh.Net.CodeGen
             _output.AppendLine();
         }
 
+        /// <summary>
+        /// Generates the property declaration using the specified prop decl
+        /// </summary>
+        /// <param name="propDecl">The prop decl</param>
         private void GeneratePropertyDeclaration(PropertyDeclaration propDecl)
         {
             Indent();
@@ -738,6 +855,10 @@ namespace uhigh.Net.CodeGen
             }
         }
 
+        /// <summary>
+        /// Generates the field declaration using the specified field decl
+        /// </summary>
+        /// <param name="fieldDecl">The field decl</param>
         private void GenerateFieldDeclaration(FieldDeclaration fieldDecl)
         {
             Indent();
@@ -764,6 +885,10 @@ namespace uhigh.Net.CodeGen
             _output.AppendLine(";");
         }
 
+        /// <summary>
+        /// Gets the current class name
+        /// </summary>
+        /// <returns>The string</returns>
         private string GetCurrentClassName()
         {
             // This would need to track current class context
@@ -771,6 +896,10 @@ namespace uhigh.Net.CodeGen
             return "GeneratedClass";
         }
 
+        /// <summary>
+        /// Generates the variable declaration using the specified var decl
+        /// </summary>
+        /// <param name="varDecl">The var decl</param>
         private void GenerateVariableDeclaration(VariableDeclaration varDecl)
         {
             Indent();
@@ -795,6 +924,10 @@ namespace uhigh.Net.CodeGen
             _output.AppendLine(";");
         }
 
+        /// <summary>
+        /// Generates the function declaration using the specified func decl
+        /// </summary>
+        /// <param name="funcDecl">The func decl</param>
         private void GenerateFunctionDeclaration(FunctionDeclaration funcDecl)
         {
             // Check if function has external or dotnetfunc attribute - completely skip generation
@@ -864,6 +997,10 @@ namespace uhigh.Net.CodeGen
             _output.AppendLine();
         }
 
+        /// <summary>
+        /// Generates the if statement using the specified if stmt
+        /// </summary>
+        /// <param name="ifStmt">The if stmt</param>
         private void GenerateIfStatement(IfStatement ifStmt)
         {
             Indent();
@@ -902,6 +1039,10 @@ namespace uhigh.Net.CodeGen
             }
         }
 
+        /// <summary>
+        /// Generates the while statement using the specified while stmt
+        /// </summary>
+        /// <param name="whileStmt">The while stmt</param>
         private void GenerateWhileStatement(WhileStatement whileStmt)
         {
             Indent();
@@ -922,6 +1063,10 @@ namespace uhigh.Net.CodeGen
             _output.AppendLine("}");
         }
 
+        /// <summary>
+        /// Generates the for statement using the specified for stmt
+        /// </summary>
+        /// <param name="forStmt">The for stmt</param>
         private void GenerateForStatement(ForStatement forStmt)
         {
             Indent();
@@ -995,6 +1140,10 @@ namespace uhigh.Net.CodeGen
             _output.AppendLine("}");
         }
 
+        /// <summary>
+        /// Generates the range iterable using the specified range expr
+        /// </summary>
+        /// <param name="rangeExpr">The range expr</param>
         private void GenerateRangeIterable(RangeExpression rangeExpr)
         {
             if (rangeExpr.IsSimpleRange && rangeExpr.End != null)
@@ -1021,6 +1170,10 @@ namespace uhigh.Net.CodeGen
             }
         }
 
+        /// <summary>
+        /// Generates the expression using the specified expression
+        /// </summary>
+        /// <param name="expression">The expression</param>
         private void GenerateExpression(ASTNode expression)
         {
             switch (expression)
@@ -1116,6 +1269,10 @@ namespace uhigh.Net.CodeGen
             }
         }
 
+        /// <summary>
+        /// Generates the block expression using the specified block expr
+        /// </summary>
+        /// <param name="blockExpr">The block expr</param>
         private void GenerateBlockExpression(BlockExpression blockExpr)
         {
             _output.AppendLine();
@@ -1133,6 +1290,10 @@ namespace uhigh.Net.CodeGen
             _output.Append("}");
         }
 
+        /// <summary>
+        /// Generates the match statement using the specified match stmt
+        /// </summary>
+        /// <param name="matchStmt">The match stmt</param>
         private void GenerateMatchStatement(MatchStatement matchStmt)
         {
             Indent();
@@ -1198,6 +1359,10 @@ namespace uhigh.Net.CodeGen
             _output.AppendLine("}");
         }
 
+        /// <summary>
+        /// Generates the array expression using the specified array expr
+        /// </summary>
+        /// <param name="arrayExpr">The array expr</param>
         private void GenerateArrayExpression(ArrayExpression arrayExpr)
         {
             // Check if we have an explicit array type
@@ -1222,6 +1387,10 @@ namespace uhigh.Net.CodeGen
             _output.Append(" }");
         }
 
+        /// <summary>
+        /// Generates the match expression using the specified match expr
+        /// </summary>
+        /// <param name="matchExpr">The match expr</param>
         private void GenerateMatchExpression(MatchExpression matchExpr)
         {
             // Check if any arm uses block form - if so, we need different handling
@@ -1346,6 +1515,11 @@ namespace uhigh.Net.CodeGen
             }
         }
 
+        /// <summary>
+        /// Generates the function call using the specified function name
+        /// </summary>
+        /// <param name="functionName">The function name</param>
+        /// <param name="arguments">The arguments</param>
         private void GenerateFunctionCall(string functionName, List<Expression> arguments)
         {
             // Handle special function names that are C# keywords
@@ -1373,6 +1547,10 @@ namespace uhigh.Net.CodeGen
             _output.Append(")");
         }
 
+        /// <summary>
+        /// Generates the literal using the specified literal
+        /// </summary>
+        /// <param name="literal">The literal</param>
         private void GenerateLiteral(LiteralExpression literal)
         {
             switch (literal.Value)
@@ -1389,6 +1567,11 @@ namespace uhigh.Net.CodeGen
             }
         }
 
+        /// <summary>
+        /// Converts the operator using the specified op
+        /// </summary>
+        /// <param name="op">The op</param>
+        /// <returns>The string</returns>
         private string ConvertOperator(TokenType op)
         {
             return op switch
@@ -1418,6 +1601,10 @@ namespace uhigh.Net.CodeGen
             };
         }
 
+        /// <summary>
+        /// Generates the type alias using the specified alias
+        /// </summary>
+        /// <param name="alias">The alias</param>
         private void GenerateTypeAlias(TypeAliasDeclaration alias)
         {
             Indent();
@@ -1430,6 +1617,11 @@ namespace uhigh.Net.CodeGen
         }
 
         // Convert TypeAnnotation to C# type string
+        /// <summary>
+        /// Converts the type annotation using the specified type ann
+        /// </summary>
+        /// <param name="typeAnn">The type ann</param>
+        /// <returns>The string</returns>
         private string ConvertTypeAnnotation(TypeAnnotation typeAnn)
         {
             if (typeAnn.Name == "array" && typeAnn.TypeArguments.Count == 1)
@@ -1443,6 +1635,11 @@ namespace uhigh.Net.CodeGen
             return ConvertType(typeAnn.Name);
         }
 
+        /// <summary>
+        /// Converts the type using the specified type
+        /// </summary>
+        /// <param name="type">The type</param>
+        /// <returns>The string</returns>
         private string ConvertType(string type)
         {
             // Handle array types first
@@ -1543,6 +1740,11 @@ namespace uhigh.Net.CodeGen
             };
         }
 
+        /// <summary>
+        /// Gets the c sharp type name using the specified type
+        /// </summary>
+        /// <param name="type">The type</param>
+        /// <returns>The string</returns>
         private string GetCSharpTypeName(Type type)
         {
             // Handle special C# type names
@@ -1584,6 +1786,9 @@ namespace uhigh.Net.CodeGen
             return type.FullName ?? type.Name;
         }
 
+        /// <summary>
+        /// Indents this instance
+        /// </summary>
         private void Indent()
         {
             _output.Append(new string('\t', _indentLevel));

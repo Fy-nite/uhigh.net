@@ -9,30 +9,76 @@ using System.Collections.Concurrent;
 
 namespace uhigh.Net.CodeGen
 {
+    /// <summary>
+    /// The in memory compiler class
+    /// </summary>
     public class InMemoryCompiler
     {
+        /// <summary>
+        /// The base directory
+        /// </summary>
         private static readonly string DefaultStdLibPath = Path.Combine(AppContext.BaseDirectory, "stdlib");
+        /// <summary>
+        /// The std lib path
+        /// </summary>
         private readonly string _stdLibPath;
         
         // Add caching for assemblies and references
+        /// <summary>
+        /// The assembly cache
+        /// </summary>
         private static readonly ConcurrentDictionary<string, byte[]> _assemblyCache = new();
+        /// <summary>
+        /// The reference cache
+        /// </summary>
         private static readonly ConcurrentDictionary<string, MetadataReference[]> _referenceCache = new();
+        /// <summary>
+        /// The compilation lock
+        /// </summary>
         private static readonly object _compilationLock = new object();
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="InMemoryCompiler"/> class
+        /// </summary>
+        /// <param name="stdLibPath">The std lib path</param>
         public InMemoryCompiler(string? stdLibPath = null)
         {
             _stdLibPath = stdLibPath ?? DefaultStdLibPath;
         }
 
+        /// <summary>
+        /// The source info class
+        /// </summary>
         private class SourceInfo
         {
+            /// <summary>
+            /// Gets or sets the value of the namespace
+            /// </summary>
             public string? Namespace { get; set; }
+            /// <summary>
+            /// Gets or sets the value of the main class name
+            /// </summary>
             public string? MainClassName { get; set; }
+            /// <summary>
+            /// Gets or sets the value of the all classes
+            /// </summary>
             public List<string> AllClasses { get; set; } = new();
+            /// <summary>
+            /// Gets or sets the value of the has main method
+            /// </summary>
             public bool HasMainMethod { get; set; }
+            /// <summary>
+            /// Gets or sets the value of the has main function
+            /// </summary>
             public bool HasMainFunction { get; set; } // Add this to track μHigh main functions
         }
 
+        /// <summary>
+        /// Gets the assembly references using the specified std lib path
+        /// </summary>
+        /// <param name="stdLibPath">The std lib path</param>
+        /// <param name="additionalAssemblies">The additional assemblies</param>
+        /// <returns>The references array</returns>
         private static MetadataReference[] GetAssemblyReferences(string? stdLibPath = null, List<string>? additionalAssemblies = null)
         {
             // Create cache key
@@ -90,6 +136,11 @@ namespace uhigh.Net.CodeGen
             return referencesArray;
         }
 
+        /// <summary>
+        /// Tries the add system assembly using the specified references
+        /// </summary>
+        /// <param name="references">The references</param>
+        /// <param name="assemblyName">The assembly name</param>
         private static void TryAddSystemAssembly(List<MetadataReference> references, string assemblyName)
         {
             try
@@ -102,6 +153,11 @@ namespace uhigh.Net.CodeGen
             }
         }
 
+        /// <summary>
+        /// Gets the standard library references using the specified std lib path
+        /// </summary>
+        /// <param name="stdLibPath">The std lib path</param>
+        /// <returns>The references</returns>
         private static List<MetadataReference> GetStandardLibraryReferences(string? stdLibPath = null)
         {
             var references = new List<MetadataReference>();
@@ -153,6 +209,16 @@ namespace uhigh.Net.CodeGen
             return references;
         }
 
+        /// <summary>
+        /// Compiles the and run using the specified csharp code
+        /// </summary>
+        /// <param name="csharpCode">The csharp code</param>
+        /// <param name="outputPath">The output path</param>
+        /// <param name="rootNamespace">The root namespace</param>
+        /// <param name="className">The class name</param>
+        /// <param name="outputType">The output type</param>
+        /// <param name="additionalAssemblies">The additional assemblies</param>
+        /// <returns>A task containing the bool</returns>
         public async Task<bool> CompileAndRun(string csharpCode, string? outputPath = null, string? rootNamespace = null, string? className = null, string outputType = "Exe", List<string>? additionalAssemblies = null)
         {
             try
@@ -214,6 +280,15 @@ namespace uhigh.Net.CodeGen
             }
         }
 
+        /// <summary>
+        /// Compiles the to assembly bytes using the specified csharp code
+        /// </summary>
+        /// <param name="csharpCode">The csharp code</param>
+        /// <param name="rootNamespace">The root namespace</param>
+        /// <param name="className">The class name</param>
+        /// <param name="outputType">The output type</param>
+        /// <param name="additionalAssemblies">The additional assemblies</param>
+        /// <returns>The byte array</returns>
         private byte[]? CompileToAssemblyBytes(string csharpCode, string? rootNamespace, string? className, string outputType, List<string>? additionalAssemblies)
         {
             try
@@ -273,6 +348,14 @@ namespace uhigh.Net.CodeGen
             }
         }
 
+        /// <summary>
+        /// Executes the assembly using the specified assembly bytes
+        /// </summary>
+        /// <param name="assemblyBytes">The assembly bytes</param>
+        /// <param name="rootNamespace">The root namespace</param>
+        /// <param name="className">The class name</param>
+        /// <exception cref="InvalidOperationException">Unsupported Main method signature</exception>
+        /// <returns>A task containing the bool</returns>
         private async Task<bool> ExecuteAssembly(byte[] assemblyBytes, string? rootNamespace, string? className)
         {
             try
@@ -345,6 +428,11 @@ namespace uhigh.Net.CodeGen
             }
         }
 
+        /// <summary>
+        /// Extracts the source info using the specified syntax tree
+        /// </summary>
+        /// <param name="syntaxTree">The syntax tree</param>
+        /// <returns>The source info</returns>
         private SourceInfo ExtractSourceInfo(SyntaxTree syntaxTree)
         {
             var sourceInfo = new SourceInfo();
@@ -423,6 +511,11 @@ namespace uhigh.Net.CodeGen
             return sourceInfo;
         }
         
+        /// <summary>
+        /// Compiles the to bytes using the specified csharp code
+        /// </summary>
+        /// <param name="csharpCode">The csharp code</param>
+        /// <returns>A task containing the byte array</returns>
         public async Task<byte[]?> CompileToBytes(string csharpCode)
         {
             try
@@ -461,6 +554,16 @@ namespace uhigh.Net.CodeGen
             }
         }
         
+        /// <summary>
+        /// Compiles the to executable using the specified csharp code
+        /// </summary>
+        /// <param name="csharpCode">The csharp code</param>
+        /// <param name="outputPath">The output path</param>
+        /// <param name="rootNamespace">The root namespace</param>
+        /// <param name="className">The class name</param>
+        /// <param name="outputType">The output type</param>
+        /// <param name="additionalAssemblies">The additional assemblies</param>
+        /// <returns>A task containing the bool</returns>
         public async Task<bool> CompileToExecutable(string csharpCode, string outputPath, string? rootNamespace = null, string? className = null, string outputType = "Exe", List<string>? additionalAssemblies = null)
         {
             try
@@ -547,6 +650,11 @@ namespace uhigh.Net.CodeGen
             }
         }
         
+        /// <summary>
+        /// Copies the required assemblies using the specified build dir
+        /// </summary>
+        /// <param name="buildDir">The build dir</param>
+        /// <param name="additionalAssemblies">The additional assemblies</param>
         private async Task CopyRequiredAssemblies(string buildDir, List<string>? additionalAssemblies = null)
         {
             // Copy standard library DLLs to build directory
@@ -600,6 +708,10 @@ namespace uhigh.Net.CodeGen
             Console.WriteLine("Required assemblies copied to build directory");
         }
         
+        /// <summary>
+        /// Creates the runtime config using the specified executable path
+        /// </summary>
+        /// <param name="executablePath">The executable path</param>
         private async Task CreateRuntimeConfigAsync(string executablePath)
         {
             var runtimeConfigPath = Path.ChangeExtension(executablePath, ".runtimeconfig.json");

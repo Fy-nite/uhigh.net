@@ -5,16 +5,31 @@ using uhigh.Net.Diagnostics;
 
 namespace uhigh.Net
 {
+    /// <summary>
+    /// The project file class
+    /// </summary>
     public class ProjectFile
     {
+        /// <summary>
+        /// The camel case
+        /// </summary>
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
             WriteIndented = true,
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
 
+        /// <summary>
+        /// The uhigh project
+        /// </summary>
         private static readonly XmlSerializer Serializer = new(typeof(uhighProject));
 
+        /// <summary>
+        /// Loads the project path
+        /// </summary>
+        /// <param name="projectPath">The project path</param>
+        /// <param name="diagnostics">The diagnostics</param>
+        /// <returns>A task containing the uhigh project</returns>
         public static async Task<uhighProject?> LoadAsync(string projectPath, DiagnosticsReporter? diagnostics = null)
         {
             try
@@ -61,6 +76,13 @@ namespace uhigh.Net
             }
         }
 
+        /// <summary>
+        /// Saves the project
+        /// </summary>
+        /// <param name="project">The project</param>
+        /// <param name="projectPath">The project path</param>
+        /// <param name="diagnostics">The diagnostics</param>
+        /// <returns>A task containing the bool</returns>
         public static async Task<bool> SaveAsync(uhighProject project, string projectPath, DiagnosticsReporter? diagnostics = null)
         {
             try
@@ -87,6 +109,13 @@ namespace uhigh.Net
             }
         }
 
+        /// <summary>
+        /// Creates the project name
+        /// </summary>
+        /// <param name="projectName">The project name</param>
+        /// <param name="projectDir">The project dir</param>
+        /// <param name="diagnostics">The diagnostics</param>
+        /// <returns>A task containing the bool</returns>
         public static async Task<bool> CreateAsync(string projectName, string projectDir, DiagnosticsReporter? diagnostics = null)
         {
             try

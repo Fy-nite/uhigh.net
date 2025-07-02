@@ -6,15 +6,40 @@ using uhigh.Net.Diagnostics;
 
 namespace uhigh.Net.Parser
 {
+    /// <summary>
+    /// The reflection type resolver class
+    /// </summary>
     public class ReflectionTypeResolver
     {
+        /// <summary>
+        /// The diagnostics
+        /// </summary>
         private readonly DiagnosticsReporter _diagnostics;
+        /// <summary>
+        /// The discovered types
+        /// </summary>
         private readonly Dictionary<string, Type> _discoveredTypes = new();
+        /// <summary>
+        /// The discovered methods
+        /// </summary>
         private readonly Dictionary<string, List<MethodInfo>> _discoveredMethods = new();
+        /// <summary>
+        /// The scanned assemblies
+        /// </summary>
         private readonly HashSet<Assembly> _scannedAssemblies = new();
+        /// <summary>
+        /// The generic type definitions
+        /// </summary>
         private readonly Dictionary<string, Type> _genericTypeDefinitions = new();
+        /// <summary>
+        /// The attribute resolver
+        /// </summary>
         private ReflectionAttributeResolver? _attributeResolver; // Add this
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ReflectionTypeResolver"/> class
+        /// </summary>
+        /// <param name="diagnostics">The diagnostics</param>
         public ReflectionTypeResolver(DiagnosticsReporter diagnostics)
         {
             _diagnostics = diagnostics;
@@ -22,16 +47,27 @@ namespace uhigh.Net.Parser
             InitializeAttributeResolver(); // Add this
         }
 
+        /// <summary>
+        /// Initializes the attribute resolver
+        /// </summary>
         private void InitializeAttributeResolver()
         {
             _attributeResolver = new ReflectionAttributeResolver(_diagnostics, this);
         }
 
+        /// <summary>
+        /// Gets the attribute resolver
+        /// </summary>
+        /// <exception cref="InvalidOperationException">Attribute resolver not initialized</exception>
+        /// <returns>The reflection attribute resolver</returns>
         public ReflectionAttributeResolver GetAttributeResolver()
         {
             return _attributeResolver ?? throw new InvalidOperationException("Attribute resolver not initialized");
         }
 
+        /// <summary>
+        /// Scans the default assemblies
+        /// </summary>
         private void ScanDefaultAssemblies()
         {
             // Scan core .NET assemblies
@@ -70,6 +106,10 @@ namespace uhigh.Net.Parser
             _diagnostics.ReportInfo($"Discovered {_discoveredTypes.Count} types and {_discoveredMethods.Values.Sum(m => m.Count)} methods via reflection");
         }
 
+        /// <summary>
+        /// Scans the assembly using the specified assembly
+        /// </summary>
+        /// <param name="assembly">The assembly</param>
         public void ScanAssembly(Assembly assembly)
         {
             if (_scannedAssemblies.Contains(assembly))
@@ -95,6 +135,10 @@ namespace uhigh.Net.Parser
             }
         }
 
+        /// <summary>
+        /// Registers the type using the specified type
+        /// </summary>
+        /// <param name="type">The type</param>
         private void RegisterType(Type type)
         {
             // Register type by simple name
@@ -143,6 +187,10 @@ namespace uhigh.Net.Parser
             DiscoverMethods(type);
         }
 
+        /// <summary>
+        /// Discovers the methods using the specified type
+        /// </summary>
+        /// <param name="type">The type</param>
         private void DiscoverMethods(Type type)
         {
             var methods = type.GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance);
@@ -178,6 +226,12 @@ namespace uhigh.Net.Parser
             }
         }
 
+        /// <summary>
+        /// Tries the resolve type using the specified type name
+        /// </summary>
+        /// <param name="typeName">The type name</param>
+        /// <param name="type">The type</param>
+        /// <returns>The bool</returns>
         public bool TryResolveType(string typeName, out Type type)
         {
             // Handle array syntax first (e.g., string[], int[])
@@ -234,6 +288,11 @@ namespace uhigh.Net.Parser
         }
 
         // Add method to check if a type name is a type parameter
+        /// <summary>
+        /// Ises the type parameter using the specified type name
+        /// </summary>
+        /// <param name="typeName">The type name</param>
+        /// <returns>The bool</returns>
         private bool IsTypeParameter(string typeName)
         {
             // Type parameters are typically single uppercase letters (T, U, V, etc.)
@@ -243,6 +302,12 @@ namespace uhigh.Net.Parser
         }
 
         // Add new method for generic type resolution
+        /// <summary>
+        /// Tries the resolve generic type using the specified type name
+        /// </summary>
+        /// <param name="typeName">The type name</param>
+        /// <param name="type">The type</param>
+        /// <returns>The bool</returns>
         public bool TryResolveGenericType(string typeName, out Type type)
         {
             type = null;
@@ -334,6 +399,11 @@ namespace uhigh.Net.Parser
         }
 
         // Add helper method to parse generic type arguments
+        /// <summary>
+        /// Parses the generic type arguments using the specified type args string
+        /// </summary>
+        /// <param name="typeArgsString">The type args string</param>
+        /// <returns>The type args</returns>
         private List<string> ParseGenericTypeArguments(string typeArgsString)
         {
             var typeArgs = new List<string>();
@@ -377,6 +447,11 @@ namespace uhigh.Net.Parser
         }
 
         // Add method to resolve common type aliases
+        /// <summary>
+        /// Tries the resolve type alias using the specified type name
+        /// </summary>
+        /// <param name="typeName">The type name</param>
+        /// <returns>The string</returns>
         private string TryResolveTypeAlias(string typeName)
         {
             return typeName switch
@@ -393,23 +468,45 @@ namespace uhigh.Net.Parser
         }
 
         // Add method to get generic type information
+        /// <summary>
+        /// Ises the generic type using the specified type name
+        /// </summary>
+        /// <param name="typeName">The type name</param>
+        /// <returns>The bool</returns>
         public bool IsGenericType(string typeName)
         {
             return typeName.Contains('<') && typeName.Contains('>');
         }
 
         // Add method to get generic type definition
+        /// <summary>
+        /// Tries the get generic type definition using the specified base type name
+        /// </summary>
+        /// <param name="baseTypeName">The base type name</param>
+        /// <param name="genericTypeDef">The generic type def</param>
+        /// <returns>The bool</returns>
         public bool TryGetGenericTypeDefinition(string baseTypeName, out Type genericTypeDef)
         {
             return _genericTypeDefinitions.TryGetValue(baseTypeName, out genericTypeDef);
         }
 
         // Add method to get all generic type definitions
+        /// <summary>
+        /// Gets the all generic type names
+        /// </summary>
+        /// <returns>An enumerable of string</returns>
         public IEnumerable<string> GetAllGenericTypeNames()
         {
             return _genericTypeDefinitions.Keys;
         }
 
+        /// <summary>
+        /// Tries the resolve method using the specified method name
+        /// </summary>
+        /// <param name="methodName">The method name</param>
+        /// <param name="arguments">The arguments</param>
+        /// <param name="method">The method</param>
+        /// <returns>The bool</returns>
         public bool TryResolveMethod(string methodName, List<Expression> arguments, out MethodInfo method)
         {
             method = null;
@@ -432,6 +529,12 @@ namespace uhigh.Net.Parser
             return false;
         }
 
+        /// <summary>
+        /// Ises the method match using the specified method
+        /// </summary>
+        /// <param name="method">The method</param>
+        /// <param name="arguments">The arguments</param>
+        /// <returns>The bool</returns>
         private bool IsMethodMatch(MethodInfo method, List<Expression> arguments)
         {
             var parameters = method.GetParameters();
@@ -454,11 +557,21 @@ namespace uhigh.Net.Parser
             return true;
         }
 
+        /// <summary>
+        /// Ises the valid type using the specified type name
+        /// </summary>
+        /// <param name="typeName">The type name</param>
+        /// <returns>The bool</returns>
         public bool IsValidType(string typeName)
         {
             return TryResolveType(typeName, out _);
         }
 
+        /// <summary>
+        /// Gets the similar types using the specified type name
+        /// </summary>
+        /// <param name="typeName">The type name</param>
+        /// <returns>A list of string</returns>
         public List<string> GetSimilarTypes(string typeName)
         {
             return _discoveredTypes.Keys
@@ -467,6 +580,11 @@ namespace uhigh.Net.Parser
                 .ToList();
         }
 
+        /// <summary>
+        /// Gets the similar methods using the specified method name
+        /// </summary>
+        /// <param name="methodName">The method name</param>
+        /// <returns>A list of string</returns>
         public List<string> GetSimilarMethods(string methodName)
         {
             return _discoveredMethods.Keys
@@ -475,6 +593,10 @@ namespace uhigh.Net.Parser
                 .ToList();
         }
 
+        /// <summary>
+        /// Loads the assembly from file using the specified assembly path
+        /// </summary>
+        /// <param name="assemblyPath">The assembly path</param>
         public void LoadAssemblyFromFile(string assemblyPath)
         {
             try
@@ -489,16 +611,30 @@ namespace uhigh.Net.Parser
             }
         }
 
+        /// <summary>
+        /// Gets the all type names
+        /// </summary>
+        /// <returns>An enumerable of string</returns>
         public IEnumerable<string> GetAllTypeNames()
         {
             return _discoveredTypes.Keys;
         }
 
+        /// <summary>
+        /// Gets the all method names
+        /// </summary>
+        /// <returns>An enumerable of string</returns>
         public IEnumerable<string> GetAllMethodNames()
         {
             return _discoveredMethods.Keys;
         }
 
+        /// <summary>
+        /// Levenshteins the distance using the specified a
+        /// </summary>
+        /// <param name="a">The </param>
+        /// <param name="b">The </param>
+        /// <returns>The int</returns>
         private static int LevenshteinDistance(string a, string b)
         {
             if (string.IsNullOrEmpty(a)) return b?.Length ?? 0;

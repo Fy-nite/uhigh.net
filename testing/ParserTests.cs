@@ -5,9 +5,17 @@ using uhigh.Net.Diagnostics;
 
 namespace uhigh.Net.Testing
 {
+    /// <summary>
+    /// The parser tests class
+    /// </summary>
     public class ParserTests
     {
         // Add helper method for parsing source code
+        /// <summary>
+        /// Parses the source using the specified source
+        /// </summary>
+        /// <param name="source">The source</param>
+        /// <returns>The program</returns>
         private Program ParseSource(string source)
         {
             var diagnostics = new uhigh.Net.Diagnostics.DiagnosticsReporter();
@@ -17,6 +25,9 @@ namespace uhigh.Net.Testing
             return parser.Parse();
         }
 
+        /// <summary>
+        /// Tests that test variable declaration
+        /// </summary>
         [Test]
         public void TestVariableDeclaration()
         {
@@ -31,6 +42,9 @@ namespace uhigh.Net.Testing
             Assert.IsTrue(varDecl.Initializer is LiteralExpression);
         }
 
+        /// <summary>
+        /// Tests that test function declaration
+        /// </summary>
         [Test]
         public void TestFunctionDeclaration()
         {
@@ -50,6 +64,9 @@ namespace uhigh.Net.Testing
             Assert.AreEqual(1, funcDecl.Body.Count);
         }
 
+        /// <summary>
+        /// Tests that test class declaration
+        /// </summary>
         [Test]
         public void TestClassDeclaration()
         {
@@ -70,6 +87,9 @@ namespace uhigh.Net.Testing
             Assert.AreEqual(2, classDecl.Members.Count);
         }
 
+        /// <summary>
+        /// Tests that test namespace declaration
+        /// </summary>
         [Test]
         public void TestNamespaceDeclaration()
         {
@@ -88,6 +108,9 @@ namespace uhigh.Net.Testing
             Assert.AreEqual(1, nsDecl.Members.Count);
         }
 
+        /// <summary>
+        /// Tests that test if statement
+        /// </summary>
         [Test]
         public void TestIfStatement()
         {
@@ -108,6 +131,9 @@ namespace uhigh.Net.Testing
             Assert.AreEqual(1, ifStmt.ElseBranch.Count);
         }
 
+        /// <summary>
+        /// Tests that test while loop
+        /// </summary>
         [Test]
         public void TestWhileLoop()
         {
@@ -125,6 +151,9 @@ namespace uhigh.Net.Testing
             Assert.AreEqual(2, whileStmt.Body.Count);
         }
 
+        /// <summary>
+        /// Tests that test binary expression
+        /// </summary>
         [Test]
         public void TestBinaryExpression()
         {
@@ -139,6 +168,9 @@ namespace uhigh.Net.Testing
             Assert.IsTrue(binExpr.Right is BinaryExpression);
         }
 
+        /// <summary>
+        /// Tests that test function call
+        /// </summary>
         [Test]
         public void TestFunctionCall()
         {
@@ -154,6 +186,9 @@ namespace uhigh.Net.Testing
             Assert.AreEqual(2, callExpr.Arguments.Count);
         }
 
+        /// <summary>
+        /// Tests that test constructor call
+        /// </summary>
         [Test]
         public void TestConstructorCall()
         {
@@ -167,6 +202,9 @@ namespace uhigh.Net.Testing
             Assert.AreEqual(2, ctorCall.Arguments.Count);
         }
 
+        /// <summary>
+        /// Tests that test member access
+        /// </summary>
         [Test]
         public void TestMemberAccess()
         {
@@ -206,6 +244,9 @@ namespace uhigh.Net.Testing
             }
         }
 
+        /// <summary>
+        /// Tests that test attributes parsing
+        /// </summary>
         [Test]
         public void TestAttributesParsing()
         {
@@ -242,6 +283,9 @@ namespace uhigh.Net.Testing
             Assert.AreEqual("Console.WriteLine", funcDecl.Name);
         }
 
+        /// <summary>
+        /// Tests that test print attribute parsing
+        /// </summary>
         [Test]
         public void TestPrintAttributeParsing()
         {
@@ -264,6 +308,9 @@ namespace uhigh.Net.Testing
             Assert.AreEqual("Test message", arg.Value);
         }
 
+        /// <summary>
+        /// Tests that test complex
+        /// </summary>
         [Test]
         public void TestComplexClass()
         {
@@ -323,6 +370,9 @@ namespace uhigh.Net.Testing
             Assert.IsTrue(fieldDecl.Modifiers.Contains("private"));
         }
 
+        /// <summary>
+        /// Tests that test match expression
+        /// </summary>
         [Test]
         public void TestMatchExpression()
         {
@@ -351,6 +401,9 @@ namespace uhigh.Net.Testing
             Assert.IsTrue(matchExpr.Arms[2].IsDefault);
         }
 
+        /// <summary>
+        /// Tests that test match with multiple patterns
+        /// </summary>
         [Test]
         public void TestMatchWithMultiplePatterns()
         {
@@ -369,6 +422,9 @@ namespace uhigh.Net.Testing
             Assert.IsTrue(matchExpr.Arms[2].IsDefault);
         }
 
+        /// <summary>
+        /// Tests that test match with function calls
+        /// </summary>
         [Test]
         public void TestMatchWithFunctionCalls()
         {
@@ -388,6 +444,9 @@ namespace uhigh.Net.Testing
             Assert.IsTrue(matchExpr.Arms[3].IsDefault);
         }
 
+        /// <summary>
+        /// Tests that test match expression assignment
+        /// </summary>
         [Test]
         public void TestMatchExpressionAssignment()
         {
@@ -410,6 +469,9 @@ namespace uhigh.Net.Testing
             Assert.IsTrue(assignment.Value is MatchExpression);
         }
 
+        /// <summary>
+        /// Tests that test function call validation
+        /// </summary>
         [Test]
         public void TestFunctionCallValidation()
         {
@@ -434,6 +496,9 @@ namespace uhigh.Net.Testing
             Assert.AreEqual(3, mainFunc.Body.Count); // 3 variable declarations
         }
 
+        /// <summary>
+        /// Tests that test calculate area function call
+        /// </summary>
         [Test]
         public void TestCalculateAreaFunctionCall()
         {
@@ -473,6 +538,9 @@ namespace uhigh.Net.Testing
             Assert.AreEqual(4, mainFunc.Body.Count); // 3 var declarations + 1 console call
         }
 
+        /// <summary>
+        /// Tests that test match expression with blocks
+        /// </summary>
         [Test]
         public void TestMatchExpressionWithBlocks()
         {
@@ -510,6 +578,9 @@ namespace uhigh.Net.Testing
             Assert.AreEqual(2, firstBlock.Statements.Count); // print + return
         }
 
+        /// <summary>
+        /// Tests that test for in range loop
+        /// </summary>
         [Test]
         public void TestForInRangeLoop()
         {
@@ -531,6 +602,9 @@ namespace uhigh.Net.Testing
             Assert.IsNotNull(rangeExpr.End);
         }
 
+        /// <summary>
+        /// Tests that test for in array loop
+        /// </summary>
         [Test]
         public void TestForInArrayLoop()
         {
@@ -551,6 +625,9 @@ namespace uhigh.Net.Testing
             Assert.AreEqual("items", identExpr.Name);
         }
 
+        /// <summary>
+        /// Tests that test traditional for loop
+        /// </summary>
         [Test]
         public void TestTraditionalForLoop()
         {
@@ -569,6 +646,9 @@ namespace uhigh.Net.Testing
             Assert.IsNotNull(forStmt.Increment);
         }
 
+        /// <summary>
+        /// Tests that test generic constructor call
+        /// </summary>
         [Test]
         public void TestGenericConstructorCall()
         {
@@ -585,6 +665,9 @@ namespace uhigh.Net.Testing
             Assert.AreEqual(0, ctorCall.Arguments.Count);
         }
 
+        /// <summary>
+        /// Tests that test multiple generic parameters
+        /// </summary>
         [Test]
         public void TestMultipleGenericParameters()
         {
@@ -595,6 +678,9 @@ namespace uhigh.Net.Testing
             Assert.AreEqual("Dictionary<string, int>", ctorCall.ClassName);
         }
 
+        /// <summary>
+        /// Tests that test array type declarations
+        /// </summary>
         [Test]
         public void TestArrayTypeDeclarations()
         {
@@ -619,6 +705,9 @@ namespace uhigh.Net.Testing
             Assert.AreEqual("bool[]", boolArrayDecl.Type);
         }
 
+        /// <summary>
+        /// Tests that test function with array parameter
+        /// </summary>
         [Test]
         public void TestFunctionWithArrayParameter()
         {

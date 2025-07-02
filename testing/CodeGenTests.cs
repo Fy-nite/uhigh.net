@@ -5,8 +5,16 @@ using uhigh.Net.Diagnostics;
 
 namespace uhigh.Net.Testing
 {
+    /// <summary>
+    /// The code gen tests class
+    /// </summary>
     public class CodeGenTests
     {
+        /// <summary>
+        /// Generates the c sharp using the specified source
+        /// </summary>
+        /// <param name="source">The source</param>
+        /// <returns>The string</returns>
         private string GenerateCSharp(string source)
         {
             var diagnostics = new DiagnosticsReporter();
@@ -18,6 +26,9 @@ namespace uhigh.Net.Testing
             return generator.Generate(ast, diagnostics);
         }
 
+        /// <summary>
+        /// Tests that test simple variable declaration
+        /// </summary>
         [Test]
         public void TestSimpleVariableDeclaration()
         {
@@ -28,6 +39,9 @@ namespace uhigh.Net.Testing
             Assert.IsTrue(result.Contains("public class Program"));
         }
 
+        /// <summary>
+        /// Tests that test function declaration
+        /// </summary>
         [Test]
         public void TestFunctionDeclaration()
         {
@@ -37,6 +51,9 @@ namespace uhigh.Net.Testing
             Assert.IsTrue(result.Contains("return x + y;"));
         }
 
+        /// <summary>
+        /// Tests that test class generation
+        /// </summary>
         [Test]
         public void TestClassGeneration()
         {
@@ -54,6 +71,9 @@ namespace uhigh.Net.Testing
             Assert.IsTrue(result.Contains("return this.name;"));
         }
 
+        /// <summary>
+        /// Tests that test namespace generation
+        /// </summary>
         [Test]
         public void TestNamespaceGeneration()
         {
@@ -66,6 +86,9 @@ namespace uhigh.Net.Testing
             Assert.IsTrue(result.Contains("public class TestClass"));
         }
 
+        /// <summary>
+        /// Tests that test constructor call
+        /// </summary>
         [Test]
         public void TestConstructorCall()
         {
@@ -77,6 +100,9 @@ namespace uhigh.Net.Testing
             Assert.IsFalse(result.Contains("new \nPerson"));
         }
 
+        /// <summary>
+        /// Tests that test method call
+        /// </summary>
         [Test]
         public void TestMethodCall()
         {
@@ -85,6 +111,9 @@ namespace uhigh.Net.Testing
             Assert.IsTrue(result.Contains("Console.WriteLine(\"Hello\");"));
         }
 
+        /// <summary>
+        /// Tests that test binary expressions
+        /// </summary>
         [Test]
         public void TestBinaryExpressions()
         {
@@ -93,6 +122,9 @@ namespace uhigh.Net.Testing
             Assert.IsTrue(result.Contains("var result = x + y * 2;"));
         }
 
+        /// <summary>
+        /// Tests that test if statement
+        /// </summary>
         [Test]
         public void TestIfStatement()
         {
@@ -109,6 +141,9 @@ namespace uhigh.Net.Testing
             Assert.IsTrue(result.Contains("print(\"less or equal\");"));
         }
 
+        /// <summary>
+        /// Tests that test while loop
+        /// </summary>
         [Test]
         public void TestWhileLoop()
         {
@@ -123,6 +158,9 @@ namespace uhigh.Net.Testing
             Assert.IsTrue(result.Contains("i++;"));
         }
 
+        /// <summary>
+        /// Tests that test built in functions
+        /// </summary>
         [Test]
         public void TestBuiltInFunctions()
         {
@@ -132,6 +170,9 @@ namespace uhigh.Net.Testing
             Assert.IsTrue(result.Contains("public static string input() => Console.ReadLine() ?? \"\";"));
         }
 
+        /// <summary>
+        /// Tests that test attribute skipping
+        /// </summary>
         [Test]
         public void TestAttributeSkipping()
         {
@@ -143,6 +184,9 @@ namespace uhigh.Net.Testing
             Assert.IsFalse(result.Contains("public static void Console.WriteLine"));
         }
 
+        /// <summary>
+        /// Tests that test external attribute skipping
+        /// </summary>
         [Test]
         public void TestExternalAttributeSkipping()
         {
@@ -154,6 +198,9 @@ namespace uhigh.Net.Testing
             Assert.IsFalse(result.Contains("public static void Console.WriteLine"));
         }
 
+        /// <summary>
+        /// Tests that test external class skipping
+        /// </summary>
         [Test]
         public void TestExternalClassSkipping()
         {
@@ -167,6 +214,9 @@ namespace uhigh.Net.Testing
             Assert.IsFalse(result.Contains("class ExternalLibrary"));
         }
 
+        /// <summary>
+        /// Tests that test type conversion
+        /// </summary>
         [Test]
         public void TestTypeConversion()
         {
@@ -178,6 +228,9 @@ namespace uhigh.Net.Testing
             Assert.IsTrue(result.Contains("public static void test(int a, double b, string c, bool d)"));
         }
 
+        /// <summary>
+        /// Tests that test match expression
+        /// </summary>
         [Test]
         public void TestMatchExpression()
         {
@@ -193,6 +246,9 @@ namespace uhigh.Net.Testing
             Assert.IsTrue(result.Contains("_ => \"Unknown\""));
         }
 
+        /// <summary>
+        /// Tests that test match expression with blocks
+        /// </summary>
         [Test]
         public void TestMatchExpressionWithBlocks()
         {
@@ -215,6 +271,9 @@ namespace uhigh.Net.Testing
             Assert.IsTrue(result.Contains("_ => (() => {"));
         }
 
+        /// <summary>
+        /// Tests that test match statement with blocks
+        /// </summary>
         [Test]
         public void TestMatchStatementWithBlocks()
         {
@@ -241,6 +300,9 @@ namespace uhigh.Net.Testing
             Assert.IsTrue(result.Contains("showError()"));
         }
 
+        /// <summary>
+        /// Tests that test match expression in assignment
+        /// </summary>
         [Test]
         public void TestMatchExpressionInAssignment()
         {

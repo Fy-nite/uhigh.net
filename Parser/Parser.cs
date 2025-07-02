@@ -4,14 +4,38 @@ using System.Text;
 
 namespace uhigh.Net.Parser
 {
+    /// <summary>
+    /// The parser class
+    /// </summary>
     public class Parser
     {
+        /// <summary>
+        /// The tokens
+        /// </summary>
         private readonly List<Token> _tokens;
+        /// <summary>
+        /// The current
+        /// </summary>
         private int _current = 0;
+        /// <summary>
+        /// The diagnostics
+        /// </summary>
         private readonly DiagnosticsReporter _diagnostics;
+        /// <summary>
+        /// The method checker
+        /// </summary>
         private readonly MethodChecker _methodChecker;
+        /// <summary>
+        /// The attribute resolver
+        /// </summary>
         private readonly ReflectionAttributeResolver _attributeResolver;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Parser"/> class
+        /// </summary>
+        /// <param name="tokens">The tokens</param>
+        /// <param name="diagnostics">The diagnostics</param>
+        /// <param name="verboseMode">The verbose mode</param>
         public Parser(List<Token> tokens, DiagnosticsReporter? diagnostics = null, bool verboseMode = false)
         {
             _tokens = tokens;
@@ -20,6 +44,10 @@ namespace uhigh.Net.Parser
             _attributeResolver = _methodChecker.GetAttributeResolver();
         }
 
+        /// <summary>
+        /// Parses this instance
+        /// </summary>
+        /// <returns>The program</returns>
         public Program Parse()
         {
             var statements = new List<Statement>();
@@ -60,12 +88,19 @@ namespace uhigh.Net.Parser
             return new Program { Statements = statements };
         }
 
+        /// <summary>
+        /// Gets the diagnostics
+        /// </summary>
+        /// <returns>The diagnostics</returns>
         public DiagnosticsReporter GetDiagnostics()
         {
             return _diagnostics;
         }
 
 
+        /// <summary>
+        /// Registers the all methods
+        /// </summary>
         private void RegisterAllMethods()
         {
             var tempCurrent = _current;
@@ -321,6 +356,10 @@ namespace uhigh.Net.Parser
             _current = tempCurrent;
         }
 
+        /// <summary>
+        /// Parses the statement
+        /// </summary>
+        /// <returns>The statement</returns>
         private Statement? ParseStatement()
         {
             try
@@ -463,6 +502,10 @@ namespace uhigh.Net.Parser
         }
 
         // Add method to parse using statements
+        /// <summary>
+        /// Parses the using statement
+        /// </summary>
+        /// <returns>The statement</returns>
         private Statement ParseUsingStatement()
         {
             var identifier = Consume(TokenType.Identifier, "Expected namespace or type name after 'using'").Value;
@@ -483,6 +526,11 @@ namespace uhigh.Net.Parser
             };
         }
 
+        /// <summary>
+        /// Parses the enum declaration using the specified modifiers
+        /// </summary>
+        /// <param name="modifiers">The modifiers</param>
+        /// <returns>The statement</returns>
         private Statement ParseEnumDeclaration(List<string> modifiers)
         {
             var name = Consume(TokenType.Identifier, "Expected enum name").Value;
@@ -525,6 +573,11 @@ namespace uhigh.Net.Parser
             };
         }
 
+        /// <summary>
+        /// Parses the interface declaration using the specified modifiers
+        /// </summary>
+        /// <param name="modifiers">The modifiers</param>
+        /// <returns>The statement</returns>
         private Statement ParseInterfaceDeclaration(List<string> modifiers)
         {
             var name = Consume(TokenType.Identifier, "Expected interface name").Value;
@@ -558,6 +611,10 @@ namespace uhigh.Net.Parser
             };
         }
 
+        /// <summary>
+        /// Parses the interface member
+        /// </summary>
+        /// <returns>The statement</returns>
         private Statement? ParseInterfaceMember()
         {
             if (Match(TokenType.Func))
@@ -616,6 +673,11 @@ namespace uhigh.Net.Parser
             return null;
         }
 
+        /// <summary>
+        /// Parses the type alias declaration using the specified modifiers
+        /// </summary>
+        /// <param name="modifiers">The modifiers</param>
+        /// <returns>The statement</returns>
         private Statement ParseTypeAliasDeclaration(List<string> modifiers)
         {
             var name = Consume(TokenType.Identifier, "Expected type alias name").Value;
@@ -632,6 +694,11 @@ namespace uhigh.Net.Parser
         }
 
         // Update this method to use ParseTypeAnnotation for type names
+        /// <summary>
+        /// Parses the type name
+        /// </summary>
+        /// <exception cref="ParseException">Unexpected attribute in type context</exception>
+        /// <returns>The type name</returns>
         private string ParseTypeName()
         {
             string typeName;
@@ -718,6 +785,10 @@ namespace uhigh.Net.Parser
         }
 
         // Add method to parse type annotations with generics and arrays
+        /// <summary>
+        /// Parses the type annotation
+        /// </summary>
+        /// <returns>The type ann</returns>
         private TypeAnnotation ParseTypeAnnotation()
         {
             string typeName;
@@ -788,6 +859,11 @@ namespace uhigh.Net.Parser
         }
 
         // Helper method to build type string from TypeAnnotation
+        /// <summary>
+        /// Builds the type string using the specified type ann
+        /// </summary>
+        /// <param name="typeAnn">The type ann</param>
+        /// <returns>The string</returns>
         private string BuildTypeString(TypeAnnotation typeAnn)
         {
             if (typeAnn.TypeArguments.Count == 0)
@@ -797,6 +873,11 @@ namespace uhigh.Net.Parser
         }
 
         // Helper method to check if a type name is likely valid
+        /// <summary>
+        /// Ises the likely valid type using the specified type name
+        /// </summary>
+        /// <param name="typeName">The type name</param>
+        /// <returns>The bool</returns>
         private bool IsLikelyValidType(string typeName)
         {
             // Allow type parameters (single uppercase letters or T-prefixed names)
@@ -820,6 +901,10 @@ namespace uhigh.Net.Parser
             return commonTypes.Any(ct => typeName.Contains(ct));
         }
 
+        /// <summary>
+        /// Parses the field declaration
+        /// </summary>
+        /// <returns>The statement</returns>
         private Statement ParseFieldDeclaration()
         {
             var name = Consume(TokenType.Identifier, "Expected field name").Value;
@@ -863,6 +948,10 @@ namespace uhigh.Net.Parser
             return new FieldDeclaration { Name = name, Type = type, Initializer = initializer };
         }
 
+        /// <summary>
+        /// Parses the property declaration
+        /// </summary>
+        /// <returns>The statement</returns>
         private Statement ParsePropertyDeclaration()
         {
             var name = Consume(TokenType.Identifier, "Expected property name").Value;
@@ -981,6 +1070,10 @@ namespace uhigh.Net.Parser
             };
         }
 
+        /// <summary>
+        /// Parses the method declaration
+        /// </summary>
+        /// <returns>The statement</returns>
         private Statement ParseMethodDeclaration()
         {
             var name = Consume(TokenType.Identifier, "Expected method name").Value;
@@ -1058,6 +1151,10 @@ namespace uhigh.Net.Parser
             };
         }
 
+        /// <summary>
+        /// Parses the const declaration
+        /// </summary>
+        /// <returns>The statement</returns>
         private Statement ParseConstDeclaration()
         {
             var name = Consume(TokenType.Identifier, "Expected variable name").Value;
@@ -1066,6 +1163,10 @@ namespace uhigh.Net.Parser
             return new VariableDeclaration { Name = name, Initializer = initializer, IsConstant = true };
         }
 
+        /// <summary>
+        /// Parses the variable declaration
+        /// </summary>
+        /// <returns>The statement</returns>
         private Statement ParseVariableDeclaration()
         {
             var name = Consume(TokenType.Identifier, "Expected variable name").Value;
@@ -1085,6 +1186,10 @@ namespace uhigh.Net.Parser
             return new VariableDeclaration { Name = name, Initializer = initializer, Type = type };
         }
 
+        /// <summary>
+        /// Parses the function declaration
+        /// </summary>
+        /// <returns>The statement</returns>
         private Statement ParseFunctionDeclaration()
         {
             var nameToken = Consume(TokenType.Identifier, "Expected function name");
@@ -1143,6 +1248,10 @@ namespace uhigh.Net.Parser
             };
         }
 
+        /// <summary>
+        /// Parses the if statement
+        /// </summary>
+        /// <returns>The statement</returns>
         private Statement ParseIfStatement()
         {
             var condition = ParseExpression();
@@ -1184,6 +1293,10 @@ namespace uhigh.Net.Parser
             return new IfStatement { Condition = condition, ThenBranch = thenBranch, ElseBranch = elseBranch };
         }
 
+        /// <summary>
+        /// Parses the while statement
+        /// </summary>
+        /// <returns>The statement</returns>
         private Statement ParseWhileStatement()
         {
             var condition = ParseExpression();
@@ -1201,6 +1314,10 @@ namespace uhigh.Net.Parser
             return new WhileStatement { Condition = condition, Body = body };
         }
 
+        /// <summary>
+        /// Parses the for statement
+        /// </summary>
+        /// <returns>The statement</returns>
         private Statement ParseForStatement()
         {
             // Check for for-in syntax: for var i in expression
@@ -1247,6 +1364,10 @@ namespace uhigh.Net.Parser
             }
         }
 
+        /// <summary>
+        /// Parses the traditional for statement
+        /// </summary>
+        /// <returns>The statement</returns>
         private Statement ParseTraditionalForStatement()
         {
             // Traditional for loop: for (init; condition; increment)
@@ -1279,6 +1400,10 @@ namespace uhigh.Net.Parser
             };
         }
 
+        /// <summary>
+        /// Parses the return statement
+        /// </summary>
+        /// <returns>The statement</returns>
         private Statement ParseReturnStatement()
         {
             Expression? value = null;
@@ -1289,16 +1414,28 @@ namespace uhigh.Net.Parser
             return new ReturnStatement { Value = value };
         }
 
+        /// <summary>
+        /// Parses the break statement
+        /// </summary>
+        /// <returns>The statement</returns>
         private Statement ParseBreakStatement()
         {
             return new BreakStatement();
         }
 
+        /// <summary>
+        /// Parses the continue statement
+        /// </summary>
+        /// <returns>The statement</returns>
         private Statement ParseContinueStatement()
         {
             return new ContinueStatement();
         }
 
+        /// <summary>
+        /// Parses the sharp block
+        /// </summary>
+        /// <returns>The statement</returns>
         private Statement ParseSharpBlock()
         {
             Consume(TokenType.LeftBrace, "Expected '{' after 'sharp'");
@@ -1351,6 +1488,10 @@ namespace uhigh.Net.Parser
             return new SharpBlock { Code = code.ToString().Trim() };
         }
 
+        /// <summary>
+        /// Parses the expression statement
+        /// </summary>
+        /// <returns>The statement</returns>
         private Statement ParseExpressionStatement()
         {
             var expr = ParseExpression();
@@ -1362,11 +1503,19 @@ namespace uhigh.Net.Parser
             return new ExpressionStatement { Expression = expr };
         }
 
+        /// <summary>
+        /// Parses the expression
+        /// </summary>
+        /// <returns>The expression</returns>
         private Expression ParseExpression()
         {
             return ParseAssignment();
         }
 
+        /// <summary>
+        /// Parses the assignment
+        /// </summary>
+        /// <returns>The expr</returns>
         private Expression ParseAssignment()
         {
             var expr = ParseOr();
@@ -1392,6 +1541,10 @@ namespace uhigh.Net.Parser
             return expr;
         }
 
+        /// <summary>
+        /// Parses the or
+        /// </summary>
+        /// <returns>The expr</returns>
         private Expression ParseOr()
         {
             var expr = ParseAnd();
@@ -1406,6 +1559,10 @@ namespace uhigh.Net.Parser
             return expr;
         }
 
+        /// <summary>
+        /// Parses the and
+        /// </summary>
+        /// <returns>The expr</returns>
         private Expression ParseAnd()
         {
             var expr = ParseEquality();
@@ -1420,6 +1577,10 @@ namespace uhigh.Net.Parser
             return expr;
         }
 
+        /// <summary>
+        /// Parses the equality
+        /// </summary>
+        /// <returns>The expr</returns>
         private Expression ParseEquality()
         {
             var expr = ParseComparison();
@@ -1434,6 +1595,10 @@ namespace uhigh.Net.Parser
             return expr;
         }
 
+        /// <summary>
+        /// Parses the comparison
+        /// </summary>
+        /// <returns>The expr</returns>
         private Expression ParseComparison()
         {
             var expr = ParseTerm();
@@ -1448,6 +1613,10 @@ namespace uhigh.Net.Parser
             return expr;
         }
 
+        /// <summary>
+        /// Parses the term
+        /// </summary>
+        /// <returns>The expr</returns>
         private Expression ParseTerm()
         {
             var expr = ParseFactor();
@@ -1462,6 +1631,10 @@ namespace uhigh.Net.Parser
             return expr;
         }
 
+        /// <summary>
+        /// Parses the factor
+        /// </summary>
+        /// <returns>The expr</returns>
         private Expression ParseFactor()
         {
             var expr = ParseUnary();
@@ -1476,6 +1649,10 @@ namespace uhigh.Net.Parser
             return expr;
         }
 
+        /// <summary>
+        /// Parses the unary
+        /// </summary>
+        /// <returns>The expression</returns>
         private Expression ParseUnary()
         {
             if (Match(TokenType.Not, TokenType.Minus))
@@ -1496,6 +1673,10 @@ namespace uhigh.Net.Parser
             return ParsePostfix();
         }
 
+        /// <summary>
+        /// Parses the postfix
+        /// </summary>
+        /// <returns>The expr</returns>
         private Expression ParsePostfix()
         {
             var expr = ParseCall();
@@ -1517,6 +1698,10 @@ namespace uhigh.Net.Parser
             return expr;
         }
 
+        /// <summary>
+        /// Parses the call
+        /// </summary>
+        /// <returns>The expr</returns>
         private Expression ParseCall()
         {
             var expr = ParsePrimary();
@@ -1573,6 +1758,11 @@ namespace uhigh.Net.Parser
             return expr;
         }
 
+        /// <summary>
+        /// Ises the array method using the specified method name
+        /// </summary>
+        /// <param name="methodName">The method name</param>
+        /// <returns>The bool</returns>
         private bool IsArrayMethod(string methodName)
         {
             var arrayMethods = new[] { 
@@ -1583,6 +1773,11 @@ namespace uhigh.Net.Parser
             return arrayMethods.Contains(methodName);
         }
 
+        /// <summary>
+        /// Parses the primary
+        /// </summary>
+        /// <exception cref="ParseException">Unexpected token: {Peek().Value}</exception>
+        /// <returns>The expression</returns>
         private Expression ParsePrimary()
         {
             if (Match(TokenType.This))
@@ -1750,6 +1945,11 @@ namespace uhigh.Net.Parser
             throw new ParseException($"Unexpected token: {Peek().Value}");
         }
 
+        /// <summary>
+        /// Parses the match expression using the specified value
+        /// </summary>
+        /// <param name="value">The value</param>
+        /// <returns>The expression</returns>
         private Expression ParseMatchExpression(Expression? value = null)
         {
             // If value is null, parse it (for legacy/fallback)
@@ -1780,6 +1980,10 @@ namespace uhigh.Net.Parser
             };
         }
 
+        /// <summary>
+        /// Parses the match arm
+        /// </summary>
+        /// <returns>The match arm</returns>
         private MatchArm ParseMatchArm()
         {
             var patterns = new List<Expression>();
@@ -1833,6 +2037,10 @@ namespace uhigh.Net.Parser
             };
         }
 
+        /// <summary>
+        /// Parses the interpolated string
+        /// </summary>
+        /// <returns>The expression</returns>
         private Expression ParseInterpolatedString()
         {
             var parts = new List<InterpolationPart>();
@@ -1847,6 +2055,11 @@ namespace uhigh.Net.Parser
             return new LiteralExpression { Value = stringValue, Type = TokenType.String };
         }
         
+        /// <summary>
+        /// Finishes the call using the specified callee
+        /// </summary>
+        /// <param name="callee">The callee</param>
+        /// <returns>The expression</returns>
         private Expression FinishCall(Expression callee)
         {
             var arguments = new List<Expression>();
@@ -1868,6 +2081,11 @@ namespace uhigh.Net.Parser
             };
         }
 
+        /// <summary>
+        /// Converts the token type to string using the specified token type
+        /// </summary>
+        /// <param name="tokenType">The token type</param>
+        /// <returns>The string</returns>
         private string ConvertTokenTypeToString(TokenType tokenType)
         {
             return tokenType switch
@@ -1895,6 +2113,11 @@ namespace uhigh.Net.Parser
             };
         }
 
+        /// <summary>
+        /// Matches the types
+        /// </summary>
+        /// <param name="types">The types</param>
+        /// <returns>The bool</returns>
         private bool Match(params TokenType[] types)
         {
             foreach (var type in types)
@@ -1908,33 +2131,61 @@ namespace uhigh.Net.Parser
             return false;
         }
 
+        /// <summary>
+        /// Checks the type
+        /// </summary>
+        /// <param name="type">The type</param>
+        /// <returns>The bool</returns>
         private bool Check(TokenType type)
         {
             if (IsAtEnd()) return false;
             return Peek().Type == type;
         }
 
+        /// <summary>
+        /// Advances this instance
+        /// </summary>
+        /// <returns>The token</returns>
         private Token Advance()
         {
             if (!IsAtEnd()) _current++;
             return Previous();
         }
 
+        /// <summary>
+        /// Ises the at end
+        /// </summary>
+        /// <returns>The bool</returns>
         private bool IsAtEnd()
         {
             return Peek().Type == TokenType.EOF;
         }
 
+        /// <summary>
+        /// Peeks this instance
+        /// </summary>
+        /// <returns>The token</returns>
         private Token Peek()
         {
             return _tokens[_current];
         }
 
+        /// <summary>
+        /// Previouses this instance
+        /// </summary>
+        /// <returns>The token</returns>
         private Token Previous()
         {
             return _tokens[_current - 1];
         }
 
+        /// <summary>
+        /// Consumes the type
+        /// </summary>
+        /// <param name="type">The type</param>
+        /// <param name="message">The message</param>
+        /// <exception cref="ParseException">{message}. Got {Peek().Type}</exception>
+        /// <returns>The token</returns>
         private Token Consume(TokenType type, string message)
         {
             if (Check(type)) return Advance();
@@ -1944,6 +2195,9 @@ namespace uhigh.Net.Parser
             throw new ParseException($"{message}. Got {Peek().Type}");
         }
 
+        /// <summary>
+        /// Synchronizes this instance
+        /// </summary>
         private void Synchronize()
         {
             Advance();
@@ -1970,6 +2224,11 @@ namespace uhigh.Net.Parser
             }
         }
 
+        /// <summary>
+        /// Ises the modifier token using the specified token
+        /// </summary>
+        /// <param name="token">The token</param>
+        /// <returns>The bool</returns>
         private bool IsModifierToken(Token token)
         {
             return token.Type switch
@@ -1981,6 +2240,10 @@ namespace uhigh.Net.Parser
             };
         }
 
+        /// <summary>
+        /// Parses the attribute
+        /// </summary>
+        /// <returns>The attribute declaration</returns>
         private AttributeDeclaration ParseAttribute()
         {
             Consume(TokenType.LeftBracket, "Expected '['");
@@ -2028,6 +2291,10 @@ namespace uhigh.Net.Parser
             };
         }
 
+        /// <summary>
+        /// Parses the import statement
+        /// </summary>
+        /// <returns>The statement</returns>
         private Statement ParseImportStatement()
         {
             var assemblyName = Consume(TokenType.String, "Expected assembly name").Value;
@@ -2059,6 +2326,10 @@ namespace uhigh.Net.Parser
             };
         }
 
+        /// <summary>
+        /// Parses the namespace declaration
+        /// </summary>
+        /// <returns>The statement</returns>
         private Statement ParseNamespaceDeclaration()
         {
             var name = Consume(TokenType.Identifier, "Expected namespace name").Value;
@@ -2087,6 +2358,10 @@ namespace uhigh.Net.Parser
             };
         }
 
+        /// <summary>
+        /// Parses the class declaration
+        /// </summary>
+        /// <returns>The statement</returns>
         private Statement ParseClassDeclaration()
         {
             var name = Consume(TokenType.Identifier, "Expected class name").Value;
@@ -2118,6 +2393,10 @@ namespace uhigh.Net.Parser
             };
         }
 
+        /// <summary>
+        /// Parses the class member
+        /// </summary>
+        /// <returns>The statement</returns>
         private Statement? ParseClassMember()
         {
             // Check for attributes first
@@ -2233,6 +2512,10 @@ namespace uhigh.Net.Parser
             return null;
         }
 
+        /// <summary>
+        /// Parses the match statement
+        /// </summary>
+        /// <returns>The statement</returns>
         private Statement ParseMatchStatement()
         {
             // Parse: match <value> { ... }
@@ -2255,6 +2538,10 @@ namespace uhigh.Net.Parser
             };
         }
 
+        /// <summary>
+        /// Parses the include statement
+        /// </summary>
+        /// <returns>The statement</returns>
         private Statement ParseIncludeStatement()
         {
             // include "filename.uh"

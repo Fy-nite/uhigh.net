@@ -3,21 +3,55 @@ using uhigh.Net.Lexer;
 
 namespace uhigh.Net.Parser
 {
+    /// <summary>
+    /// The method signature class
+    /// </summary>
     public class MethodSignature
     {
+        /// <summary>
+        /// Gets or sets the value of the name
+        /// </summary>
         public string Name { get; set; } = "";
+        /// <summary>
+        /// Gets or sets the value of the parameters
+        /// </summary>
         public List<Parameter> Parameters { get; set; } = new();
+        /// <summary>
+        /// Gets or sets the value of the return type
+        /// </summary>
         public string? ReturnType { get; set; }
+        /// <summary>
+        /// Gets or sets the value of the is built in
+        /// </summary>
         public bool IsBuiltIn { get; set; }
+        /// <summary>
+        /// Gets or sets the value of the is static
+        /// </summary>
         public bool IsStatic { get; set; }
+        /// <summary>
+        /// Gets or sets the value of the class name
+        /// </summary>
         public string? ClassName { get; set; }        
+        /// <summary>
+        /// Gets or sets the value of the declaration location
+        /// </summary>
         public SourceLocation? DeclarationLocation { get; set; }
 
+        /// <summary>
+        /// Gets the full signature
+        /// </summary>
+        /// <returns>The string</returns>
         public string GetFullSignature()
         {
             var paramTypes = Parameters.Select(p => p.Type ?? "object").ToList();
             return $"{Name}({string.Join(", ", paramTypes)})";
-        }        public bool MatchesCall(string name, List<Expression> arguments)
+        }        /// <summary>
+/// Matcheses the call using the specified name
+/// </summary>
+/// <param name="name">The name</param>
+/// <param name="arguments">The arguments</param>
+/// <returns>The bool</returns>
+public bool MatchesCall(string name, List<Expression> arguments)
         {
             if (Name != name) return false;
             
@@ -45,12 +79,22 @@ namespace uhigh.Net.Parser
             return false;
         }
 
+        /// <summary>
+        /// Hases the default value using the specified parameter
+        /// </summary>
+        /// <param name="parameter">The parameter</param>
+        /// <returns>The bool</returns>
         private bool HasDefaultValue(Parameter parameter)
         {
             // Check if parameter has a default value
             // For now, we'll consider parameters with nullable types as having defaults
             return parameter.Type != null && parameter.Type.EndsWith("?");
-        }        private string InferArgumentType(Expression argument)
+        }        /// <summary>
+/// Infers the argument type using the specified argument
+/// </summary>
+/// <param name="argument">The argument</param>
+/// <returns>The string</returns>
+private string InferArgumentType(Expression argument)
         {
             return argument switch
             {
@@ -63,6 +107,11 @@ namespace uhigh.Net.Parser
             };
         }
 
+        /// <summary>
+        /// Infers the literal type using the specified literal
+        /// </summary>
+        /// <param name="literal">The literal</param>
+        /// <returns>The string</returns>
         private string InferLiteralType(LiteralExpression literal)
         {
             return literal.Value switch
@@ -76,7 +125,13 @@ namespace uhigh.Net.Parser
                 null => "null",
                 _ => "object"
             };
-        }private bool IsTypeCompatible(string? paramType, string argType)
+        }/// <summary>
+/// Ises the type compatible using the specified param type
+/// </summary>
+/// <param name="paramType">The param type</param>
+/// <param name="argType">The arg type</param>
+/// <returns>The bool</returns>
+private bool IsTypeCompatible(string? paramType, string argType)
         {
             if (paramType == null || paramType == "object") return true;
             if (paramType == argType) return true;
@@ -110,11 +165,21 @@ namespace uhigh.Net.Parser
             return false;
         }
 
+        /// <summary>
+        /// Ises the arithmetic operator using the specified op
+        /// </summary>
+        /// <param name="op">The op</param>
+        /// <returns>The bool</returns>
         private bool IsArithmeticOperator(TokenType op)
         {
             return op is TokenType.Plus or TokenType.Minus or TokenType.Multiply or TokenType.Divide or TokenType.Modulo;
         }
 
+        /// <summary>
+        /// Ises the comparison operator using the specified op
+        /// </summary>
+        /// <param name="op">The op</param>
+        /// <returns>The bool</returns>
         private bool IsComparisonOperator(TokenType op)
         {
             return op is TokenType.Equal or TokenType.NotEqual or TokenType.Less or TokenType.Greater 
@@ -122,42 +187,109 @@ namespace uhigh.Net.Parser
         }
     }
 
+    /// <summary>
+    /// The class info class
+    /// </summary>
     public class ClassInfo
     {
+        /// <summary>
+        /// Gets or sets the value of the name
+        /// </summary>
         public string Name { get; set; } = "";
+        /// <summary>
+        /// Gets or sets the value of the base class
+        /// </summary>
         public string? BaseClass { get; set; }
+        /// <summary>
+        /// Gets or sets the value of the fields
+        /// </summary>
         public List<PropertyDeclaration> Fields { get; set; } = new();
+        /// <summary>
+        /// Gets or sets the value of the properties
+        /// </summary>
         public List<PropertyDeclaration> Properties { get; set; } = new(); // Separate properties from fields
+        /// <summary>
+        /// Gets or sets the value of the methods
+        /// </summary>
         public List<MethodDeclaration> Methods { get; set; } = new();
+        /// <summary>
+        /// Gets or sets the value of the constructors
+        /// </summary>
         public List<MethodDeclaration> Constructors { get; set; } = new();
+        /// <summary>
+        /// Gets or sets the value of the is public
+        /// </summary>
         public bool IsPublic { get; set; }
+        /// <summary>
+        /// Gets or sets the value of the declaration location
+        /// </summary>
         public SourceLocation? DeclarationLocation { get; set; }
 
+        /// <summary>
+        /// Hases the field using the specified field name
+        /// </summary>
+        /// <param name="fieldName">The field name</param>
+        /// <returns>The bool</returns>
         public bool HasField(string fieldName)
         {
             return Fields.Any(f => f.Name == fieldName) || Properties.Any(p => p.Name == fieldName);
         }
 
+        /// <summary>
+        /// Hases the method using the specified method name
+        /// </summary>
+        /// <param name="methodName">The method name</param>
+        /// <returns>The bool</returns>
         public bool HasMethod(string methodName)
         {
             return Methods.Any(m => m.Name == methodName);
         }
 
+        /// <summary>
+        /// Gets the method using the specified method name
+        /// </summary>
+        /// <param name="methodName">The method name</param>
+        /// <returns>The method declaration</returns>
         public MethodDeclaration? GetMethod(string methodName)
         {
             return Methods.FirstOrDefault(m => m.Name == methodName);
         }
     }
 
+    /// <summary>
+    /// The method checker class
+    /// </summary>
     public class MethodChecker
     {
+        /// <summary>
+        /// The diagnostics
+        /// </summary>
         private readonly DiagnosticsReporter _diagnostics;
+        /// <summary>
+        /// The reflection resolver
+        /// </summary>
         private readonly ReflectionMethodResolver _reflectionResolver;
+        /// <summary>
+        /// The type resolver
+        /// </summary>
         private readonly ReflectionTypeResolver _typeResolver;
+        /// <summary>
+        /// The methods
+        /// </summary>
         private readonly Dictionary<string, List<MethodSignature>> _methods = new();
+        /// <summary>
+        /// The class methods
+        /// </summary>
         private readonly Dictionary<string, List<MethodSignature>> _classMethods = new();
+        /// <summary>
+        /// The classes
+        /// </summary>
         private readonly Dictionary<string, ClassInfo> _classes = new();
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MethodChecker"/> class
+        /// </summary>
+        /// <param name="diagnostics">The diagnostics</param>
         public MethodChecker(DiagnosticsReporter diagnostics)
         {
             _diagnostics = diagnostics;
@@ -166,6 +298,9 @@ namespace uhigh.Net.Parser
             RegisterBuiltInMethods();
         }
 
+        /// <summary>
+        /// Registers the built in methods
+        /// </summary>
         private void RegisterBuiltInMethods()
         {
             // Only register essential built-ins that don't map directly to .NET
@@ -189,6 +324,12 @@ namespace uhigh.Net.Parser
             RegisterBuiltIn("range", new[] { "int", "int", "int" }, "IEnumerable<int>");
         }
 
+        /// <summary>
+        /// Registers the built in using the specified name
+        /// </summary>
+        /// <param name="name">The name</param>
+        /// <param name="paramTypes">The param types</param>
+        /// <param name="returnType">The return type</param>
         private void RegisterBuiltIn(string name, string[] paramTypes, string returnType)
         {
             var parameters = paramTypes.Select((type, index) => new Parameter 
@@ -212,6 +353,11 @@ namespace uhigh.Net.Parser
             _methods[name].Add(signature);
         }
 
+        /// <summary>
+        /// Registers the method using the specified func
+        /// </summary>
+        /// <param name="func">The func</param>
+        /// <param name="location">The location</param>
         public void RegisterMethod(FunctionDeclaration func, SourceLocation? location = null)
         {
             // Validate attributes first
@@ -243,6 +389,12 @@ namespace uhigh.Net.Parser
             _methods[func.Name].Add(signature);
         }
 
+        /// <summary>
+        /// Registers the method using the specified method
+        /// </summary>
+        /// <param name="method">The method</param>
+        /// <param name="className">The class name</param>
+        /// <param name="location">The location</param>
         public void RegisterMethod(MethodDeclaration method, string className, SourceLocation? location = null)
         {
             // Validate attributes first
@@ -277,6 +429,11 @@ namespace uhigh.Net.Parser
             _classMethods[key].Add(signature);
         }
 
+        /// <summary>
+        /// Registers the class decl
+        /// </summary>
+        /// <param name="classDecl">The class decl</param>
+        /// <param name="location">The location</param>
         public void RegisterClass(ClassDeclaration classDecl, SourceLocation? location = null)
         {
             // Note: ClassDeclaration doesn't have Attributes property in the current AST
@@ -312,6 +469,13 @@ namespace uhigh.Net.Parser
             _diagnostics.ReportInfo($"Registered class: {classDecl.Name} with {classInfo.Fields.Count} fields, {classInfo.Methods.Count} methods, and {classInfo.Constructors.Count} constructors");
         }
 
+        /// <summary>
+        /// Validates the constructor call using the specified class name
+        /// </summary>
+        /// <param name="className">The class name</param>
+        /// <param name="arguments">The arguments</param>
+        /// <param name="callToken">The call token</param>
+        /// <returns>The bool</returns>
         public bool ValidateConstructorCall(string className, List<Expression> arguments, Token callToken)
         {
             // Don't validate qualified names like "microshell.shell" as constructor calls
@@ -373,6 +537,11 @@ namespace uhigh.Net.Parser
         }
 
         // Add helper method to check if a class is external
+        /// <summary>
+        /// Ises the external using the specified class name
+        /// </summary>
+        /// <param name="className">The class name</param>
+        /// <returns>The bool</returns>
         private bool IsExternalClass(string className)
         {
             // Check if this class name appears in any import mappings or known external classes
@@ -380,6 +549,13 @@ namespace uhigh.Net.Parser
             return false; // For now, return false - can be enhanced later
         }
 
+        /// <summary>
+        /// Validates the member access using the specified class name
+        /// </summary>
+        /// <param name="className">The class name</param>
+        /// <param name="memberName">The member name</param>
+        /// <param name="accessToken">The access token</param>
+        /// <returns>The bool</returns>
         public bool ValidateMemberAccess(string className, string memberName, Token accessToken)
         {
             if (!_classes.ContainsKey(className))
@@ -417,7 +593,14 @@ namespace uhigh.Net.Parser
             }
 
             return false;
-        }        public bool ValidateCall(string functionName, List<Expression> arguments, Token location)
+        }        /// <summary>
+/// Validates the call using the specified function name
+/// </summary>
+/// <param name="functionName">The function name</param>
+/// <param name="arguments">The arguments</param>
+/// <param name="location">The location</param>
+/// <returns>The bool</returns>
+public bool ValidateCall(string functionName, List<Expression> arguments, Token location)
         {
             // Check if this is actually a constructor call (capitalized name without dots)
             if (char.IsUpper(functionName[0]) && !functionName.Contains('.'))
@@ -479,6 +662,11 @@ namespace uhigh.Net.Parser
 
        
 
+        /// <summary>
+        /// Suggests the similar methods using the specified method name
+        /// </summary>
+        /// <param name="methodName">The method name</param>
+        /// <param name="callToken">The call token</param>
         private void SuggestSimilarMethods(string methodName, Token callToken)
         {
             // Get suggestions from both user-defined and reflected methods
@@ -500,6 +688,12 @@ namespace uhigh.Net.Parser
         }
 
         // Add method to validate attributes
+        /// <summary>
+        /// Validates the attributes using the specified attributes
+        /// </summary>
+        /// <param name="attributes">The attributes</param>
+        /// <param name="targetType">The target type</param>
+        /// <param name="location">The location</param>
         private void ValidateAttributes(List<AttributeDeclaration>? attributes, string targetType, SourceLocation? location)
         {
             if (attributes == null || attributes.Count == 0)
@@ -524,17 +718,28 @@ namespace uhigh.Net.Parser
         }
 
         // Add method to get attribute resolver for other components
+        /// <summary>
+        /// Gets the attribute resolver
+        /// </summary>
+        /// <returns>The reflection attribute resolver</returns>
         public ReflectionAttributeResolver GetAttributeResolver()
         {
             return _typeResolver.GetAttributeResolver();
         }
 
         // Add method to get type resolver for other components
+        /// <summary>
+        /// Gets the type resolver
+        /// </summary>
+        /// <returns>The type resolver</returns>
         public ReflectionTypeResolver GetTypeResolver()
         {
             return _typeResolver;
         }
 
+        /// <summary>
+        /// Prints the method summary
+        /// </summary>
         public void PrintMethodSummary()
         {
             _diagnostics.ReportInfo($"Registered {_classes.Count} user-defined classes");
@@ -544,21 +749,39 @@ namespace uhigh.Net.Parser
             _diagnostics.ReportInfo($"Discovered {_typeResolver.GetAllMethodNames().Count()} methods via reflection");
         }
 
+        /// <summary>
+        /// Gets the class info using the specified class name
+        /// </summary>
+        /// <param name="className">The class name</param>
+        /// <returns>The class info</returns>
         public ClassInfo? GetClassInfo(string className)
         {
             return _classes.GetValueOrDefault(className);
         }
 
+        /// <summary>
+        /// Gets the all class names
+        /// </summary>
+        /// <returns>A list of string</returns>
         public List<string> GetAllClassNames()
         {
             return _classes.Keys.ToList();
         }
 
+        /// <summary>
+        /// Gets the all method names
+        /// </summary>
+        /// <returns>A list of string</returns>
         public List<string> GetAllMethodNames()
         {
             return _methods.Keys.Concat(_classMethods.Keys).Distinct().ToList();
         }
 
+        /// <summary>
+        /// Gets the method signature using the specified method name
+        /// </summary>
+        /// <param name="methodName">The method name</param>
+        /// <returns>The method signature</returns>
         public MethodSignature? GetMethodSignature(string methodName)
         {
             if (_methods.ContainsKey(methodName))
@@ -570,6 +793,11 @@ namespace uhigh.Net.Parser
             return null;
         }
         
+        /// <summary>
+        /// Infers the argument type using the specified argument
+        /// </summary>
+        /// <param name="argument">The argument</param>
+        /// <returns>The string</returns>
         private string InferArgumentType(Expression argument)
         {
             return argument switch
@@ -583,6 +811,11 @@ namespace uhigh.Net.Parser
             };
         }
 
+        /// <summary>
+        /// Infers the literal type using the specified literal
+        /// </summary>
+        /// <param name="literal">The literal</param>
+        /// <returns>The string</returns>
         private string InferLiteralType(LiteralExpression literal)
         {
             return literal.Value switch
@@ -598,17 +831,33 @@ namespace uhigh.Net.Parser
             };
         }
         
+        /// <summary>
+        /// Ises the arithmetic operator using the specified op
+        /// </summary>
+        /// <param name="op">The op</param>
+        /// <returns>The bool</returns>
         private bool IsArithmeticOperator(TokenType op)
         {
             return op is TokenType.Plus or TokenType.Minus or TokenType.Multiply or TokenType.Divide or TokenType.Modulo;
         }
 
+        /// <summary>
+        /// Ises the comparison operator using the specified op
+        /// </summary>
+        /// <param name="op">The op</param>
+        /// <returns>The bool</returns>
         private bool IsComparisonOperator(TokenType op)
         {
             return op is TokenType.Equal or TokenType.NotEqual or TokenType.Less or TokenType.Greater 
                 or TokenType.LessEqual or TokenType.GreaterEqual;
         }
         
+        /// <summary>
+        /// Levenshteins the distance using the specified s
+        /// </summary>
+        /// <param name="s">The </param>
+        /// <param name="t">The </param>
+        /// <returns>The int</returns>
         private int LevenshteinDistance(string s, string t)
         {
             // Levenshtein distance algorithm to find the edit distance between two strings
@@ -636,6 +885,12 @@ namespace uhigh.Net.Parser
             return d[n, m];
         }
 
+        /// <summary>
+        /// Validates the type using the specified type name
+        /// </summary>
+        /// <param name="typeName">The type name</param>
+        /// <param name="token">The token</param>
+        /// <returns>The bool</returns>
         internal bool ValidateType(string typeName, Token token)
         {
             if (_typeResolver.TryResolveType(typeName, out var type))

@@ -3,14 +3,35 @@ using uhigh.Net.Diagnostics;
 
 namespace uhigh.Net.Lexer
 {
+    /// <summary>
+    /// The lexer class
+    /// </summary>
     public class Lexer
     {
+        /// <summary>
+        /// The source
+        /// </summary>
         private readonly string _source;
+        /// <summary>
+        /// The position
+        /// </summary>
         private int _position;
+        /// <summary>
+        /// The line
+        /// </summary>
         private int _line = 1;
+        /// <summary>
+        /// The column
+        /// </summary>
         private int _column = 1;
+        /// <summary>
+        /// The diagnostics
+        /// </summary>
         private readonly DiagnosticsReporter _diagnostics;
         
+        /// <summary>
+        /// The match
+        /// </summary>
         private static readonly Dictionary<string, TokenType> Keywords = new()
         {
             { "new", TokenType.New },
@@ -109,12 +130,22 @@ namespace uhigh.Net.Lexer
             // { "inline", TokenType.Inline }
         };
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Lexer"/> class
+        /// </summary>
+        /// <param name="source">The source</param>
+        /// <param name="diagnostics">The diagnostics</param>
+        /// <param name="verboseMode">The verbose mode</param>
         public Lexer(string source, DiagnosticsReporter? diagnostics = null, bool verboseMode = false)
         {
             _source = source;
             _diagnostics = diagnostics ?? new DiagnosticsReporter(verboseMode);
         }
 
+        /// <summary>
+        /// Tokenizes this instance
+        /// </summary>
+        /// <returns>The tokens</returns>
         public List<Token> Tokenize()
         {
             var tokens = new List<Token>();
@@ -145,6 +176,11 @@ namespace uhigh.Net.Lexer
             return tokens;
         }
 
+        /// <summary>
+        /// Nexts the token
+        /// </summary>
+        /// <exception cref="Exception">Unexpected character '{current}' at line {line}, column {column}</exception>
+        /// <returns>The token</returns>
         private Token? NextToken()
         {
             SkipWhitespace();
@@ -218,6 +254,9 @@ namespace uhigh.Net.Lexer
             throw new Exception($"Unexpected character '{current}' at line {line}, column {column}");
         }
 
+        /// <summary>
+        /// Skips the whitespace
+        /// </summary>
         private void SkipWhitespace()
         {
             while (_position < _source.Length && char.IsWhiteSpace(_source[_position]))
@@ -235,6 +274,9 @@ namespace uhigh.Net.Lexer
             }
         }
 
+        /// <summary>
+        /// Skips the line comment
+        /// </summary>
         private void SkipLineComment()
         {
             while (_position < _source.Length && _source[_position] != '\n')
@@ -244,6 +286,9 @@ namespace uhigh.Net.Lexer
             }
         }
 
+        /// <summary>
+        /// Skips the block comment
+        /// </summary>
         private void SkipBlockComment()
         {
             _position += 2; // Skip /*
@@ -271,11 +316,22 @@ namespace uhigh.Net.Lexer
             }
         }
 
+        /// <summary>
+        /// Peeks this instance
+        /// </summary>
+        /// <returns>The char</returns>
         private char Peek()
         {
             return _position + 1 < _source.Length ? _source[_position + 1] : '\0';
         }
 
+        /// <summary>
+        /// Reads the string using the specified line
+        /// </summary>
+        /// <param name="line">The line</param>
+        /// <param name="column">The column</param>
+        /// <exception cref="Exception">Unterminated string at line {line}</exception>
+        /// <returns>The token</returns>
         private Token ReadString(int line, int column)
         {
             _position++; // Skip opening quote
@@ -309,6 +365,12 @@ namespace uhigh.Net.Lexer
             return new Token(TokenType.String, value, line, column);
         }
 
+        /// <summary>
+        /// Reads the number using the specified line
+        /// </summary>
+        /// <param name="line">The line</param>
+        /// <param name="column">The column</param>
+        /// <returns>The token</returns>
         private Token ReadNumber(int line, int column)
         {
             var start = _position;
@@ -340,6 +402,12 @@ namespace uhigh.Net.Lexer
             return new Token(TokenType.Number, value, line, column);
         }
 
+        /// <summary>
+        /// Reads the identifier using the specified line
+        /// </summary>
+        /// <param name="line">The line</param>
+        /// <param name="column">The column</param>
+        /// <returns>The token</returns>
         private Token ReadIdentifier(int line, int column)
         {
             var start = _position;
@@ -427,6 +495,11 @@ namespace uhigh.Net.Lexer
             return new Token(tokenType, value, line, column);
         }
         
+        /// <summary>
+        /// Ises the type identifier using the specified identifier
+        /// </summary>
+        /// <param name="identifier">The identifier</param>
+        /// <returns>The bool</returns>
         private bool IsTypeIdentifier(string identifier)
         {
             // Check if this looks like a type name
@@ -443,6 +516,13 @@ namespace uhigh.Net.Lexer
             return char.IsUpper(identifier[0]);
         }
 
+        /// <summary>
+        /// Gets the two char token using the specified two char
+        /// </summary>
+        /// <param name="twoChar">The two char</param>
+        /// <param name="line">The line</param>
+        /// <param name="column">The column</param>
+        /// <returns>The token</returns>
         private Token? GetTwoCharToken(string twoChar, int line, int column)
         {
             return twoChar switch
@@ -468,6 +548,12 @@ namespace uhigh.Net.Lexer
             };
         }
 
+        /// <summary>
+        /// Reads the interpolated string using the specified line
+        /// </summary>
+        /// <param name="line">The line</param>
+        /// <param name="column">The column</param>
+        /// <returns>The token</returns>
         private Token ReadInterpolatedString(int line, int column)
         {
             _position += 2; // Skip $"
@@ -523,6 +609,13 @@ namespace uhigh.Net.Lexer
             return new Token(TokenType.String, "$\"" + value + "\"", line, column);
         }
 
+        /// <summary>
+        /// Gets the single char token using the specified c
+        /// </summary>
+        /// <param name="c">The </param>
+        /// <param name="line">The line</param>
+        /// <param name="column">The column</param>
+        /// <returns>The token</returns>
         private Token? GetSingleCharToken(char c, int line, int column)
         {
             return c switch

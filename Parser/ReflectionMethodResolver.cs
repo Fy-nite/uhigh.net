@@ -6,18 +6,37 @@ using uhigh.Net.Diagnostics;
 
 namespace uhigh.Net.Parser
 {
+    /// <summary>
+    /// The reflection method resolver class
+    /// </summary>
     public class ReflectionMethodResolver
     {
+        /// <summary>
+        /// The diagnostics
+        /// </summary>
         private readonly DiagnosticsReporter _diagnostics;
+        /// <summary>
+        /// The known types
+        /// </summary>
         private readonly Dictionary<string, Type> _knownTypes = new();
+        /// <summary>
+        /// The loaded assemblies
+        /// </summary>
         private readonly HashSet<Assembly> _loadedAssemblies = new();
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ReflectionMethodResolver"/> class
+        /// </summary>
+        /// <param name="diagnostics">The diagnostics</param>
         public ReflectionMethodResolver(DiagnosticsReporter diagnostics)
         {
             _diagnostics = diagnostics;
             LoadSystemTypes();
         }
 
+        /// <summary>
+        /// Loads the system types
+        /// </summary>
         private void LoadSystemTypes()
         {
             // Load common system types
@@ -80,6 +99,10 @@ namespace uhigh.Net.Parser
             }
         }
 
+        /// <summary>
+        /// Loads the assembly using the specified assembly
+        /// </summary>
+        /// <param name="assembly">The assembly</param>
         public void LoadAssembly(Assembly assembly)
         {
             if (_loadedAssemblies.Contains(assembly)) return;
@@ -104,6 +127,14 @@ namespace uhigh.Net.Parser
             }
         }
 
+        /// <summary>
+        /// Tries the resolve method using the specified type name
+        /// </summary>
+        /// <param name="typeName">The type name</param>
+        /// <param name="methodName">The method name</param>
+        /// <param name="arguments">The arguments</param>
+        /// <param name="method">The method</param>
+        /// <returns>The bool</returns>
         public bool TryResolveMethod(string typeName, string methodName, List<Expression> arguments, out MethodInfo? method)
         {
             method = null;
@@ -127,6 +158,12 @@ namespace uhigh.Net.Parser
             return method != null;
         }
 
+        /// <summary>
+        /// Finds the best method match using the specified methods
+        /// </summary>
+        /// <param name="methods">The methods</param>
+        /// <param name="arguments">The arguments</param>
+        /// <returns>The method info</returns>
         private MethodInfo? FindBestMethodMatch(MethodInfo[] methods, List<Expression> arguments)
         {
             var candidates = new List<(MethodInfo method, int score)>();
@@ -146,6 +183,12 @@ namespace uhigh.Net.Parser
             return candidates.OrderByDescending(c => c.score).FirstOrDefault().method;
         }
 
+        /// <summary>
+        /// Calculates the match score using the specified parameters
+        /// </summary>
+        /// <param name="parameters">The parameters</param>
+        /// <param name="arguments">The arguments</param>
+        /// <returns>The score</returns>
         private int CalculateMatchScore(ParameterInfo[] parameters, List<Expression> arguments)
         {
             if (parameters.Length != arguments.Count)
@@ -194,6 +237,11 @@ namespace uhigh.Net.Parser
             return score;
         }
 
+        /// <summary>
+        /// Infers the expression type using the specified expression
+        /// </summary>
+        /// <param name="expression">The expression</param>
+        /// <returns>The type</returns>
         private Type InferExpressionType(Expression expression)
         {
             return expression switch
@@ -206,11 +254,22 @@ namespace uhigh.Net.Parser
             };
         }
 
+        /// <summary>
+        /// Infers the literal type using the specified literal
+        /// </summary>
+        /// <param name="literal">The literal</param>
+        /// <returns>The type</returns>
         private Type InferLiteralType(LiteralExpression literal)
         {
             return literal.Value?.GetType() ?? typeof(object);
         }
 
+        /// <summary>
+        /// Typeses the match using the specified param type
+        /// </summary>
+        /// <param name="paramType">The param type</param>
+        /// <param name="argType">The arg type</param>
+        /// <returns>The bool</returns>
         private bool TypesMatch(Type paramType, Type argType)
         {
             if (paramType == argType) return true;
@@ -225,6 +284,12 @@ namespace uhigh.Net.Parser
             return false;
         }
 
+        /// <summary>
+        /// Ises the implicitly convertible using the specified from
+        /// </summary>
+        /// <param name="from">The from</param>
+        /// <param name="to">The to</param>
+        /// <returns>The bool</returns>
         private bool IsImplicitlyConvertible(Type from, Type to)
         {
             if (from == to) return true;
@@ -248,21 +313,43 @@ namespace uhigh.Net.Parser
             return to.IsAssignableFrom(from);
         }
 
+        /// <summary>
+        /// Ises the nullable type using the specified type
+        /// </summary>
+        /// <param name="type">The type</param>
+        /// <returns>The bool</returns>
         private bool IsNullableType(Type type)
         {
             return type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>);
         }
 
+        /// <summary>
+        /// Gets the known types
+        /// </summary>
+        /// <returns>An enumerable of type</returns>
         public IEnumerable<Type> GetKnownTypes()
         {
             return _knownTypes.Values.Distinct();
         }
 
+        /// <summary>
+        /// Tries the get type using the specified type name
+        /// </summary>
+        /// <param name="typeName">The type name</param>
+        /// <param name="type">The type</param>
+        /// <returns>The bool</returns>
         public bool TryGetType(string typeName, out Type? type)
         {
             return _knownTypes.TryGetValue(typeName, out type);
         }
 
+        /// <summary>
+        /// Tries the resolve static method using the specified qualified name
+        /// </summary>
+        /// <param name="qualifiedName">The qualified name</param>
+        /// <param name="arguments">The arguments</param>
+        /// <param name="method">The method</param>
+        /// <returns>The bool</returns>
         public bool TryResolveStaticMethod(string qualifiedName, List<Expression> arguments, out MethodInfo? method)
         {
             method = null;
@@ -276,6 +363,11 @@ namespace uhigh.Net.Parser
             return TryResolveMethod(typeName, methodName, arguments, out method);
         }
 
+        /// <summary>
+        /// Gets the available methods using the specified type name
+        /// </summary>
+        /// <param name="typeName">The type name</param>
+        /// <returns>An enumerable of string</returns>
         public IEnumerable<string> GetAvailableMethods(string typeName)
         {
             if (!_knownTypes.TryGetValue(typeName, out var type))
@@ -288,6 +380,11 @@ namespace uhigh.Net.Parser
                       .Distinct();
         }
 
+        /// <summary>
+        /// Ises the known type using the specified type name
+        /// </summary>
+        /// <param name="typeName">The type name</param>
+        /// <returns>The bool</returns>
         public bool IsKnownType(string typeName)
         {
             return _knownTypes.ContainsKey(typeName);

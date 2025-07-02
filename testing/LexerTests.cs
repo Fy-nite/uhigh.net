@@ -3,14 +3,25 @@ using uhigh.Net.Diagnostics;
 
 namespace uhigh.Net.Testing
 {
+    /// <summary>
+    /// The lexer tests class
+    /// </summary>
     public class LexerTests
     {
+        /// <summary>
+        /// Creates the lexer using the specified source
+        /// </summary>
+        /// <param name="source">The source</param>
+        /// <returns>The lexer lexer</returns>
         private Lexer.Lexer CreateLexer(string source)
         {
             var diagnostics = new DiagnosticsReporter();
             return new Lexer.Lexer(source, diagnostics);
         }
 
+        /// <summary>
+        /// Tests that test basic tokens
+        /// </summary>
         [Test]
         public void TestBasicTokens()
         {
@@ -25,6 +36,9 @@ namespace uhigh.Net.Testing
             Assert.AreEqual(TokenType.EOF, tokens[4].Type);
         }
 
+        /// <summary>
+        /// Tests that test string literals
+        /// </summary>
         [Test]
         public void TestStringLiterals()
         {
@@ -36,6 +50,9 @@ namespace uhigh.Net.Testing
             Assert.AreEqual("Hello, World!", tokens[0].Value);
         }
 
+        /// <summary>
+        /// Tests that test number literals
+        /// </summary>
         [Test]
         public void TestNumberLiterals()
         {
@@ -51,6 +68,9 @@ namespace uhigh.Net.Testing
             Assert.AreEqual("0.5", tokens[2].Value);
         }
 
+        /// <summary>
+        /// Tests that test keywords
+        /// </summary>
         [Test]
         public void TestKeywords()
         {
@@ -66,6 +86,9 @@ namespace uhigh.Net.Testing
             Assert.AreEqual(TokenType.Return, tokens[5].Type);
         }
 
+        /// <summary>
+        /// Tests that test operators
+        /// </summary>
         [Test]
         public void TestOperators()
         {
@@ -86,6 +109,9 @@ namespace uhigh.Net.Testing
             }
         }
 
+        /// <summary>
+        /// Tests that test generic types
+        /// </summary>
         [Test]
         public void TestGenericTypes()
         {
@@ -101,6 +127,9 @@ namespace uhigh.Net.Testing
             Assert.AreEqual(TokenType.Greater, tokens[3].Type);
         }
 
+        /// <summary>
+        /// Tests that test comments
+        /// </summary>
         [Test]
         public void TestComments()
         {
@@ -115,6 +144,9 @@ namespace uhigh.Net.Testing
             Assert.AreEqual(9, tokens.Count);
         }
 
+        /// <summary>
+        /// Tests that test qualified identifiers
+        /// </summary>
         [Test]
         public void TestQualifiedIdentifiers()
         {
@@ -128,6 +160,9 @@ namespace uhigh.Net.Testing
             Assert.AreEqual("System.IO.File", tokens[1].Value);
         }
 
+        /// <summary>
+        /// Tests that test punctuation
+        /// </summary>
         [Test]
         public void TestPunctuation()
         {
@@ -149,6 +184,9 @@ namespace uhigh.Net.Testing
             }
         }
 
+        /// <summary>
+        /// Tests that test line and column tracking
+        /// </summary>
         [Test]
         public void TestLineAndColumnTracking()
         {
@@ -165,6 +203,9 @@ namespace uhigh.Net.Testing
             Assert.AreEqual(5, tokens[3].Column);
         }
 
+        /// <summary>
+        /// Tests that test modifier keywords
+        /// </summary>
         [Test]
         public void TestModifierKeywords()
         {
@@ -178,6 +219,9 @@ namespace uhigh.Net.Testing
             Assert.AreEqual(TokenType.Readonly, tokens[3].Type);
         }
 
+        /// <summary>
+        /// Tests that test increment decrement
+        /// </summary>
         [Test]
         public void TestIncrementDecrement()
         {
@@ -189,6 +233,9 @@ namespace uhigh.Net.Testing
             Assert.AreEqual(TokenType.Decrement, tokens[1].Type);
         }
 
+        /// <summary>
+        /// Tests that test assignment operators
+        /// </summary>
         [Test]
         public void TestAssignmentOperators()
         {
@@ -202,6 +249,9 @@ namespace uhigh.Net.Testing
             Assert.AreEqual(TokenType.DivideAssign, tokens[3].Type);
         }
 
+        /// <summary>
+        /// Tests that test complex expression
+        /// </summary>
         [Test]
         public void TestComplexExpression()
         {
@@ -216,6 +266,9 @@ namespace uhigh.Net.Testing
             Assert.AreEqual(TokenType.EOF, tokens.Last().Type);
         }
 
+        /// <summary>
+        /// Tests that test match keywords
+        /// </summary>
         [Test]
         public void TestMatchKeywords()
         {
@@ -228,6 +281,9 @@ namespace uhigh.Net.Testing
             Assert.AreEqual(TokenType.Underscore, tokens[2].Type);
         }
 
+        /// <summary>
+        /// Tests that test range keyword
+        /// </summary>
         [Test]
         public void TestRangeKeyword()
         {
@@ -241,6 +297,9 @@ namespace uhigh.Net.Testing
             Assert.AreEqual(TokenType.RightParen, tokens[3].Type);
         }
 
+        /// <summary>
+        /// Tests that test for in syntax
+        /// </summary>
         [Test]
         public void TestForInSyntax()
         {
@@ -260,6 +319,9 @@ namespace uhigh.Net.Testing
             }
         }
 
+        /// <summary>
+        /// Tests that test array type syntax
+        /// </summary>
         [Test]
         public void TestArrayTypeSyntax()
         {
@@ -276,6 +338,9 @@ namespace uhigh.Net.Testing
             Assert.AreEqual("List", tokens[2].Value);
         }
 
+        /// <summary>
+        /// Tests that test generic array types
+        /// </summary>
         [Test]
         public void TestGenericArrayTypes()
         {
@@ -293,6 +358,9 @@ namespace uhigh.Net.Testing
             Assert.AreEqual(TokenType.RightBracket, tokens[5].Type);
         }
 
+        /// <summary>
+        /// Tests that test attribute tokenization
+        /// </summary>
         [Test]
         public void TestAttributeTokenization()
         {
@@ -312,6 +380,9 @@ namespace uhigh.Net.Testing
             Assert.AreEqual(TokenType.EOF, tokens[6].Type);
         }
 
+        /// <summary>
+        /// Tests that test complex attribute tokenization
+        /// </summary>
         [Test]
         public void TestComplexAttributeTokenization()
         {

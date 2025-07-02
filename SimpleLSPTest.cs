@@ -3,8 +3,15 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 
+/// <summary>
+/// The simple lsp test class
+/// </summary>
 public class SimpleLSPTest
 {
+    /// <summary>
+    /// Tests the main using the specified args
+    /// </summary>
+    /// <param name="args">The args</param>
     public static async Task TestMain(string[] args)
     {
         if (args.Length > 0 && args[0] == "simple-lsp")
@@ -13,6 +20,9 @@ public class SimpleLSPTest
         }
     }
     
+    /// <summary>
+    /// Runs the simple lsp
+    /// </summary>
     private static async Task RunSimpleLSP()
     {
         var reader = new StreamReader(Console.OpenStandardInput(), Encoding.UTF8);

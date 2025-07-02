@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 namespace uhigh.StdLib
 {
     /// <summary>
@@ -5,21 +8,11 @@ namespace uhigh.StdLib
     /// </summary>
     public static class Terminal
     {
-        /// <summary>
-        /// Prints a line to the console, handling null values gracefully.
-        /// </summary>
-        /// <param name="value">The value to print. If null, prints "null".</param>
-        /// <remarks>
-        /// This method ensures that null values are printed as "null" instead of throwing an exception.
-        /// It uses the ToString() method of the value if it is not null.
-        /// </remarks>
-        /// <example>
-        /// Terminal.PrintLine("Hello, World!"); // Outputs: Hello, World!
-        /// Terminal.PrintLine(null); // Outputs: null
-        /// </example>
-        /// <seealso cref="Print(object?)"/>
-        /// <seealso cref="ReadInput(string?)"/>
 
+        /// <summary>
+        /// Prints the line using the specified value
+        /// </summary>
+        /// <param name="value">The value</param>
         public static void PrintLine(object? value)
         {
             if (value == null)
@@ -31,28 +24,11 @@ namespace uhigh.StdLib
                 Console.WriteLine(value.ToString());
             }
         }
+
         /// <summary>
-        /// Prints a value to the console without a newline, handling null values gracefully.
+        /// Prints the value
         /// </summary>
-        /// <param name="value">The value to print. If null, prints "null".</param>
-        /// <remarks>
-        /// This method ensures that null values are printed as "null" instead of throwing an exception.
-        /// It uses the ToString() method of the value if it is not null.
-        /// </remarks>
-        /// <example>
-        /// Terminal.Print("Hello, World!"); // Outputs: Hello, World!
-        /// Terminal.Print(null); // Outputs: null
-        /// </example>
-        /// <seealso cref="PrintLine(object?)"/>
-        /// <seealso cref="ReadInput(string?)"/>
-        /// <returns>None</returns>
-        /// <exception cref="ArgumentNullException">Thrown if the value is null and cannot be converted to a string.</exception>
-        /// <exception cref="InvalidOperationException">Thrown if the value's ToString() method throws an exception.</exception>
-        /// <remarks>
-        /// This method is useful for printing values in a more compact format without line breaks.
-        /// </remarks>
-        /// <seealso cref="PrintLine(object?)"/>
-        /// <seealso cref="ReadInput(string?)"/>
+        /// <param name="value">The value</param>
         public static void Print(object? value)
         {
             if (value == null)
@@ -64,27 +40,12 @@ namespace uhigh.StdLib
                 Console.Write(value.ToString());
             }
         }
+
         /// <summary>
-        /// Reads input from the console with an optional prompt.       
+        /// Reads the input using the specified prompt
         /// </summary>
-        /// <param name="prompt">An optional prompt to display before reading input. If null, no prompt is displayed.</param>
-        /// <returns>The input read from the console as a string, or null if no input was provided.</returns>
-        /// <remarks>        This method allows you to prompt the user for input, making it more user-friendly.
-        /// If a prompt is provided, it will be displayed before waiting for input. If no prompt is provided, it simply waits for input without displaying anything.
-        /// </remarks>
-        /// <example>
-        /// var name = Terminal.ReadInput("Enter your name: ");
-        /// if name != null {
-        ///   Terminal.PrintLine($"Hello, {name}!");
-        /// /// } else {
-        ///  Terminal.PrintLine("No input provided.");
-        /// /// }
-        /// </example>
-        /// <seealso cref="PrintLine(object?)"/>
-        /// <seealso cref="Print(object?)"/>
-        /// <returns>The input read from the console as a string, or null if no input was provided.</returns>
-        /// <exception cref="IOException">Thrown if there is an error reading from the console.</exception>
-        
+        /// <param name="prompt">The prompt</param>
+        /// <returns>The string</returns>
         public static string? ReadInput(string? prompt = null)
         {
             if (prompt != null)

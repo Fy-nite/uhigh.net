@@ -6,29 +6,78 @@ using uhigh.Net.Diagnostics;
 
 namespace uhigh.Net.Parser
 {
+    /// <summary>
+    /// The attribute info class
+    /// </summary>
     public class AttributeInfo
     {
+        /// <summary>
+        /// Gets or sets the value of the name
+        /// </summary>
         public string Name { get; set; } = "";
+        /// <summary>
+        /// Gets or sets the value of the attribute type
+        /// </summary>
         public Type AttributeType { get; set; } = null!;
+        /// <summary>
+        /// Gets or sets the value of the parameters
+        /// </summary>
         public List<ParameterInfo> Parameters { get; set; } = new();
+        /// <summary>
+        /// Gets or sets the value of the valid targets
+        /// </summary>
         public AttributeTargets ValidTargets { get; set; }
+        /// <summary>
+        /// Gets or sets the value of the allow multiple
+        /// </summary>
         public bool AllowMultiple { get; set; }
+        /// <summary>
+        /// Gets or sets the value of the inherited
+        /// </summary>
         public bool Inherited { get; set; }
+        /// <summary>
+        /// Gets or sets the value of the description
+        /// </summary>
         public string? Description { get; set; }
         
+        /// <summary>
+        /// Cans the apply to using the specified target
+        /// </summary>
+        /// <param name="target">The target</param>
+        /// <returns>The bool</returns>
         public bool CanApplyTo(AttributeTargets target)
         {
             return ValidTargets.HasFlag(target);
         }
     }
 
+    /// <summary>
+    /// The reflection attribute resolver class
+    /// </summary>
     public class ReflectionAttributeResolver
     {
+        /// <summary>
+        /// The diagnostics
+        /// </summary>
         private readonly DiagnosticsReporter _diagnostics;
+        /// <summary>
+        /// The discovered attributes
+        /// </summary>
         private readonly Dictionary<string, List<AttributeInfo>> _discoveredAttributes = new();
+        /// <summary>
+        /// The scanned assemblies
+        /// </summary>
         private readonly HashSet<Assembly> _scannedAssemblies = new();
+        /// <summary>
+        /// The type resolver
+        /// </summary>
         private readonly ReflectionTypeResolver _typeResolver;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ReflectionAttributeResolver"/> class
+        /// </summary>
+        /// <param name="diagnostics">The diagnostics</param>
+        /// <param name="typeResolver">The type resolver</param>
         public ReflectionAttributeResolver(DiagnosticsReporter diagnostics, ReflectionTypeResolver typeResolver)
         {
             _diagnostics = diagnostics;
@@ -36,6 +85,9 @@ namespace uhigh.Net.Parser
             ScanDefaultAssemblies();
         }
 
+        /// <summary>
+        /// Scans the default assemblies
+        /// </summary>
         private void ScanDefaultAssemblies()
         {
             // Scan core .NET assemblies for attributes
@@ -58,6 +110,10 @@ namespace uhigh.Net.Parser
             _diagnostics.ReportInfo($"Discovered {_discoveredAttributes.Count} attribute types via reflection");
         }
 
+        /// <summary>
+        /// Scans the assembly using the specified assembly
+        /// </summary>
+        /// <param name="assembly">The assembly</param>
         public void ScanAssembly(Assembly assembly)
         {
             if (_scannedAssemblies.Contains(assembly))
@@ -84,6 +140,10 @@ namespace uhigh.Net.Parser
             }
         }
 
+        /// <summary>
+        /// Registers the attribute using the specified attribute type
+        /// </summary>
+        /// <param name="attributeType">The attribute type</param>
         private void RegisterAttribute(Type attributeType)
         {
             var name = attributeType.Name;
@@ -139,6 +199,11 @@ namespace uhigh.Net.Parser
             RegisterAttributeAliases(name, attributeInfo);
         }
 
+        /// <summary>
+        /// Registers the attribute aliases using the specified name
+        /// </summary>
+        /// <param name="name">The name</param>
+        /// <param name="attributeInfo">The attribute info</param>
         private void RegisterAttributeAliases(string name, AttributeInfo attributeInfo)
         {
             var aliases = name.ToLower() switch
@@ -166,6 +231,12 @@ namespace uhigh.Net.Parser
             }
         }
 
+        /// <summary>
+        /// Tries the resolve attribute using the specified attribute name
+        /// </summary>
+        /// <param name="attributeName">The attribute name</param>
+        /// <param name="attributeInfos">The attribute infos</param>
+        /// <returns>The bool</returns>
         public bool TryResolveAttribute(string attributeName, out List<AttributeInfo> attributeInfos)
         {
             attributeInfos = new List<AttributeInfo>();
@@ -210,6 +281,13 @@ namespace uhigh.Net.Parser
             return true; // Allow unknown attributes for now
         }
 
+        /// <summary>
+        /// Validates the attribute using the specified attribute
+        /// </summary>
+        /// <param name="attribute">The attribute</param>
+        /// <param name="target">The target</param>
+        /// <param name="location">The location</param>
+        /// <returns>The bool</returns>
         public bool ValidateAttribute(AttributeDeclaration attribute, AttributeTargets target, SourceLocation? location = null)
         {
             if (!TryResolveAttribute(attribute.Name, out var attributeInfos))
@@ -242,6 +320,13 @@ namespace uhigh.Net.Parser
             return ValidateAttributeArguments(attribute, attributeInfo, location);
         }
 
+        /// <summary>
+        /// Validates the attribute arguments using the specified attribute
+        /// </summary>
+        /// <param name="attribute">The attribute</param>
+        /// <param name="attributeInfo">The attribute info</param>
+        /// <param name="location">The location</param>
+        /// <returns>The bool</returns>
         private bool ValidateAttributeArguments(AttributeDeclaration attribute, AttributeInfo attributeInfo, SourceLocation? location)
         {
             var errorLocation = location ?? new SourceLocation(0, 0);
@@ -283,6 +368,12 @@ namespace uhigh.Net.Parser
             return true;
         }
 
+        /// <summary>
+        /// Ises the argument compatible using the specified argument
+        /// </summary>
+        /// <param name="argument">The argument</param>
+        /// <param name="parameterType">The parameter type</param>
+        /// <returns>The bool</returns>
         private bool IsArgumentCompatible(Expression argument, Type parameterType)
         {
             // Basic type compatibility checking
@@ -294,6 +385,12 @@ namespace uhigh.Net.Parser
             };
         }
 
+        /// <summary>
+        /// Ises the literal compatible using the specified literal
+        /// </summary>
+        /// <param name="literal">The literal</param>
+        /// <param name="parameterType">The parameter type</param>
+        /// <returns>The bool</returns>
         private bool IsLiteralCompatible(LiteralExpression literal, Type parameterType)
         {
             return literal.Value switch
@@ -307,11 +404,21 @@ namespace uhigh.Net.Parser
             };
         }
 
+        /// <summary>
+        /// Ises the nullable type using the specified type
+        /// </summary>
+        /// <param name="type">The type</param>
+        /// <returns>The bool</returns>
         private bool IsNullableType(Type type)
         {
             return type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>);
         }
 
+        /// <summary>
+        /// Gets the similar attributes using the specified attribute name
+        /// </summary>
+        /// <param name="attributeName">The attribute name</param>
+        /// <returns>A list of string</returns>
         public List<string> GetSimilarAttributes(string attributeName)
         {
             return _discoveredAttributes.Keys
@@ -320,11 +427,20 @@ namespace uhigh.Net.Parser
                 .ToList();
         }
 
+        /// <summary>
+        /// Gets the all attribute names
+        /// </summary>
+        /// <returns>An enumerable of string</returns>
         public IEnumerable<string> GetAllAttributeNames()
         {
             return _discoveredAttributes.Keys;
         }
 
+        /// <summary>
+        /// Gets the attributes for target using the specified target
+        /// </summary>
+        /// <param name="target">The target</param>
+        /// <returns>An enumerable of attribute info</returns>
         public IEnumerable<AttributeInfo> GetAttributesForTarget(AttributeTargets target)
         {
             return _discoveredAttributes.Values
@@ -333,6 +449,11 @@ namespace uhigh.Net.Parser
                 .Distinct();
         }
 
+        /// <summary>
+        /// Converts the to attribute target using the specified target type
+        /// </summary>
+        /// <param name="targetType">The target type</param>
+        /// <returns>The attribute targets</returns>
         public AttributeTargets ConvertToAttributeTarget(string targetType)
         {
             return targetType.ToLower() switch
@@ -351,6 +472,12 @@ namespace uhigh.Net.Parser
             };
         }
 
+        /// <summary>
+        /// Levenshteins the distance using the specified a
+        /// </summary>
+        /// <param name="a">The </param>
+        /// <param name="b">The </param>
+        /// <returns>The int</returns>
         private static int LevenshteinDistance(string a, string b)
         {
             if (string.IsNullOrEmpty(a)) return b?.Length ?? 0;
@@ -379,11 +506,25 @@ namespace uhigh.Net.Parser
         }
     }
 
+    /// <summary>
+    /// The source location class
+    /// </summary>
     public class SourceLocation
     {
+        /// <summary>
+        /// Gets or sets the value of the line
+        /// </summary>
         public int Line { get; set; }
+        /// <summary>
+        /// Gets or sets the value of the column
+        /// </summary>
         public int Column { get; set; }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SourceLocation"/> class
+        /// </summary>
+        /// <param name="line">The line</param>
+        /// <param name="column">The column</param>
         public SourceLocation(int line, int column)
         {
             Line = line;

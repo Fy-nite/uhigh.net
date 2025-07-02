@@ -1,9 +1,16 @@
-﻿using uhigh.Net;
+using uhigh.Net;
 using uhigh.Net.CommandLine;
 using CommandLine;
 
+/// <summary>
+/// The entry point class
+/// </summary>
 public class EntryPoint
 {
+    /// <summary>
+    /// Main the args
+    /// </summary>
+    /// <param name="args">The args</param>
     public static async Task Main(string[] args)
     {
         // Handle the case where user provides a file directly without a verb
@@ -53,6 +60,11 @@ public class EntryPoint
                 errors => HandleParseError(errors));
     }
 
+    /// <summary>
+    /// Ises the known verb using the specified arg
+    /// </summary>
+    /// <param name="arg">The arg</param>
+    /// <returns>The bool</returns>
     private static bool IsKnownVerb(string arg)
     {
         var knownVerbs = new[] { 
@@ -63,6 +75,11 @@ public class EntryPoint
         return knownVerbs.Contains(arg.ToLower());
     }
 
+    /// <summary>
+    /// Handles the compile command using the specified options
+    /// </summary>
+    /// <param name="options">The options</param>
+    /// <returns>A task containing the int</returns>
     private static async Task<int> HandleCompileCommand(CompileOptions options)
     {
         try
@@ -102,6 +119,11 @@ public class EntryPoint
         }
     }
 
+    /// <summary>
+    /// Handles the create command using the specified options
+    /// </summary>
+    /// <param name="options">The options</param>
+    /// <returns>A task containing the int</returns>
     private static async Task<int> HandleCreateCommand(CreateOptions options)
     {
         try
@@ -124,6 +146,11 @@ public class EntryPoint
         }
     }
 
+    /// <summary>
+    /// Handles the build command using the specified options
+    /// </summary>
+    /// <param name="options">The options</param>
+    /// <returns>A task containing the int</returns>
     private static async Task<int> HandleBuildCommand(BuildOptions options)
     {
         try
@@ -160,6 +187,11 @@ public class EntryPoint
         }
     }
 
+    /// <summary>
+    /// Handles the run command using the specified options
+    /// </summary>
+    /// <param name="options">The options</param>
+    /// <returns>A task containing the int</returns>
     private static async Task<int> HandleRunCommand(RunOptions options)
     {
         try
@@ -191,6 +223,11 @@ public class EntryPoint
         }
     }
 
+    /// <summary>
+    /// Handles the info command using the specified options
+    /// </summary>
+    /// <param name="options">The options</param>
+    /// <returns>A task containing the int</returns>
     private static async Task<int> HandleInfoCommand(InfoOptions options)
     {
         try
@@ -213,6 +250,11 @@ public class EntryPoint
         }
     }
 
+    /// <summary>
+    /// Handles the add file command using the specified options
+    /// </summary>
+    /// <param name="options">The options</param>
+    /// <returns>A task containing the int</returns>
     private static async Task<int> HandleAddFileCommand(AddFileOptions options)
     {
         try
@@ -235,6 +277,11 @@ public class EntryPoint
         }
     }
 
+    /// <summary>
+    /// Handles the add package command using the specified options
+    /// </summary>
+    /// <param name="options">The options</param>
+    /// <returns>A task containing the int</returns>
     private static async Task<int> HandleAddPackageCommand(AddPackageOptions options)
     {
         try
@@ -257,6 +304,11 @@ public class EntryPoint
         }
     }
 
+    /// <summary>
+    /// Handles the install packages command using the specified options
+    /// </summary>
+    /// <param name="options">The options</param>
+    /// <returns>A task containing the int</returns>
     private static async Task<int> HandleInstallPackagesCommand(InstallPackagesOptions options)
     {
         try
@@ -292,6 +344,11 @@ public class EntryPoint
         }
     }
 
+    /// <summary>
+    /// Handles the search packages command using the specified options
+    /// </summary>
+    /// <param name="options">The options</param>
+    /// <returns>A task containing the int</returns>
     private static async Task<int> HandleSearchPackagesCommand(SearchPackagesOptions options)
     {
         try
@@ -327,6 +384,11 @@ public class EntryPoint
         }
     }
 
+    /// <summary>
+    /// Handles the list packages command using the specified options
+    /// </summary>
+    /// <param name="options">The options</param>
+    /// <returns>A task containing the int</returns>
     private static async Task<int> HandleListPackagesCommand(ListPackagesOptions options)
     {
         try
@@ -359,6 +421,11 @@ public class EntryPoint
         }
     }
 
+    /// <summary>
+    /// Handles the restore packages command using the specified options
+    /// </summary>
+    /// <param name="options">The options</param>
+    /// <returns>A task containing the int</returns>
     private static async Task<int> HandleRestorePackagesCommand(RestorePackagesOptions options)
     {
         try
@@ -392,6 +459,11 @@ public class EntryPoint
         }
     }
 
+    /// <summary>
+    /// Handles the ast command using the specified options
+    /// </summary>
+    /// <param name="options">The options</param>
+    /// <returns>A task containing the int</returns>
     private static async Task<int> HandleAstCommand(AstOptions options)
     {
         try
@@ -407,6 +479,11 @@ public class EntryPoint
         }
     }
 
+    /// <summary>
+    /// Handles the lsp command using the specified options
+    /// </summary>
+    /// <param name="options">The options</param>
+    /// <returns>A task containing the int</returns>
     private static async Task<int> HandleLspCommand(LspOptions options)
     {
         // For now, redirect to the simple LSP test
@@ -414,6 +491,11 @@ public class EntryPoint
         return 0;
     }
 
+    /// <summary>
+    /// Handles the test command using the specified options
+    /// </summary>
+    /// <param name="options">The options</param>
+    /// <returns>A task containing the int</returns>
     private static async Task<int> HandleTestCommand(TestOptions options)
     {
         try
@@ -434,6 +516,11 @@ public class EntryPoint
         }
     }
 
+    /// <summary>
+    /// Handles the repl command using the specified options
+    /// </summary>
+    /// <param name="options">The options</param>
+    /// <returns>A task containing the int</returns>
     private static async Task<int> HandleReplCommand(ReplOptions options)
     {
         try
@@ -459,6 +546,11 @@ public class EntryPoint
         }
     }
 
+    /// <summary>
+    /// Handles the parse error using the specified errors
+    /// </summary>
+    /// <param name="errors">The errors</param>
+    /// <returns>A task containing the int</returns>
     private static async Task<int> HandleParseError(IEnumerable<Error> errors)
     {
         var errorsList = errors.ToList();
@@ -475,6 +567,10 @@ public class EntryPoint
         return 1;
     }
 
+    /// <summary>
+    /// Writes the error using the specified message
+    /// </summary>
+    /// <param name="message">The message</param>
     private static void WriteError(string message)
     {
         Console.ForegroundColor = ConsoleColor.Red;

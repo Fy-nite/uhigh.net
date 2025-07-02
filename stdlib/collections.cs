@@ -129,11 +129,26 @@ namespace uhigh.StdLib
         }
     }
 
+    /// <summary>
+    /// The array diff class
+    /// </summary>
     public class ArrayDiff<T>
     {
+        /// <summary>
+        /// Gets or sets the value of the added
+        /// </summary>
         public List<T> Added { get; set; } = new();
+        /// <summary>
+        /// Gets or sets the value of the removed
+        /// </summary>
         public List<T> Removed { get; set; } = new();
+        /// <summary>
+        /// Gets or sets the value of the common
+        /// </summary>
         public List<T> Common { get; set; } = new();
+        /// <summary>
+        /// Gets or sets the value of the has changes
+        /// </summary>
         public bool HasChanges { get; set; }
     }
 
@@ -142,14 +157,28 @@ namespace uhigh.StdLib
     /// </summary>
     public class TemporalConcurrentList<T> where T : class
     {
+        /// <summary>
+        /// The lock
+        /// </summary>
         private readonly object _lock = new object();
+        /// <summary>
+        /// The temporal
+        /// </summary>
         private readonly Temporal<List<T>> _temporal;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="TemporalConcurrentList{T}"/> class
+        /// </summary>
         public TemporalConcurrentList()
         {
             _temporal = new Temporal<List<T>>(new List<T>());
         }
 
+        /// <summary>
+        /// Adds the item
+        /// </summary>
+        /// <param name="item">The item</param>
+        /// <param name="reason">The reason</param>
         public void Add(T item, string? reason = null)
         {
             lock (_lock)
@@ -159,6 +188,11 @@ namespace uhigh.StdLib
             }
         }
 
+        /// <summary>
+        /// Removes the item
+        /// </summary>
+        /// <param name="item">The item</param>
+        /// <param name="reason">The reason</param>
         public void Remove(T item, string? reason = null)
         {
             lock (_lock)
@@ -169,8 +203,22 @@ namespace uhigh.StdLib
             }
         }
 
+        /// <summary>
+        /// Gets the snapshot
+        /// </summary>
+        /// <returns>A list of t</returns>
         public List<T> GetSnapshot() => new List<T>(_temporal.Current);
+        /// <summary>
+        /// Gets the seconds ago using the specified seconds
+        /// </summary>
+        /// <param name="seconds">The seconds</param>
+        /// <returns>A list of t</returns>
         public List<T>? GetSecondsAgo(double seconds) => _temporal.GetSecondsAgo(seconds);
+        /// <summary>
+        /// Gets the minutes ago using the specified minutes
+        /// </summary>
+        /// <param name="minutes">The minutes</param>
+        /// <returns>A list of t</returns>
         public List<T>? GetMinutesAgo(double minutes) => _temporal.GetMinutesAgo(minutes);
     }
 }

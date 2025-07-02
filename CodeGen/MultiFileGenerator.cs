@@ -5,18 +5,43 @@ using System.Text;
 
 namespace uhigh.Net.CodeGen
 {
+    /// <summary>
+    /// The multi file generator class
+    /// </summary>
     public class MultiFileGenerator
     {
+        /// <summary>
+        /// The diagnostics
+        /// </summary>
         private readonly DiagnosticsReporter _diagnostics;
+        /// <summary>
+        /// The files
+        /// </summary>
         private readonly Dictionary<string, StringBuilder> _files = new();
+        /// <summary>
+        /// The global usings
+        /// </summary>
         private readonly HashSet<string> _globalUsings = new();
+        /// <summary>
+        /// The import mappings
+        /// </summary>
         private readonly Dictionary<string, string> _importMappings = new();
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MultiFileGenerator"/> class
+        /// </summary>
+        /// <param name="diagnostics">The diagnostics</param>
         public MultiFileGenerator(DiagnosticsReporter? diagnostics = null)
         {
             _diagnostics = diagnostics ?? new DiagnosticsReporter();
         }
 
+        /// <summary>
+        /// Generates the program
+        /// </summary>
+        /// <param name="program">The program</param>
+        /// <param name="outputDirectory">The output directory</param>
+        /// <returns>The result</returns>
         public Dictionary<string, string> Generate(Program program, string outputDirectory = "output")
         {
             _files.Clear();
@@ -42,6 +67,10 @@ namespace uhigh.Net.CodeGen
             return result;
         }
 
+        /// <summary>
+        /// Processes the imports using the specified program
+        /// </summary>
+        /// <param name="program">The program</param>
         private void ProcessImports(Program program)
         {
             if (program.Statements == null) return;
@@ -57,6 +86,10 @@ namespace uhigh.Net.CodeGen
             _globalUsings.Add("System.Linq");
         }
 
+        /// <summary>
+        /// Processes the import statement using the specified import
+        /// </summary>
+        /// <param name="import">The import</param>
         private void ProcessImportStatement(ImportStatement import)
         {
             if (import.AssemblyName.EndsWith(".dll"))
@@ -74,6 +107,10 @@ namespace uhigh.Net.CodeGen
             }
         }
 
+        /// <summary>
+        /// Generates the files using the specified program
+        /// </summary>
+        /// <param name="program">The program</param>
         private void GenerateFiles(Program program)
         {
             if (program.Statements == null) return;
@@ -87,6 +124,11 @@ namespace uhigh.Net.CodeGen
             }
         }
 
+        /// <summary>
+        /// Groups the statements by file using the specified statements
+        /// </summary>
+        /// <param name="statements">The statements</param>
+        /// <returns>The groups</returns>
         private Dictionary<string, List<Statement>> GroupStatementsByFile(List<Statement> statements)
         {
             var groups = new Dictionary<string, List<Statement>>();
@@ -106,6 +148,11 @@ namespace uhigh.Net.CodeGen
             return groups;
         }
 
+        /// <summary>
+        /// Gets the file name for statement using the specified statement
+        /// </summary>
+        /// <param name="statement">The statement</param>
+        /// <returns>The string</returns>
         private string GetFileNameForStatement(Statement statement)
         {
             return statement switch
@@ -119,6 +166,11 @@ namespace uhigh.Net.CodeGen
             };
         }
 
+        /// <summary>
+        /// Generates the file using the specified file name
+        /// </summary>
+        /// <param name="fileName">The file name</param>
+        /// <param name="statements">The statements</param>
         private void GenerateFile(string fileName, List<Statement> statements)
         {
             var output = new StringBuilder();
@@ -203,6 +255,11 @@ namespace uhigh.Net.CodeGen
             _files[fileName] = output;
         }
 
+        /// <summary>
+        /// Generates the namespace using the specified output
+        /// </summary>
+        /// <param name="output">The output</param>
+        /// <param name="nsDecl">The ns decl</param>
         private void GenerateNamespace(StringBuilder output, NamespaceDeclaration nsDecl)
         {
             output.AppendLine($"namespace {nsDecl.Name}");
@@ -217,6 +274,12 @@ namespace uhigh.Net.CodeGen
             output.AppendLine();
         }
 
+        /// <summary>
+        /// Generates the output
+        /// </summary>
+        /// <param name="output">The output</param>
+        /// <param name="classDecl">The class decl</param>
+        /// <param name="indentLevel">The indent level</param>
         private void GenerateClass(StringBuilder output, ClassDeclaration classDecl, int indentLevel)
         {
             Indent(output, indentLevel);
@@ -252,6 +315,12 @@ namespace uhigh.Net.CodeGen
             output.AppendLine();
         }
 
+        /// <summary>
+        /// Generates the statement using the specified output
+        /// </summary>
+        /// <param name="output">The output</param>
+        /// <param name="statement">The statement</param>
+        /// <param name="indentLevel">The indent level</param>
         private void GenerateStatement(StringBuilder output, Statement statement, int indentLevel)
         {
             switch (statement)
@@ -279,6 +348,12 @@ namespace uhigh.Net.CodeGen
             }
         }
 
+        /// <summary>
+        /// Generates the method using the specified output
+        /// </summary>
+        /// <param name="output">The output</param>
+        /// <param name="methodDecl">The method decl</param>
+        /// <param name="indentLevel">The indent level</param>
         private void GenerateMethod(StringBuilder output, MethodDeclaration methodDecl, int indentLevel)
         {
             if (methodDecl.Attributes.Any(attr => attr.IsExternal || attr.IsDotNetFunc))
@@ -309,6 +384,12 @@ namespace uhigh.Net.CodeGen
             output.AppendLine();
         }
 
+        /// <summary>
+        /// Generates the field using the specified output
+        /// </summary>
+        /// <param name="output">The output</param>
+        /// <param name="fieldDecl">The field decl</param>
+        /// <param name="indentLevel">The indent level</param>
         private void GenerateField(StringBuilder output, FieldDeclaration fieldDecl, int indentLevel)
         {
             Indent(output, indentLevel);
@@ -326,6 +407,12 @@ namespace uhigh.Net.CodeGen
             output.AppendLine($"{fieldType} {fieldDecl.Name};");
         }
 
+        /// <summary>
+        /// Generates the property using the specified output
+        /// </summary>
+        /// <param name="output">The output</param>
+        /// <param name="propDecl">The prop decl</param>
+        /// <param name="indentLevel">The indent level</param>
         private void GenerateProperty(StringBuilder output, PropertyDeclaration propDecl, int indentLevel)
         {
             Indent(output, indentLevel);
@@ -333,6 +420,12 @@ namespace uhigh.Net.CodeGen
             output.AppendLine($"public {propType} {propDecl.Name} {{ get; set; }}");
         }
 
+        /// <summary>
+        /// Generates the function using the specified output
+        /// </summary>
+        /// <param name="output">The output</param>
+        /// <param name="funcDecl">The func decl</param>
+        /// <param name="indentLevel">The indent level</param>
         private void GenerateFunction(StringBuilder output, FunctionDeclaration funcDecl, int indentLevel)
         {
             if (funcDecl.Attributes.Any(attr => attr.IsExternal || attr.IsDotNetFunc))
@@ -363,6 +456,12 @@ namespace uhigh.Net.CodeGen
             output.AppendLine();
         }
 
+        /// <summary>
+        /// Generates the main function using the specified output
+        /// </summary>
+        /// <param name="output">The output</param>
+        /// <param name="mainFunc">The main func</param>
+        /// <param name="indentLevel">The indent level</param>
         private void GenerateMainFunction(StringBuilder output, FunctionDeclaration mainFunc, int indentLevel)
         {
             Indent(output, indentLevel);
@@ -376,6 +475,12 @@ namespace uhigh.Net.CodeGen
             output.AppendLine();
         }
 
+        /// <summary>
+        /// Generates the main method using the specified output
+        /// </summary>
+        /// <param name="output">The output</param>
+        /// <param name="statements">The statements</param>
+        /// <param name="indentLevel">The indent level</param>
         private void GenerateMainMethod(StringBuilder output, List<Statement> statements, int indentLevel)
         {
             Indent(output, indentLevel);
@@ -389,6 +494,11 @@ namespace uhigh.Net.CodeGen
             output.AppendLine();
         }
 
+        /// <summary>
+        /// Generates the built in functions using the specified output
+        /// </summary>
+        /// <param name="output">The output</param>
+        /// <param name="indentLevel">The indent level</param>
         private void GenerateBuiltInFunctions(StringBuilder output, int indentLevel)
         {
             string[] builtIns = {
@@ -406,6 +516,11 @@ namespace uhigh.Net.CodeGen
             output.AppendLine();
         }
 
+        /// <summary>
+        /// Generates the type alias using the specified output
+        /// </summary>
+        /// <param name="output">The output</param>
+        /// <param name="alias">The alias</param>
         private void GenerateTypeAlias(StringBuilder output, TypeAliasDeclaration alias)
         {
             output.Append("using ");
@@ -416,6 +531,11 @@ namespace uhigh.Net.CodeGen
             output.AppendLine(";");
         }
 
+        /// <summary>
+        /// Converts the type annotation using the specified type ann
+        /// </summary>
+        /// <param name="typeAnn">The type ann</param>
+        /// <returns>The string</returns>
         private string ConvertTypeAnnotation(TypeAnnotation typeAnn)
         {
             // Handle array types first
@@ -435,6 +555,11 @@ namespace uhigh.Net.CodeGen
             return ConvertType(typeAnn.Name);
         }
 
+        /// <summary>
+        /// Converts the type using the specified type
+        /// </summary>
+        /// <param name="type">The type</param>
+        /// <returns>The string</returns>
         private string ConvertType(string type)
         {
             // Handle array types first
@@ -475,6 +600,11 @@ namespace uhigh.Net.CodeGen
             };
         }
 
+        /// <summary>
+        /// Indents the output
+        /// </summary>
+        /// <param name="output">The output</param>
+        /// <param name="level">The level</param>
         private void Indent(StringBuilder output, int level)
         {
             output.Append(new string('\t', level));

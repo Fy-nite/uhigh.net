@@ -6,15 +6,31 @@ using System.Text.RegularExpressions;
 
 namespace uhigh.Net.NuGet
 {
+    /// <summary>
+    /// The nu get manager class
+    /// </summary>
     public class NuGetManager
     {
+        /// <summary>
+        /// The diagnostics
+        /// </summary>
         private readonly DiagnosticsReporter _diagnostics;
+        /// <summary>
+        /// The global packages path
+        /// </summary>
         private readonly string _globalPackagesPath;
+        /// <summary>
+        /// The default sources
+        /// </summary>
         private readonly string[] _defaultSources = {
             "https://api.nuget.org/v3-flatcontainer/",
             "https://api.nuget.org/v3/index.json"
         };
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="NuGetManager"/> class
+        /// </summary>
+        /// <param name="diagnostics">The diagnostics</param>
         public NuGetManager(DiagnosticsReporter? diagnostics = null)
         {
             _diagnostics = diagnostics ?? new DiagnosticsReporter();
@@ -24,6 +40,13 @@ namespace uhigh.Net.NuGet
                 ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".nuget", "packages");
         }
 
+        /// <summary>
+        /// Restores the packages using the specified project
+        /// </summary>
+        /// <param name="project">The project</param>
+        /// <param name="projectDir">The project dir</param>
+        /// <param name="force">The force</param>
+        /// <returns>A task containing the bool</returns>
         public async Task<bool> RestorePackagesAsync(uhighProject project, string projectDir, bool force = false)
         {
             try
@@ -60,6 +83,13 @@ namespace uhigh.Net.NuGet
             }
         }
 
+        /// <summary>
+        /// Restores the package using the specified package
+        /// </summary>
+        /// <param name="package">The package</param>
+        /// <param name="projectDir">The project dir</param>
+        /// <param name="force">The force</param>
+        /// <returns>A task containing the bool</returns>
         private async Task<bool> RestorePackageAsync(PackageReference package, string projectDir, bool force)
         {
             try
@@ -88,6 +118,12 @@ namespace uhigh.Net.NuGet
             }
         }
 
+        /// <summary>
+        /// Tries the dot net restore using the specified package
+        /// </summary>
+        /// <param name="package">The package</param>
+        /// <param name="projectDir">The project dir</param>
+        /// <returns>A task containing the bool</returns>
         private async Task<bool> TryDotNetRestoreAsync(PackageReference package, string projectDir)
         {
             try
@@ -132,6 +168,11 @@ namespace uhigh.Net.NuGet
             }
         }
 
+        /// <summary>
+        /// Downloads the package directly using the specified package
+        /// </summary>
+        /// <param name="package">The package</param>
+        /// <returns>A task containing the bool</returns>
         private async Task<bool> DownloadPackageDirectlyAsync(PackageReference package)
         {
             try
@@ -174,6 +215,12 @@ namespace uhigh.Net.NuGet
             }
         }
 
+        /// <summary>
+        /// Gets the package assemblies using the specified package
+        /// </summary>
+        /// <param name="package">The package</param>
+        /// <param name="targetFramework">The target framework</param>
+        /// <returns>The assemblies</returns>
         public async Task<List<string>> GetPackageAssembliesAsync(PackageReference package, string targetFramework = "net8.0")
         {
             var assemblies = new List<string>();
@@ -234,6 +281,12 @@ namespace uhigh.Net.NuGet
             return assemblies;
         }
 
+        /// <summary>
+        /// Ises the compatible framework using the specified package framework
+        /// </summary>
+        /// <param name="packageFramework">The package framework</param>
+        /// <param name="targetFramework">The target framework</param>
+        /// <returns>The bool</returns>
         private bool IsCompatibleFramework(string packageFramework, string targetFramework)
         {
             // Simplified framework compatibility check
@@ -247,6 +300,11 @@ namespace uhigh.Net.NuGet
             return packageParts.version <= targetParts.version;
         }
 
+        /// <summary>
+        /// Parses the framework using the specified framework
+        /// </summary>
+        /// <param name="framework">The framework</param>
+        /// <returns>The string name version version</returns>
         private (string name, Version version) ParseFramework(string framework)
         {
             // Parse frameworks like "net8.0", "netstandard2.0", "net48", etc.
@@ -263,6 +321,11 @@ namespace uhigh.Net.NuGet
             return ("unknown", new Version(0, 0));
         }
 
+        /// <summary>
+        /// Gets the framework priority using the specified framework
+        /// </summary>
+        /// <param name="framework">The framework</param>
+        /// <returns>The int</returns>
         private int GetFrameworkPriority(string framework)
         {
             // Higher number = higher priority
@@ -277,6 +340,12 @@ namespace uhigh.Net.NuGet
             return 0;
         }
 
+        /// <summary>
+        /// Searches the packages using the specified search term
+        /// </summary>
+        /// <param name="searchTerm">The search term</param>
+        /// <param name="take">The take</param>
+        /// <returns>A task containing a list of package search result</returns>
         public async Task<List<PackageSearchResult>> SearchPackagesAsync(string searchTerm, int take = 10)
         {
             try
@@ -321,32 +390,89 @@ namespace uhigh.Net.NuGet
         }
     }
 
+    /// <summary>
+    /// The package search result class
+    /// </summary>
     public class PackageSearchResult
     {
+        /// <summary>
+        /// Gets or sets the value of the id
+        /// </summary>
         public string Id { get; set; } = "";
+        /// <summary>
+        /// Gets or sets the value of the version
+        /// </summary>
         public string Version { get; set; } = "";
+        /// <summary>
+        /// Gets or sets the value of the description
+        /// </summary>
         public string Description { get; set; } = "";
+        /// <summary>
+        /// Gets or sets the value of the authors
+        /// </summary>
         public List<string> Authors { get; set; } = new();
+        /// <summary>
+        /// Gets or sets the value of the tags
+        /// </summary>
         public List<string> Tags { get; set; } = new();
+        /// <summary>
+        /// Gets or sets the value of the total downloads
+        /// </summary>
         public long TotalDownloads { get; set; }
+        /// <summary>
+        /// Gets or sets the value of the project url
+        /// </summary>
         public string? ProjectUrl { get; set; }
     }
 
     // JSON response models for NuGet API
+    /// <summary>
+    /// The nu get search response class
+    /// </summary>
     public class NuGetSearchResponse
     {
+        /// <summary>
+        /// Gets or sets the value of the total hits
+        /// </summary>
         public int TotalHits { get; set; }
+        /// <summary>
+        /// Gets or sets the value of the data
+        /// </summary>
         public List<NuGetPackage>? Data { get; set; }
     }
 
+    /// <summary>
+    /// The nu get package class
+    /// </summary>
     public class NuGetPackage
     {
+        /// <summary>
+        /// Gets or sets the value of the id
+        /// </summary>
         public string? Id { get; set; }
+        /// <summary>
+        /// Gets or sets the value of the version
+        /// </summary>
         public string? Version { get; set; }
+        /// <summary>
+        /// Gets or sets the value of the description
+        /// </summary>
         public string? Description { get; set; }
+        /// <summary>
+        /// Gets or sets the value of the authors
+        /// </summary>
         public string[]? Authors { get; set; }
+        /// <summary>
+        /// Gets or sets the value of the tags
+        /// </summary>
         public string[]? Tags { get; set; }
+        /// <summary>
+        /// Gets or sets the value of the total downloads
+        /// </summary>
         public long? TotalDownloads { get; set; }
+        /// <summary>
+        /// Gets or sets the value of the project url
+        /// </summary>
         public string? ProjectUrl { get; set; }
     }
 }
