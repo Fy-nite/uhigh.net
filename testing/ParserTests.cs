@@ -7,9 +7,10 @@ namespace uhigh.Net.Testing
 {
     public class ParserTests
     {
+        // Add helper method for parsing source code
         private Program ParseSource(string source)
         {
-            var diagnostics = new DiagnosticsReporter();
+            var diagnostics = new uhigh.Net.Diagnostics.DiagnosticsReporter();
             var lexer = new uhigh.Net.Lexer.Lexer(source, diagnostics);
             var tokens = lexer.Tokenize();
             var parser = new uhigh.Net.Parser.Parser(tokens, diagnostics);
@@ -228,14 +229,39 @@ namespace uhigh.Net.Testing
                 }
             }
             
-            // Test external attribute
-            if (funcDecl.Attributes?.Count > 0)
-            {
-                Assert.AreEqual("external", funcDecl.Attributes[0].Name);
-                Assert.IsTrue(funcDecl.Attributes[0].IsExternal);
-            }
+            // Test external attribute - be more defensive
+            Assert.IsNotNull(funcDecl.Attributes, "Function should have attributes");
+            Assert.IsTrue(funcDecl.Attributes.Count > 0, "Should have at least one attribute");
+            
+            // Find the external attribute specifically
+            var externalAttr = funcDecl.Attributes.FirstOrDefault(attr => 
+                attr.Name.Equals("external", StringComparison.OrdinalIgnoreCase));
+            Assert.IsNotNull(externalAttr, "Should have an external attribute");
+            Assert.IsTrue(externalAttr.IsExternal, "Attribute should be marked as external");
             
             Assert.AreEqual("Console.WriteLine", funcDecl.Name);
+        }
+
+        [Test]
+        public void TestPrintAttributeParsing()
+        {
+            var program = ParseSource(@"
+                [PrintAttribute(""Test message"")]
+                func testFunction(): void {}");
+
+            Assert.AreEqual(1, program.Statements.Count);
+            Assert.IsTrue(program.Statements[0] is FunctionDeclaration);
+            
+            var funcDecl = (FunctionDeclaration)program.Statements[0];
+            
+            Assert.IsNotNull(funcDecl.Attributes);
+            Assert.AreEqual(1, funcDecl.Attributes.Count);
+            Assert.AreEqual("PrintAttribute", funcDecl.Attributes[0].Name);
+            Assert.AreEqual(1, funcDecl.Attributes[0].Arguments.Count);
+            Assert.IsTrue(funcDecl.Attributes[0].Arguments[0] is LiteralExpression);
+            
+            var arg = (LiteralExpression)funcDecl.Attributes[0].Arguments[0];
+            Assert.AreEqual("Test message", arg.Value);
         }
 
         [Test]

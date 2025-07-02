@@ -10,12 +10,14 @@ namespace uhigh.Net.Parser
         private int _current = 0;
         private readonly DiagnosticsReporter _diagnostics;
         private readonly MethodChecker _methodChecker;
+        private readonly ReflectionAttributeResolver _attributeResolver;
 
-        public Parser(List<Token> tokens, DiagnosticsReporter? diagnostics = null)
+        public Parser(List<Token> tokens, DiagnosticsReporter? diagnostics = null, bool verboseMode = false)
         {
             _tokens = tokens;
-            _diagnostics = diagnostics ?? new DiagnosticsReporter();
+            _diagnostics = diagnostics ?? new DiagnosticsReporter(verboseMode);
             _methodChecker = new MethodChecker(_diagnostics);
+            _attributeResolver = _methodChecker.GetAttributeResolver();
         }
 
         public Program Parse()
@@ -131,6 +133,7 @@ namespace uhigh.Net.Parser
                         {
                             Name = fullClassName,
                             Modifiers = modifiers,
+                            Attributes = attributes, // Add this
                             Members = new List<Statement>()
                         };
 
@@ -274,6 +277,11 @@ namespace uhigh.Net.Parser
                                 returnType = "bool";
                                 Advance();
                             }
+                            else if (Check(TokenType.Void))
+                            {
+                                returnType = "void";
+                                Advance();
+                            }
                             else
                             {
                                 returnType = Consume(TokenType.Identifier, "Expected return type").Value;
@@ -317,11 +325,17 @@ namespace uhigh.Net.Parser
         {
             try
             {
-                // Gather attributes
+                // Gather attributes FIRST - this is critical
                 var attributes = new List<AttributeDeclaration>();
                 while (Check(TokenType.LeftBracket))
                 {
                     attributes.Add(ParseAttribute());
+                }
+
+                // Debug: Log what we found after parsing attributes
+                if (attributes.Count > 0)
+                {
+                    _diagnostics.ReportInfo($"Parsed {attributes.Count} attributes, next token: {Peek().Type} '{Peek().Value}'");
                 }
 
                 // Gather modifiers
@@ -331,6 +345,41 @@ namespace uhigh.Net.Parser
                     modifiers.Add(Advance().Value);
                 }
 
+                // After parsing attributes and modifiers, we MUST have a valid statement
+                if (attributes.Count > 0 || modifiers.Count > 0)
+                {
+                    // We have attributes or modifiers, so we need a declaration
+                    if (Match(TokenType.Type)) return ParseTypeAliasDeclaration(modifiers);
+                    if (Match(TokenType.Class))
+                    {
+                        var classDecl = ParseClassDeclaration() as ClassDeclaration;
+                        if (classDecl != null)
+                        {
+                            classDecl.Modifiers.AddRange(modifiers);
+                            classDecl.Attributes.AddRange(attributes);
+                        }
+                        return classDecl;
+                    }
+                    if (Match(TokenType.Func))
+                    {
+                        var funcDecl = ParseFunctionDeclaration() as FunctionDeclaration;
+                        if (funcDecl != null)
+                        {
+                            funcDecl.Attributes = attributes;
+                            funcDecl.Modifiers = modifiers;
+                        }
+                        return funcDecl;
+                    }
+                    if (Match(TokenType.Enum)) return ParseEnumDeclaration(modifiers);
+                    if (Match(TokenType.Interface)) return ParseInterfaceDeclaration(modifiers);
+                    if (Match(TokenType.Namespace)) return ParseNamespaceDeclaration();
+                    
+                    // If we have attributes/modifiers but no valid declaration keyword, that's an error
+                    _diagnostics.ReportParseError($"Expected declaration after attributes/modifiers, but found '{Peek().Value}'", Peek());
+                    return null;
+                }
+
+                // No attributes or modifiers, parse normal statements
                 if (Match(TokenType.Type)) return ParseTypeAliasDeclaration(modifiers);
                 if (Match(TokenType.Include)) return ParseIncludeStatement();
                 if (Match(TokenType.Import)) return ParseImportStatement();
@@ -371,7 +420,6 @@ namespace uhigh.Net.Parser
                 if (Match(TokenType.Match)) return ParseMatchStatement();
 
                 // Check for using statements without the 'using' keyword (legacy support)
-                // Look ahead to see if this is "Using System" pattern
                 if (Check(TokenType.Identifier) && Peek().Value.Equals("Using", StringComparison.OrdinalIgnoreCase))
                 {
                     Advance(); // consume "Using"
@@ -396,12 +444,6 @@ namespace uhigh.Net.Parser
                         };
                     }
                 }
-
-                // if (Match(TokenType.Switch)) return ParseSwitchStatement();
-                // if (Match(TokenType.Struct)) return ParseStructDeclaration();
-                // if (Match(TokenType.Module)) return ParseModuleDeclaration();
-                // if (Match(TokenType.Let)) return ParseLetDeclaration();
-                // if (Match(TokenType.Loop)) return ParseLoopStatement();
 
                 return ParseExpressionStatement();
             }
@@ -627,6 +669,13 @@ namespace uhigh.Net.Parser
             }
             else
             {
+                // Check for attributes that shouldn't be parsed as type names
+                if (Check(TokenType.LeftBracket))
+                {
+                    _diagnostics.ReportParseError("Attributes cannot appear in type context", Peek());
+                    throw new ParseException("Unexpected attribute in type context");
+                }
+                
                 typeName = Consume(TokenType.Identifier, "Expected type name").Value;
             }
             
@@ -1545,6 +1594,34 @@ namespace uhigh.Net.Parser
             if (Match(TokenType.False))
                 return new LiteralExpression { Value = false, Type = TokenType.False };
 
+            // Check for potential attributes at expression level
+            if (Check(TokenType.LeftBracket))
+            {
+                // Look ahead to see if this might be an attribute
+                var nextToken = _current + 1 < _tokens.Count ? _tokens[_current + 1] : null;
+                if (nextToken != null && nextToken.Type == TokenType.Identifier)
+                {
+                    // Check if the token after the identifier suggests this is an attribute
+                    var tokenAfterIdent = _current + 2 < _tokens.Count ? _tokens[_current + 2] : null;
+                    if (tokenAfterIdent != null && 
+                        (tokenAfterIdent.Type == TokenType.RightBracket || 
+                         tokenAfterIdent.Type == TokenType.LeftParen))
+                    {
+                        // This looks like an attribute, but we're in expression context
+                        // This might be a parsing error - attributes should be at statement level
+                        _diagnostics.ReportParseError("Attributes cannot appear in expression context", Peek());
+                        // Skip the malformed attribute and continue
+                        while (!Check(TokenType.RightBracket) && !IsAtEnd())
+                        {
+                            Advance();
+                        }
+                        if (Check(TokenType.RightBracket)) Advance();
+                        return ParsePrimary(); // Try again
+                    }
+                }
+                // If not an attribute, fall through to array parsing
+            }
+
             // Add support for range expressions
             if (Match(TokenType.Range))
             {
@@ -1643,6 +1720,7 @@ namespace uhigh.Net.Parser
                     return new IdentifierExpression { Name = identifier };
                 }
             }
+            
 
             if (Match(TokenType.LeftParen))
             {
@@ -1667,6 +1745,8 @@ namespace uhigh.Net.Parser
                 return new ArrayExpression { Elements = elements };
             }
 
+            // last thing, turn everything into expression and return it
+            
             throw new ParseException($"Unexpected token: {Peek().Value}");
         }
 
@@ -1904,7 +1984,27 @@ namespace uhigh.Net.Parser
         private AttributeDeclaration ParseAttribute()
         {
             Consume(TokenType.LeftBracket, "Expected '['");
-            var name = Consume(TokenType.Identifier, "Expected attribute name").Value;
+            
+            // Be more flexible about attribute names - accept any token that could be an identifier
+            var nameToken = Peek();
+            string name;
+            
+            if (nameToken.Type == TokenType.Identifier)
+            {
+                name = Advance().Value;
+            }
+            else
+            {
+                // Try to handle cases where keywords might be used as attribute names
+                var currentToken = Advance();
+                name = currentToken.Value;
+                
+                // Log for debugging - but be more specific about what we're handling
+                if (currentToken.Type != TokenType.Identifier)
+                {
+                    _diagnostics.ReportInfo($"Using non-identifier token as attribute name: '{name}' (Type: {currentToken.Type})");
+                }
+            }
 
             var arguments = new List<Expression>();
             if (Match(TokenType.LeftParen))
@@ -2013,7 +2113,8 @@ namespace uhigh.Net.Parser
                 Name = name,
                 BaseClass = baseClass,
                 Members = members,
-                Modifiers = new List<string>()
+                Modifiers = new List<string>(),
+                Attributes = new List<AttributeDeclaration>() // Will be set by calling code
             };
         }
 

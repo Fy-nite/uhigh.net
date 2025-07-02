@@ -153,7 +153,7 @@ namespace uhigh.Net.Parser
     {
         private readonly DiagnosticsReporter _diagnostics;
         private readonly ReflectionMethodResolver _reflectionResolver;
-        private readonly ReflectionTypeResolver _typeResolver; // Add this
+        private readonly ReflectionTypeResolver _typeResolver;
         private readonly Dictionary<string, List<MethodSignature>> _methods = new();
         private readonly Dictionary<string, List<MethodSignature>> _classMethods = new();
         private readonly Dictionary<string, ClassInfo> _classes = new();
@@ -162,7 +162,7 @@ namespace uhigh.Net.Parser
         {
             _diagnostics = diagnostics;
             _reflectionResolver = new ReflectionMethodResolver(diagnostics);
-            _typeResolver = new ReflectionTypeResolver(diagnostics); // Add this
+            _typeResolver = new ReflectionTypeResolver(diagnostics);
             RegisterBuiltInMethods();
         }
 
@@ -214,6 +214,9 @@ namespace uhigh.Net.Parser
 
         public void RegisterMethod(FunctionDeclaration func, SourceLocation? location = null)
         {
+            // Validate attributes first
+            ValidateAttributes(func.Attributes, "function", location);
+
             // Check if function has external or dotnetfunc attribute - skip validation for these
             var hasExternalAttribute = func.Attributes.Any(attr => attr.IsExternal);
             var hasDotNetFuncAttribute = func.Attributes.Any(attr => attr.IsDotNetFunc);
@@ -242,6 +245,9 @@ namespace uhigh.Net.Parser
 
         public void RegisterMethod(MethodDeclaration method, string className, SourceLocation? location = null)
         {
+            // Validate attributes first
+            ValidateAttributes(method.Attributes, "method", location);
+
             // Check if method has external or dotnetfunc attribute - skip validation for these
             var hasExternalAttribute = method.Attributes?.Any(attr => attr.IsExternal) ?? false;
             var hasDotNetFuncAttribute = method.Attributes?.Any(attr => attr.IsDotNetFunc) ?? false;
@@ -273,6 +279,9 @@ namespace uhigh.Net.Parser
 
         public void RegisterClass(ClassDeclaration classDecl, SourceLocation? location = null)
         {
+            // Note: ClassDeclaration doesn't have Attributes property in the current AST
+            // If you add it, you can validate class attributes here
+            
             var classInfo = new ClassInfo
             {
                 Name = classDecl.Name,
@@ -490,56 +499,34 @@ namespace uhigh.Net.Parser
             }
         }
 
-        // Add method to validate types
-        public bool ValidateType(string typeName, Token location)
+        // Add method to validate attributes
+        private void ValidateAttributes(List<AttributeDeclaration>? attributes, string targetType, SourceLocation? location)
         {
-            // Check if it's a user-defined type
-            if (_classes.ContainsKey(typeName))
-            {
-                return true;
-            }
+            if (attributes == null || attributes.Count == 0)
+                return;
 
-            // Check if it's a .NET type via reflection (including generic types)
-            if (_typeResolver.IsValidType(typeName))
-            {
-                return true;
-            }
+            var attributeResolver = _typeResolver.GetAttributeResolver();
+            var target = attributeResolver.ConvertToAttributeTarget(targetType);
 
-            // Check if it's a generic type that can be resolved
-            if (_typeResolver.IsGenericType(typeName))
+            foreach (var attribute in attributes)
             {
-                if (_typeResolver.TryResolveGenericType(typeName, out var genericType))
+                // Be more lenient with attribute validation for now
+                if (!attributeResolver.TryResolveAttribute(attribute.Name, out var attributeInfos))
                 {
-                    _diagnostics.ReportInfo($"Successfully resolved generic type: {typeName} -> {genericType.FullName}");
-                    return true;
+                    _diagnostics.ReportWarning($"Unknown attribute: {attribute.Name}. Allowing for now.", 
+                        location?.Line ?? 0, location?.Column ?? 0, "UH402");
+                }
+                else
+                {
+                    attributeResolver.ValidateAttribute(attribute, target, location);
                 }
             }
+        }
 
-            // Check built-in type aliases
-            var builtInTypes = new[] { "int", "float", "string", "bool", "void", "array", "object", "string[]", "int[]", "bool[]", "double[]", "object[]" };
-            if (builtInTypes.Contains(typeName))
-            {
-                return true;
-            }
-
-            _diagnostics.ReportError($"Unknown type: {typeName}", location.Line, location.Column, "UH301");
-            
-            // Suggest similar types (including generic types)
-            var suggestions = _typeResolver.GetSimilarTypes(typeName);
-            var genericSuggestions = _typeResolver.GetAllGenericTypeNames()
-                .Where(name => LevenshteinDistance(typeName, name) <= 2)
-                .Take(3);
-            
-            var allSuggestions = suggestions.Concat(genericSuggestions).Distinct().Take(5).ToList();
-            
-            if (allSuggestions.Any())
-            {
-                _diagnostics.ReportWarning(
-                    $"Did you mean: {string.Join(", ", allSuggestions)}?",
-                    location.Line, location.Column, "UH302");
-            }
-
-            return false;
+        // Add method to get attribute resolver for other components
+        public ReflectionAttributeResolver GetAttributeResolver()
+        {
+            return _typeResolver.GetAttributeResolver();
         }
 
         // Add method to get type resolver for other components
@@ -647,6 +634,34 @@ namespace uhigh.Net.Parser
             }
 
             return d[n, m];
+        }
+
+        internal bool ValidateType(string typeName, Token token)
+        {
+            if (_typeResolver.TryResolveType(typeName, out var type))
+            {
+                return true;
+            }
+
+            _diagnostics.ReportError(
+                $"Unknown type: {typeName}",
+                token.Line, token.Column, "UH202"
+            );
+
+            // Suggest similar types
+            var suggestions = _typeResolver.GetAllTypeNames()
+                .Where(name => LevenshteinDistance(typeName, name) <= 2)
+                .Take(3)
+                .ToList();
+
+            if (suggestions.Any())
+            {
+                _diagnostics.ReportWarning(
+                    $"Did you mean: {string.Join(", ", suggestions)}?",
+                    token.Line, token.Column, "UH203");
+            }
+
+            return false;
         }
     }
 }

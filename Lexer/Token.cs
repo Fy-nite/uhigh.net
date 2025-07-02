@@ -12,7 +12,7 @@ namespace uhigh.Net.Lexer
         // Keywords
         New,
         Var, Const, Func, Return, If, Else, While, For, In,
-        Print, Include, Try, Catch, Throw, Field, Match, Type, // Added Type
+        Include, Try, Catch, Throw, Field, Match, Type, // Removed Print - it should be an identifier
         True, False, Int, Float, StringType, Bool, Void,
         Sharp, Range, // Add Range token
         Break, Continue, // Add break and continue support

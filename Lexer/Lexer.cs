@@ -67,6 +67,16 @@ namespace uhigh.Net.Lexer
             { "async", TokenType.Async },
             { "await", TokenType.Await },
 
+            // Common attribute names (optional - they can also be identifiers)
+            { "required", TokenType.Identifier },
+            { "obsolete", TokenType.Identifier },
+            { "deprecated", TokenType.Identifier },
+            { "serializable", TokenType.Identifier },
+            { "jsonproperty", TokenType.Identifier },
+            { "datamember", TokenType.Identifier },
+            { "external", TokenType.Identifier },
+            { "dotnetfunc", TokenType.Identifier },
+            { "printattribute", TokenType.Identifier },
 
             { "match", TokenType.Match },
             
@@ -99,10 +109,10 @@ namespace uhigh.Net.Lexer
             // { "inline", TokenType.Inline }
         };
 
-        public Lexer(string source, DiagnosticsReporter? diagnostics = null)
+        public Lexer(string source, DiagnosticsReporter? diagnostics = null, bool verboseMode = false)
         {
             _source = source;
-            _diagnostics = diagnostics ?? new DiagnosticsReporter();
+            _diagnostics = diagnostics ?? new DiagnosticsReporter(verboseMode);
         }
 
         public List<Token> Tokenize()

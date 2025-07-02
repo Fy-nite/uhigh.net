@@ -171,7 +171,8 @@ namespace uhigh.Net.Parser
         public string Name { get; set; } = "";
         public string? BaseClass { get; set; }
         public List<Statement> Members { get; set; } = new();
-        public List<string> Modifiers { get; set; } = new(); // New: access modifiers
+        public List<string> Modifiers { get; set; } = new();
+        public List<AttributeDeclaration> Attributes { get; set; } = new(); // Add this
         
         public bool IsPublic => Modifiers.Contains("public");
     }

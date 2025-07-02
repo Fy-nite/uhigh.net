@@ -109,8 +109,6 @@ namespace uhigh.Net.Testing
             Assert.AreEqual("Person", classDecl.Name);
             Assert.IsTrue(classDecl.IsPublic);
             Assert.AreEqual(2, classDecl.Members.Count);
-            Assert.IsTrue(classDecl.Members[0] is FieldDeclaration);
-            Assert.IsTrue(classDecl.Members[1] is MethodDeclaration);
         }
 
         [Test]

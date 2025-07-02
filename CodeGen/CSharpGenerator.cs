@@ -420,14 +420,16 @@ namespace uhigh.Net.CodeGen
         private void GenerateClassDeclaration(ClassDeclaration classDecl)
         {
             // Check for external attribute on class
-            var hasExternalAttribute = classDecl.Members.OfType<AttributeDeclaration>()
-                .Any(attr => attr.IsExternal);
+            var hasExternalAttribute = classDecl.Attributes.Any(attr => attr.IsExternal);
 
             if (hasExternalAttribute)
             {
                 _diagnostics.ReportInfo($"Skipping code generation for external class: {classDecl.Name}");
                 return;
             }
+
+            // Generate attributes for the class
+            GenerateAttributes(classDecl.Attributes);
 
             Indent();
             
@@ -463,6 +465,33 @@ namespace uhigh.Net.CodeGen
             Indent();
             _output.AppendLine("}");
             _output.AppendLine();
+        }
+
+        // Add method to generate attributes
+        private void GenerateAttributes(List<AttributeDeclaration> attributes)
+        {
+            foreach (var attribute in attributes)
+            {
+                // Skip μHigh-specific attributes that don't map to C#
+                if (attribute.IsExternal || attribute.IsDotNetFunc)
+                    continue;
+
+                Indent();
+                _output.Append($"[{attribute.Name}");
+                
+                if (attribute.Arguments.Count > 0)
+                {
+                    _output.Append("(");
+                    for (int i = 0; i < attribute.Arguments.Count; i++)
+                    {
+                        if (i > 0) _output.Append(", ");
+                        GenerateExpression(attribute.Arguments[i]);
+                    }
+                    _output.Append(")");
+                }
+                
+                _output.AppendLine("]");
+            }
         }
 
         private void GenerateStatement(ASTNode statement)

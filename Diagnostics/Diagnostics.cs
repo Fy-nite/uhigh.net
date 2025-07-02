@@ -1,4 +1,5 @@
 using uhigh.Net.Lexer;
+using System.Diagnostics;
 
 namespace uhigh.Net.Diagnostics
 {
@@ -39,6 +40,8 @@ namespace uhigh.Net.Diagnostics
         public DateTime Timestamp { get; set; }
         public string? Suggestion { get; set; }
         public string? SourceLine { get; set; }
+        public string? CallerInfo { get; set; }
+        public List<string> StackTrace { get; set; } = new();
 
         public Diagnostic(DiagnosticSeverity severity, string message, SourceLocation? location = null, string? code = null, Exception? exception = null)
         {
@@ -55,7 +58,8 @@ namespace uhigh.Net.Diagnostics
             var severity = Severity.ToString().ToLower();
             var location = Location?.ToString() ?? "unknown";
             var code = Code != null ? $"[{Code}]" : "";
-            return $"{severity}{code}: {Message}";
+            var caller = CallerInfo != null ? $" (Called from: {CallerInfo})" : "";
+            return $"{severity}{code}: {Message}{caller}";
         }
     }
 
@@ -107,6 +111,43 @@ namespace uhigh.Net.Diagnostics
         public int ErrorCount => _diagnostics.Count(d => d.Severity >= DiagnosticSeverity.Error);
         public int WarningCount => _diagnostics.Count(d => d.Severity == DiagnosticSeverity.Warning);
 
+        private void AddCallerInfoToDiagnostic(Diagnostic diagnostic)
+        {
+            if (!_verboseMode) return;
+
+            var stackTrace = new System.Diagnostics.StackTrace(true);
+            var frames = stackTrace.GetFrames();
+            
+            if (frames != null)
+            {
+                var relevantFrames = frames
+                    .Skip(2) // Skip this method and the immediate caller
+                    .Where(f => f.GetMethod() != null)
+                    .Take(10) // Limit to 10 frames
+                    .Select(f => {
+                        var method = f.GetMethod();
+                        var fileName = f.GetFileName();
+                        var lineNumber = f.GetFileLineNumber();
+                        var methodName = $"{method?.DeclaringType?.Name}.{method?.Name}";
+                        
+                        if (!string.IsNullOrEmpty(fileName))
+                        {
+                            return $"{methodName} at {Path.GetFileName(fileName)}:{lineNumber}";
+                        }
+                        return methodName;
+                    })
+                    .Where(s => !string.IsNullOrEmpty(s))
+                    .ToList();
+
+                diagnostic.StackTrace = relevantFrames;
+                
+                if (relevantFrames.Count > 0)
+                {
+                    diagnostic.CallerInfo = relevantFrames.First();
+                }
+            }
+        }
+
         public void ReportError(string message, int line = 0, int column = 0, string? code = null, Exception? exception = null)
         {
             var location = line > 0 ? new SourceLocation(line, column, _sourceFileName) : null;
@@ -117,6 +158,7 @@ namespace uhigh.Net.Diagnostics
                 diagnostic.SourceLine = _sourceLines[line];
             }
             
+            AddCallerInfoToDiagnostic(diagnostic);
             _diagnostics.Add(diagnostic);
             PrintRustStyleDiagnostic(diagnostic);
         }
@@ -131,6 +173,7 @@ namespace uhigh.Net.Diagnostics
                 diagnostic.SourceLine = _sourceLines[line];
             }
             
+            AddCallerInfoToDiagnostic(diagnostic);
             _diagnostics.Add(diagnostic);
             PrintRustStyleDiagnostic(diagnostic);
         }
@@ -145,6 +188,7 @@ namespace uhigh.Net.Diagnostics
                 diagnostic.SourceLine = _sourceLines[line];
             }
             
+            AddCallerInfoToDiagnostic(diagnostic);
             _diagnostics.Add(diagnostic);
             PrintRustStyleDiagnostic(diagnostic);
         }
@@ -153,6 +197,7 @@ namespace uhigh.Net.Diagnostics
         {
             var location = line > 0 ? new SourceLocation(line, column, _sourceFileName) : null;
             var diagnostic = new Diagnostic(DiagnosticSeverity.Info, message, location, code);
+            AddCallerInfoToDiagnostic(diagnostic);
             _diagnostics.Add(diagnostic);
             
             if (_verboseMode)
@@ -190,6 +235,27 @@ namespace uhigh.Net.Diagnostics
                 Console.ForegroundColor = ConsoleColor.White;
                 Console.Write(": ");
                 Console.WriteLine(diagnostic.Message);
+
+                // Print caller information if available and in verbose mode
+                if (_verboseMode && diagnostic.CallerInfo != null)
+                {
+                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    Console.Write("  --> Called from: ");
+                    Console.ForegroundColor = ConsoleColor.White;
+                    Console.WriteLine(diagnostic.CallerInfo);
+                }
+
+                // Print stack trace if available and in verbose mode
+                if (_verboseMode && diagnostic.StackTrace.Count > 0)
+                {
+                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    Console.WriteLine("  --> Call stack:");
+                    foreach (var frame in diagnostic.StackTrace.Take(5)) // Limit to first 5 frames
+                    {
+                        Console.ForegroundColor = ConsoleColor.DarkCyan;
+                        Console.WriteLine($"      {frame}");
+                    }
+                }
 
                 // Print location and source context if available
                 if (diagnostic.Location != null)
@@ -349,12 +415,48 @@ namespace uhigh.Net.Diagnostics
 
         public static void ReportUnexpectedToken(this DiagnosticsReporter diagnostics, Token token, string expected)
         {
+            // Get detailed stack trace for debugging
+            var stackTrace = new System.Diagnostics.StackTrace(true);
+            var frames = stackTrace.GetFrames();
+            
+            var callerChain = "";
+            if (frames != null && frames.Length > 2)
+            {
+                var relevantFrames = frames
+                    .Skip(1) // Skip this method
+                    .Take(5) // Take next 5 frames
+                    .Where(f => f.GetMethod() != null)
+                    .Select(f => {
+                        var method = f.GetMethod();
+                        var fileName = f.GetFileName();
+                        var lineNumber = f.GetFileLineNumber();
+                        var methodName = $"{method?.DeclaringType?.Name}.{method?.Name}";
+                        
+                        if (!string.IsNullOrEmpty(fileName))
+                        {
+                            return $"{methodName}({Path.GetFileName(fileName)}:{lineNumber})";
+                        }
+                        return methodName;
+                    })
+                    .Where(s => !string.IsNullOrEmpty(s));
+                
+                callerChain = string.Join(" -> ", relevantFrames);
+            }
+
+            var message = $"Unexpected token '{token.Value}' at {token.Line}:{token.Column}. Expected: {expected}";
+            if (!string.IsNullOrEmpty(callerChain))
+            {
+                message += $"\n  Call chain: {callerChain}";
+            }
+
+            diagnostics.ReportError(message, token.Line, token.Column, "UH001");
+            
+            // Set suggestion on the last diagnostic
             var diagnostic = diagnostics.Diagnostics.LastOrDefault();
             if (diagnostic != null)
             {
                 diagnostic.Suggestion = $"Expected {expected}";
             }
-            diagnostics.ReportTokenError($"Unexpected token '{token.Value}'", token, "UH001");
         }
 
         public static void ReportUnterminatedString(this DiagnosticsReporter diagnostics, int line, int column)

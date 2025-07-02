@@ -292,5 +292,61 @@ namespace uhigh.Net.Testing
             Assert.AreEqual(TokenType.LeftBracket, tokens[4].Type);
             Assert.AreEqual(TokenType.RightBracket, tokens[5].Type);
         }
+
+        [Test]
+        public void TestAttributeTokenization()
+        {
+            var lexer = CreateLexer(@"[PrintAttribute(""message"")]");
+            var tokens = lexer.Tokenize();
+
+            // Should tokenize as: [, PrintAttribute, (, "message", ), ], EOF
+            Assert.AreEqual(7, tokens.Count);
+            Assert.AreEqual(TokenType.LeftBracket, tokens[0].Type);
+            Assert.AreEqual(TokenType.Identifier, tokens[1].Type);
+            Assert.AreEqual("PrintAttribute", tokens[1].Value);
+            Assert.AreEqual(TokenType.LeftParen, tokens[2].Type);
+            Assert.AreEqual(TokenType.String, tokens[3].Type);
+            Assert.AreEqual("message", tokens[3].Value);
+            Assert.AreEqual(TokenType.RightParen, tokens[4].Type);
+            Assert.AreEqual(TokenType.RightBracket, tokens[5].Type);
+            Assert.AreEqual(TokenType.EOF, tokens[6].Type);
+        }
+
+        [Test]
+        public void TestComplexAttributeTokenization()
+        {
+            var lexer = CreateLexer(@"[external] [PrintAttribute(""test"")] func");
+            var tokens = lexer.Tokenize();
+
+            // Debug what tokens we actually get
+            Console.WriteLine("Tokens found:");
+            for (int i = 0; i < tokens.Count; i++)
+            {
+                Console.WriteLine($"  {i}: {tokens[i].Type} = '{tokens[i].Value}'");
+            }
+
+            // Verify the structure is correct
+            Assert.IsTrue(tokens.Count >= 9, "Should have at least 9 tokens");
+            
+            // First attribute: [external]
+            Assert.AreEqual(TokenType.LeftBracket, tokens[0].Type);
+            Assert.AreEqual(TokenType.Identifier, tokens[1].Type);
+            Assert.AreEqual("external", tokens[1].Value);
+            Assert.AreEqual(TokenType.RightBracket, tokens[2].Type);
+            
+            // Find PrintAttribute token specifically
+            var printAttrIndex = -1;
+            for (int i = 0; i < tokens.Count; i++)
+            {
+                if (tokens[i].Value == "PrintAttribute")
+                {
+                    printAttrIndex = i;
+                    break;
+                }
+            }
+            
+            Assert.IsTrue(printAttrIndex > 0, "Should find PrintAttribute token");
+            Assert.AreEqual(TokenType.Identifier, tokens[printAttrIndex].Type);
+        }
     }
 }

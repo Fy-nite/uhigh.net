@@ -142,7 +142,7 @@ namespace uhigh.Net
                 }
                 
                 // Tokenize
-                var lexer = new Lexer.Lexer(source, diagnostics);
+                var lexer = new Lexer.Lexer(source, diagnostics, _verboseMode);
                 var tokens = lexer.Tokenize();
                 
                 if (diagnostics.HasErrors)
@@ -151,7 +151,7 @@ namespace uhigh.Net
                 }
                 
                 // Parse
-                var parser = new Parser.Parser(tokens, diagnostics);
+                var parser = new Parser.Parser(tokens, diagnostics, _verboseMode);
                 var ast = parser.Parse();
 
                 // Handle include statements before code generation
@@ -192,7 +192,7 @@ namespace uhigh.Net
                 }
                 
                 // Tokenize
-                var lexer = new Lexer.Lexer(source, diagnostics);
+                var lexer = new Lexer.Lexer(source, diagnostics, _verboseMode);
                 var tokens = lexer.Tokenize();
                 
                 if (diagnostics.HasErrors)
@@ -201,7 +201,7 @@ namespace uhigh.Net
                 }
                 
                 // Parse
-                var parser = new Parser.Parser(tokens, diagnostics);
+                var parser = new Parser.Parser(tokens, diagnostics, _verboseMode);
                 var ast = parser.Parse();
 
                 // Handle include statements
@@ -716,7 +716,7 @@ namespace uhigh.Net
                 }
                 
                 // Tokenize
-                var lexer = new Lexer.Lexer(source, diagnostics);
+                var lexer = new Lexer.Lexer(source, diagnostics, _verboseMode);
                 var tokens = lexer.Tokenize();
                 
                 if (diagnostics.HasErrors)
@@ -730,7 +730,7 @@ namespace uhigh.Net
                 }
                 
                 // Parse
-                var parser = new Parser.Parser(tokens, diagnostics);
+                var parser = new Parser.Parser(tokens, diagnostics, _verboseMode);
                 var ast = parser.Parse();
 
                 if (diagnostics.HasErrors)

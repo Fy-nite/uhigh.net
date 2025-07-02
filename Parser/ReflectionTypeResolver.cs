@@ -12,12 +12,24 @@ namespace uhigh.Net.Parser
         private readonly Dictionary<string, Type> _discoveredTypes = new();
         private readonly Dictionary<string, List<MethodInfo>> _discoveredMethods = new();
         private readonly HashSet<Assembly> _scannedAssemblies = new();
-        private readonly Dictionary<string, Type> _genericTypeDefinitions = new(); // Add this
+        private readonly Dictionary<string, Type> _genericTypeDefinitions = new();
+        private ReflectionAttributeResolver? _attributeResolver; // Add this
 
         public ReflectionTypeResolver(DiagnosticsReporter diagnostics)
         {
             _diagnostics = diagnostics;
             ScanDefaultAssemblies();
+            InitializeAttributeResolver(); // Add this
+        }
+
+        private void InitializeAttributeResolver()
+        {
+            _attributeResolver = new ReflectionAttributeResolver(_diagnostics, this);
+        }
+
+        public ReflectionAttributeResolver GetAttributeResolver()
+        {
+            return _attributeResolver ?? throw new InvalidOperationException("Attribute resolver not initialized");
         }
 
         private void ScanDefaultAssemblies()
@@ -73,6 +85,9 @@ namespace uhigh.Net.Parser
                     RegisterType(type);
                 }
                 _diagnostics.ReportInfo($"Scanned assembly {assembly.GetName().Name} - found {types.Length} types");
+                
+                // Also scan for attributes
+                _attributeResolver?.ScanAssembly(assembly);
             }
             catch (Exception ex)
             {
