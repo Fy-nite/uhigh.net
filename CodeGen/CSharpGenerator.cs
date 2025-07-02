@@ -1260,12 +1260,76 @@ namespace uhigh.Net.CodeGen
                     GenerateArrayExpression(arrayExpr);
                     break;
                 
+                case LambdaExpression lambdaExpr:
+                    GenerateLambdaExpression(lambdaExpr);
+                    break;
+                
                 case BlockExpression blockExpr:
                     GenerateBlockExpression(blockExpr);
                     break;
                 case MatchExpression matchExpr:
                     GenerateMatchExpression(matchExpr);
                     break;
+            }
+        }
+
+        /// <summary>
+        /// Generates the lambda expression using the specified lambda expr
+        /// </summary>
+        /// <param name="lambdaExpr">The lambda expr</param>
+        private void GenerateLambdaExpression(LambdaExpression lambdaExpr)
+        {
+            // Generate parameter list
+            if (lambdaExpr.Parameters.Count == 1 && lambdaExpr.Parameters[0].Type == null)
+            {
+                // Single parameter without type: x => expression
+                _output.Append(lambdaExpr.Parameters[0].Name);
+            }
+            else
+            {
+                // Multiple parameters or typed parameters: (x, y) => expression
+                _output.Append("(");
+                for (int i = 0; i < lambdaExpr.Parameters.Count; i++)
+                {
+                    if (i > 0) _output.Append(", ");
+                    
+                    var param = lambdaExpr.Parameters[i];
+                    if (param.Type != null)
+                    {
+                        _output.Append($"{ConvertType(param.Type)} {param.Name}");
+                    }
+                    else
+                    {
+                        _output.Append(param.Name);
+                    }
+                }
+                _output.Append(")");
+            }
+            
+            _output.Append(" => ");
+            
+            // Generate body
+            if (lambdaExpr.IsExpressionLambda && lambdaExpr.Body != null)
+            {
+                // Expression lambda: x => x + 1
+                GenerateExpression(lambdaExpr.Body);
+            }
+            else if (lambdaExpr.IsBlockLambda)
+            {
+                // Block lambda: x => { return x + 1; }
+                _output.AppendLine();
+                Indent();
+                _output.AppendLine("{");
+                _indentLevel++;
+                
+                foreach (var stmt in lambdaExpr.Statements)
+                {
+                    GenerateStatement(stmt);
+                }
+                
+                _indentLevel--;
+                Indent();
+                _output.Append("}");
             }
         }
 

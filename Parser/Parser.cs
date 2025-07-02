@@ -1919,25 +1919,86 @@ namespace uhigh.Net.Parser
 
             if (Match(TokenType.LeftParen))
             {
-                var expr = ParseExpression();
-                Consume(TokenType.RightParen, "Expected ')' after expression");
-                return expr;
-            }
-
-            if (Match(TokenType.LeftBracket))
-            {
-                var elements = new List<Expression>();
-
-                if (!Check(TokenType.RightBracket))
+                // Look ahead to see if this is a lambda or grouping expression
+                var start = _current;
+                var isLambda = false;
+                var paramCount = 0;
+                
+                // Parse potential parameter list
+                if (!Check(TokenType.RightParen))
                 {
                     do
                     {
-                        elements.Add(ParseExpression());
+                        if (Check(TokenType.Identifier))
+                        {
+                            Advance();
+                            paramCount++;
+                            
+                            // Optional type annotation
+                            if (Match(TokenType.Colon))
+                            {
+                                if (Check(TokenType.Identifier)) Advance();
+                            }
+                        }
+                        else
+                        {
+                            break; // Not a parameter list
+                        }
                     } while (Match(TokenType.Comma));
                 }
-
-                Consume(TokenType.RightBracket, "Expected ']' after array elements");
-                return new ArrayExpression { Elements = elements };
+                
+                // Check if followed by ) =>
+                if (Check(TokenType.RightParen))
+                {
+                    Advance();
+                    if (Check(TokenType.Arrow))
+                    {
+                        isLambda = true;
+                    }
+                }
+                
+                // Reset position
+                _current = start - 1; // Back to before the '('
+                Advance(); // consume '('
+                
+                if (isLambda)
+                {
+                    // Parse as lambda expression
+                    var parameters = new List<Parameter>();
+                    
+                    if (!Check(TokenType.RightParen))
+                    {
+                        do
+                        {
+                            var paramName = Consume(TokenType.Identifier, "Expected parameter name").Value;
+                            string? paramType = null;
+                            
+                            if (Match(TokenType.Colon))
+                            {
+                                paramType = ParseTypeName();
+                            }
+                            
+                            parameters.Add(new Parameter(paramName, paramType));
+                        } while (Match(TokenType.Comma));
+                    }
+                    
+                    Consume(TokenType.RightParen, "Expected ')' after lambda parameters");
+                    Consume(TokenType.Arrow, "Expected '=>' after lambda parameters");
+                    
+                    var body = ParseExpression();
+                    return new LambdaExpression
+                    {
+                        Parameters = parameters,
+                        Body = body
+                    };
+                }
+                else
+                {
+                    // Parse as grouping expression
+                    var expr = ParseExpression();
+                    Consume(TokenType.RightParen, "Expected ')' after expression");
+                    return expr;
+                }
             }
 
             // last thing, turn everything into expression and return it
@@ -2068,19 +2129,152 @@ namespace uhigh.Net.Parser
             {
                 do
                 {
-                    arguments.Add(ParseExpression());
+                    // Check for lambda expressions more carefully
+                    if (IsLambdaExpression())
+                    {
+                        arguments.Add(ParseLambdaExpression());
+                    }
+                    else
+                    {
+                        arguments.Add(ParseExpression());
+                    }
                 } while (Match(TokenType.Comma));
             }
             
             Consume(TokenType.RightParen, "Expected ')' after arguments");
             
-            return new CallExpression 
-            { 
-                Function = callee,  // Make sure we set the function property
-                Arguments = arguments 
+            return new CallExpression { Function = callee, Arguments = arguments };
+        }
+
+        // Helper method to detect lambda expressions
+        private bool IsLambdaExpression()
+        {
+            var checkpoint = _current;
+            
+            // Case 1: Single parameter lambda: identifier =>
+            if (Check(TokenType.Identifier))
+            {
+                Advance(); // consume identifier
+                if (Check(TokenType.Arrow))
+                {
+                    _current = checkpoint; // reset
+                    return true;
+                }
+            }
+            
+            // Case 2: Multi-parameter lambda: (param1, param2) =>
+            _current = checkpoint; // reset
+            if (Check(TokenType.LeftParen))
+            {
+                Advance(); // consume (
+                
+                // Skip parameter list
+                var parenCount = 1;
+                while (parenCount > 0 && !IsAtEnd())
+                {
+                    if (Check(TokenType.LeftParen)) parenCount++;
+                    else if (Check(TokenType.RightParen)) parenCount--;
+                    
+                    if (parenCount > 0) Advance();
+                }
+                
+                if (parenCount == 0)
+                {
+                    Advance(); // consume )
+                    if (Check(TokenType.Arrow))
+                    {
+                        _current = checkpoint; // reset
+                        return true;
+                    }
+                }
+            }
+            
+            _current = checkpoint; // reset
+            return false;
+        }
+
+        // Helper method to parse lambda expression
+        private LambdaExpression ParseLambdaExpression()
+        {
+            var parameters = new List<Parameter>();
+            
+            // Single parameter case: identifier =>
+            if (Check(TokenType.Identifier) && PeekAhead(1)?.Type == TokenType.Arrow)
+            {
+                var paramName = Consume(TokenType.Identifier, "Expected parameter name").Value;
+                parameters.Add(new Parameter(paramName));
+                Consume(TokenType.Arrow, "Expected '=>' in lambda expression");
+            }
+            // Multi-parameter case: (param1, param2) =>
+            else if (Check(TokenType.LeftParen))
+            {
+                Consume(TokenType.LeftParen, "Expected '(' for lambda parameters");
+                
+                if (!Check(TokenType.RightParen))
+                {
+                    do
+                    {
+                        var paramName = Consume(TokenType.Identifier, "Expected parameter name").Value;
+                        string? paramType = null;
+                        
+                        if (Match(TokenType.Colon))
+                        {
+                            paramType = ParseTypeName();
+                        }
+                        
+                        parameters.Add(new Parameter(paramName, paramType));
+                    } while (Match(TokenType.Comma));
+                }
+                
+                Consume(TokenType.RightParen, "Expected ')' after lambda parameters");
+                Consume(TokenType.Arrow, "Expected '=>' after lambda parameters");
+            }
+            
+            var body = ParseLambdaBody();
+            
+            return new LambdaExpression
+            {
+                Parameters = parameters,
+                Body = body.expression,
+                Statements = body.statements
             };
         }
 
+        // Helper method to parse lambda body
+        private (Expression? expression, List<Statement> statements) ParseLambdaBody()
+        {
+            if (Check(TokenType.LeftBrace))
+            {
+                // Block lambda: { statements }
+                Advance(); // consume {
+                var statements = new List<Statement>();
+                
+                while (!Check(TokenType.RightBrace) && !IsAtEnd())
+                {
+                    var stmt = ParseStatement();
+                    if (stmt != null)
+                        statements.Add(stmt);
+                }
+                
+                Consume(TokenType.RightBrace, "Expected '}' after lambda body");
+                return (null, statements);
+            }
+            else
+            {
+                // Expression lambda: expression
+                var expression = ParseExpression();
+                return (expression, new List<Statement>());
+            }
+        }
+
+        // Helper method to peek ahead in the token list by a given offset
+        private Token? PeekAhead(int offset)
+        {
+            int index = _current + offset;
+            if (index >= 0 && index < _tokens.Count)
+                return _tokens[index];
+            return null;
+        }
         /// <summary>
         /// Converts the token type to string using the specified token type
         /// </summary>

@@ -1,3 +1,4 @@
+using System.Linq;
 using uhigh.Net.Parser;
 using uhigh.Net.Lexer;
 
@@ -256,6 +257,97 @@ namespace uhigh.Net.Testing
 
             Assert.AreEqual("Test", attribute.Name);
             Assert.AreEqual(1, attribute.Arguments.Count);
+        }
+
+        /// <summary>
+        /// Tests that test lambda expressions
+        /// </summary>
+        [Test]
+        public void TestLambdaExpressions()
+        {
+            // Single parameter lambda
+            var singleParam = new LambdaExpression
+            {
+                Parameters = new List<Parameter> { new Parameter("x") },
+                Body = new BinaryExpression
+                {
+                    Left = new IdentifierExpression { Name = "x" },
+                    Operator = TokenType.Plus,
+                    Right = new LiteralExpression { Value = 1, Type = TokenType.Number }
+                }
+            };
+
+            Assert.AreEqual(1, singleParam.Parameters.Count);
+            Assert.AreEqual("x", singleParam.Parameters[0].Name);
+            Assert.IsTrue(singleParam.IsExpressionLambda);
+            Assert.IsFalse(singleParam.IsBlockLambda);
+
+            // Multi-parameter lambda
+            var multiParam = new LambdaExpression
+            {
+                Parameters = new List<Parameter> 
+                { 
+                    new Parameter("x"), 
+                    new Parameter("y") 
+                },
+                Body = new BinaryExpression
+                {
+                    Left = new IdentifierExpression { Name = "x" },
+                    Operator = TokenType.Plus,
+                    Right = new IdentifierExpression { Name = "y" }
+                }
+            };
+
+            Assert.AreEqual(2, multiParam.Parameters.Count);
+            Assert.IsTrue(multiParam.IsExpressionLambda);
+        }
+
+        /// <summary>
+        /// Tests that test observable with lambda subscription
+        /// </summary>
+        [Test]
+        public void TestObservableWithLambda()
+        {
+            var observable = new CallExpression
+            {
+                Function = new ConstructorCallExpression
+                {
+                    ClassName = "Observable<string>",
+                    Arguments = new List<Expression>()
+                }
+            };
+
+            var subscription = new CallExpression
+            {
+                Function = new MemberAccessExpression
+                {
+                    Object = new IdentifierExpression { Name = "observable" },
+                    MemberName = "Subscribe"
+                },
+                Arguments = new List<Expression>
+                {
+                    new LambdaExpression
+                    {
+                        Parameters = new List<Parameter> { new Parameter("value") },
+                        Body = new CallExpression
+                        {
+                            Function = new QualifiedIdentifierExpression { Name = "Console.WriteLine" },
+                            Arguments = new List<Expression>
+                            {
+                                new BinaryExpression
+                                {
+                                    Left = new LiteralExpression { Value = "Value: ", Type = TokenType.String },
+                                    Operator = TokenType.Plus,
+                                    Right = new IdentifierExpression { Name = "value" }
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
+            Assert.IsNotNull(subscription);
+            Assert.IsTrue(subscription.Arguments[0] is LambdaExpression);
         }
     }
 }

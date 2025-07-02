@@ -494,11 +494,50 @@ var observable = Observable("initial", true)    // Track history
 observable.Subscribe((old, new) => {            // Watch changes
     Console.WriteLine($"Changed from {old} to {new}")
 })
+
+// Single parameter lambda (common pattern)
+observable.Subscribe(value => Console.WriteLine("New value: " + value))
+
+// Multi-parameter lambda
+var processor = (x, y) => x + y + 1
+
 observable.Value = "new value"                  // Triggers notification
 
-// Event streams
+// Event streams with lambdas
 var events = EventStream<string>()
-events.Subscribe(data => Console.WriteLine(data))
+events.Subscribe(data => Console.WriteLine("Event: " + data))
 events.Emit("Hello World")
 var recent = events.GetEventsInLastMinutes(5)   // Last 5 minutes
+```
+
+### Lambda Expressions
+
+Lambda expressions provide a concise way to represent anonymous functions:
+
+```go
+// Single parameter lambda (no parentheses needed)
+var double = x => x * 2
+
+// Multi-parameter lambda (parentheses required)
+var add = (x, y) => x + y
+
+// Lambda with type annotations
+var process = (x: int, y: int) => x + y
+
+// Lambda in method calls
+numbers.forEach(x => print(x))
+
+// Lambda with event subscription  
+observable.Subscribe(value => {
+    print("Received: " + value)
+})
+
+// Multi-line lambda expressions
+var complexProcessor = (data, options) => {
+    var result = processData(data)
+    if (options.verbose) {
+        print("Processing: " + data)
+    }
+    return result
+}
 ```

@@ -4,26 +4,17 @@ namespace testing
 
     class Program
     {
-        static field cat: string = "purr"
-        static field meow: string
-        static field cats: List<string> 
-        static field timestamp: TimestampedEvent<string>
-        static field time: Dictionary<string, string>
-        static field temptime: Temporal<string>
-
-        
-
+        static field cats: Observable<string> = new Observable<string>("meow",false)
         public static func Main(args: string[]): void
         {
-           
+        
+           cats.Subscribe(cat => Console.WriteLine("Cat sound: " + cat))
+           cats.Add("purr")
+           cats.Add("meow")
+           cats.Add("hiss")
+
             
-            cats = new List<string>()
-            cats.Add("jeff")
-            cats.Add("obamna")
-            for var cat in cats
-            {
-                Console.WriteLine("my name is: " + cat)
-            }
+            
         }
     }
 }

@@ -68,12 +68,30 @@ namespace uhigh.StdLib
         }
 
         /// <summary>
-        /// Unsubscribes the observer
+        /// Subscribes with single parameter (new value only)
         /// </summary>
         /// <param name="observer">The observer</param>
-        public void Unsubscribe(Action<T, T> observer)
+        public void Subscribe(Action<T> observer)
         {
-            _observers.Remove(observer);
+            _observers.Add((oldVal, newVal) => observer(newVal));
+        }
+
+        /// <summary>
+        /// Adds a new value (alias for Value setter for method chaining)
+        /// </summary>
+        /// <param name="value">The value to add</param>
+        public void Add(T value)
+        {
+            Value = value;
+        }
+
+        /// <summary>
+        /// Emits a value (alias for Value setter)
+        /// </summary>
+        /// <param name="value">The value to emit</param>
+        public void Emit(T value)
+        {
+            Value = value;
         }
 
         /// <summary>
