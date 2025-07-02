@@ -336,6 +336,16 @@ pow(2, 3)       // Power (2^3)
 min(5, 3)       // Minimum
 max(5, 3)       // Maximum
 random()        // Random number 0-1
+
+// Advanced Math (MathUtils)
+MathUtils.Factorial(5)              // 120
+MathUtils.GCD(12, 8)               // 4
+MathUtils.LCM(4, 6)                // 12
+MathUtils.IsPrime(17)              // true
+MathUtils.Fibonacci(10)            // [0,1,1,2,3,5,8,13,21,34]
+MathUtils.ToRadians(90)            // 1.5708
+MathUtils.Distance(0, 0, 3, 4)     // 5.0
+MathUtils.CircleArea(5)            // 78.54
 ```
 
 ### String Functions
@@ -344,6 +354,86 @@ len("hello")            // String length
 uppercase("hello")      // Convert to uppercase
 lowercase("HELLO")      // Convert to lowercase
 substring("hello", 1, 3) // Extract substring
+
+// Advanced Formatting (Formatter)
+Formatter.ToTitleCase("hello world")      // "Hello World"
+Formatter.ToCamelCase("hello_world")      // "helloWorld"
+Formatter.ToSnakeCase("HelloWorld")       // "hello_world"
+Formatter.ToKebabCase("HelloWorld")       // "hello-world"
+Formatter.Truncate("Long text", 10)       // "Long te..."
+Formatter.Mask("1234567890", '*', 0, 4)   // "******7890"
+```
+
+### File System Functions
+```go
+// File Operations (FileUtils)
+FileUtils.ReadText("file.txt")                    // Read entire file
+FileUtils.WriteText("file.txt", "content")        // Write to file
+FileUtils.ReadLines("file.txt")                   // Read as lines
+FileUtils.CopyFile("src.txt", "dest.txt")         // Copy file
+FileUtils.FileExists("file.txt")                  // Check existence
+FileUtils.GetFileSize("file.txt")                 // Get size in bytes
+FileUtils.GetFileSizeFormatted("file.txt")        // "1.2 MB"
+FileUtils.BackupFile("important.txt")             // Create backup
+
+// Directory Operations (DirectoryUtils)
+DirectoryUtils.CreateDirectory("newfolder")        // Create directory
+DirectoryUtils.GetFiles("folder", "*.txt")        // Find files
+DirectoryUtils.CopyDirectory("src", "dest")       // Copy folder
+DirectoryUtils.GetDirectorySize("folder")         // Size in bytes
+DirectoryUtils.CleanDirectory("temp")             // Remove all contents
+
+// Path Operations (PathUtils)
+PathUtils.GetHomeDirectory()                      // User home folder
+PathUtils.GetDesktopDirectory()                   // Desktop folder
+PathUtils.MakeSafeFileName("file:name")           // "filename"
+PathUtils.GetUniqueFileName("file.txt")           // "file (1).txt"
+```
+
+### Random Functions
+```go
+// Basic Random (RandomUtils)
+RandomUtils.RandomInt(1, 10)                     // Random 1-9
+RandomUtils.RandomDouble(0.0, 1.0)               // Random decimal
+RandomUtils.RandomBool()                         // true or false
+RandomUtils.Choose("apple", "banana", "cherry")   // Random choice
+RandomUtils.RandomString(10)                     // Random string
+RandomUtils.RandomAlphanumeric(8)                // "aB3xY9mK"
+RandomUtils.Shuffle([1, 2, 3, 4, 5])            // Shuffled array
+
+// Advanced Random
+RandomUtils.RandomNormal(0, 1)                   // Normal distribution
+RandomUtils.RandomColor()                        // (255, 128, 64)
+RandomUtils.RandomHexColor()                     // "#FF8040"
+RandomUtils.SecureRandomInt(1, 100)              // Crypto-secure
+
+// Dice Rolling (Dice)
+Dice.Roll()                                      // Roll d6
+Dice.Roll(20)                                    // Roll d20
+Dice.RollSum(3, 6)                              // Roll 3d6, sum
+Dice.RollAdvantage()                            // Roll twice, take higher
+Dice.RollNotation("3d6+2")                     // Parse dice notation
+```
+
+### Validation Functions
+```go
+// Data Validation (Validator)
+Validator.IsEmail("user@example.com")            // true
+Validator.IsUrl("https://example.com")           // true
+Validator.IsPhoneNumber("(555) 123-4567")        // true
+Validator.IsCreditCard("4111111111111111")       // true (test card)
+Validator.IsIPv4("192.168.1.1")                 // true
+Validator.IsHexColor("#FF6600")                  // true
+Validator.IsStrongPassword("MyPass123!")         // true
+Validator.InRange(5, 1, 10)                     // true
+Validator.LengthInRange("hello", 3, 10)         // true
+
+// String Validation
+Validator.IsAlpha("hello")                       // true (letters only)
+Validator.IsAlphanumeric("hello123")             // true
+Validator.IsNumeric("12345")                     // true
+Validator.IsInteger("-42")                       // true
+Validator.IsDecimal("3.14159")                   // true
 ```
 
 ### Array Functions
@@ -353,175 +443,62 @@ append(array, item)     // Add item to end
 pop(array, index)       // Remove and return item
 sort(array)             // Sort array
 reverse(array)          // Reverse array
+
+// Advanced Collections (Collections)
+Collections.Range(1, 10, 2)                     // [1, 3, 5, 7, 9]
+array.Chunk(3)                                  // Split into chunks of 3
+array.Flatten()                                 // Flatten nested arrays
+array.Diff(otherArray)                          // Find differences
+array.Rotate(2)                                 // Rotate elements
+array.MostFrequent()                            // Most common element
+array.SlidingWindow(3)                          // Moving window of size 3
 ```
 
-## Examples
-
-### Basic Example
-
+### Statistical Functions
 ```go
-func main() {
-        var x = 42
-        print("The answer is:")
-        print(x)
-}
+// Statistics
+Statistics.Mean([1, 2, 3, 4, 5])               // 3.0
+Statistics.Median([1, 2, 3, 4, 5])             // 3.0
+Statistics.Mode([1, 2, 2, 3, 3, 3])            // 3.0
+Statistics.StandardDeviation([1, 2, 3, 4, 5])   // 1.58
+Statistics.Variance([1, 2, 3, 4, 5])           // 2.5
+Statistics.Correlation(xValues, yValues)        // -0.9 to 1.0
+Statistics.Percentile([1, 2, 3, 4, 5], 75)     // 4.0
 ```
 
-### Input and Output Example
-
+### Temporal Functions (Advanced Time/State Management)
 ```go
-func main() {
-        var name = ""
-        print("Enter your name:")
-        input name
-        print("Hello, " + name + "!")
-}
-```
+// Temporal containers track changes over time
+var data = myObject.ToTemporal()
+data.Update(newValue, "reason for change")
+var pastValue = data.GetSecondsAgo(30)          // Value 30 seconds ago
+var history = data.GetHistory()                 // All changes
 
-### Array Example
+// Time utilities
+TimeUtils.Now                                   // Current UTC time
+TimeUtils.Since(startTime)                      // Duration since
+TimeUtils.FormatDuration(timeSpan)              // "2h 30m 15s"
+TimeUtils.RoundToMinute(dateTime)               // Round to minute
 
-```go
-func main() {
-        var numbers = [5, 2, 8, 1, 9]
-        print "Original array:"
-        for num in numbers {
-                print num
-        }
-        
-        sort(numbers)
-        print "Sorted array:"
-        for i = 0; i < len(numbers); i++ {
-                print numbers[i]
-        }
-}
-```
-
-### Error Handling Example
-
-```go
-func safe_divide(a, b) {
-        try {
-                if b == 0 {
-                        throw "Division by zero"
-                }
-                return a / b
-        } catch error {
-                print "Error: " + error
-                return 0
-        }
-}
-
-func main() {
-        var result = safe_divide(10, 0)
-        print "Result: " + result
+// Rate limiting
+var limiter = RateTracker(TimeSpan.FromMinutes(1), 10)
+if (limiter.TryExecute()) {
+    // Action allowed (max 10 per minute)
 }
 ```
 
-### Type System Example
-
+### Reactive Programming
 ```go
-func calculate_area(length: float, width: float): float {
-        return length * width
-}
+// Observable values
+var observable = Observable("initial", true)    // Track history
+observable.Subscribe((old, new) => {            // Watch changes
+    Console.WriteLine($"Changed from {old} to {new}")
+})
+observable.Value = "new value"                  // Triggers notification
 
-func main() {
-        var l: float = 5.5
-        var w: float = 3.2
-        var area: float = calculate_area(l, w)
-        print "Area: " + string(area)
-}
-```
-
-### Classes
-
-Define custom types with properties, fields, and methods:
-
-```go
-public class Person {
-    private field name: string     // Field - direct storage
-    private field age: int = 0     // Field with default value
-    
-    public var Name: string {      // Property - can have logic
-        get { return this.name }
-        set { this.name = value }
-    }
-    
-    public func constructor(name: string, age: int) {
-        this.name = name
-        this.age = age
-    }
-    
-    public func greet() {
-        Console.WriteLine("Hello, I'm " + this.name)
-    }
-}
-```
-
-### Fields vs Properties
-
-- **Fields** (`field`) - Direct storage, compiled to C# fields
-- **Properties** (`var`) - Can have getters/setters, compiled to C# properties
-
-```go
-public class Example {
-    private field _data: string           // Private field
-    public field MaxCount: int = 100      // Public field with default
-    readonly field Id: string             // Readonly field
-    static field Counter: int = 0         // Static field
-    
-    // Auto-implemented properties
-    public var Name: string { get; set; }
-    public var ReadOnlyProp: string { get; }
-    
-    // Expression-bodied properties
-    public var FullName: string {
-        get = this.FirstName + " " + this.LastName
-    }
-    
-    // Block-bodied properties
-    public var Data: string {
-        get {
-            return this._data?.ToUpper()
-        }
-        set {
-            this._data = value?.Trim()
-        }
-    }
-    
-    // Property with initializer
-    public var Status: string = "Active"
-}
-```
-
-### Property Accessor Syntax
-
-μHigh supports several property accessor patterns:
-
-```go
-// Auto-implemented properties
-var Name: string { get; set; }          // Read-write
-var ReadOnly: string { get; }           // Read-only
-
-// Expression-bodied accessors
-var FullName: string {
-    get = FirstName + " " + LastName    // Computed property
-}
-
-// Block-bodied accessors
-var Value: int {
-    get {
-        return this._value * 2
-    }
-    set {
-        this._value = value / 2
-    }
-}
-
-// Mixed accessor styles
-var Mixed: string {
-    get = this._data?.ToUpper()         // Expression-bodied getter
-    set {                               // Block-bodied setter
-        this._data = value?.Trim()
-    }
-}
+// Event streams
+var events = EventStream<string>()
+events.Subscribe(data => Console.WriteLine(data))
+events.Emit("Hello World")
+var recent = events.GetEventsInLastMinutes(5)   // Last 5 minutes
 ```
