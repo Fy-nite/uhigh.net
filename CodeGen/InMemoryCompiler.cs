@@ -696,6 +696,33 @@ namespace uhigh.Net.CodeGen
                                 File.Copy(assembly, destPath);
                                 Console.WriteLine($"Copied NuGet assembly: {fileName}");
                             }
+                            
+                            // Also copy any related files (pdb, xml, etc.)
+                            var assemblyDir = Path.GetDirectoryName(assembly);
+                            if (assemblyDir != null)
+                            {
+                                var baseName = Path.GetFileNameWithoutExtension(assembly);
+                                var relatedFiles = Directory.GetFiles(assemblyDir, $"{baseName}.*")
+                                    .Where(f => !f.Equals(assembly, StringComparison.OrdinalIgnoreCase));
+                                
+                                foreach (var relatedFile in relatedFiles)
+                                {
+                                    var relatedFileName = Path.GetFileName(relatedFile);
+                                    var relatedDestPath = Path.Combine(buildDir, relatedFileName);
+                                    if (!File.Exists(relatedDestPath))
+                                    {
+                                        try
+                                        {
+                                            File.Copy(relatedFile, relatedDestPath);
+                                            Console.WriteLine($"Copied related file: {relatedFileName}");
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            Console.WriteLine($"Warning: Could not copy related file {relatedFileName}: {ex.Message}");
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                     catch (Exception ex)

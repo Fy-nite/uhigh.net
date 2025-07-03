@@ -37,7 +37,7 @@ namespace uhigh.Net
         /// Gets or sets the value of the target
         /// </summary>
         [XmlElement("Target")]
-        public string Target { get; set; } = "net9.0";
+        public string Target { get; set; } = "net8.0"; // Changed from net9.0 to net8.0 for better compatibility
 
         /// <summary>
         /// Gets or sets the value of the output type

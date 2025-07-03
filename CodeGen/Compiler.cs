@@ -593,6 +593,7 @@ namespace uhigh.Net
         public async Task<bool> CompileProject(string projectPath, string? outputFile = null)
         {
             var diagnostics = new DiagnosticsReporter(_verboseMode, projectPath);
+            var overallTimer = Stopwatch.StartNew();
             
             try
             {
@@ -605,172 +606,207 @@ namespace uhigh.Net
                 }
 
                 // Load project file
-                var project = await ProjectFile.LoadAsync(projectPath, diagnostics);
-                if (project == null)
+                using (var loadTimer = new NuGet.OperationTimer("Loading project", diagnostics, _verboseMode))
                 {
-                    diagnostics.PrintSummary();
-                    return false;
-                }
-
-                diagnostics.ReportInfo($"Compiling project: {project.Name} (OutputType: {project.OutputType})");
-
-                // Define projectDir for resolving relative paths
-                var projectDir = Path.GetDirectoryName(Path.GetFullPath(projectPath)) ?? "";
-                diagnostics.ReportInfo($"Project directory: {projectDir}");
-
-                // Restore NuGet packages first
-                var nugetManager = new NuGet.NuGetManager(diagnostics);
-                var restoreSuccess = await nugetManager.RestorePackagesAsync(project, projectDir);
-                if (!restoreSuccess)
-                {
-                    diagnostics.ReportWarning("Some packages failed to restore, compilation may fail");
-                }
-
-                // Get NuGet package assemblies
-                var nugetAssemblies = new List<string>();
-                foreach (var package in project.Dependencies)
-                {
-                    var assemblies = await nugetManager.GetPackageAssembliesAsync(package, project.Target);
-                    nugetAssemblies.AddRange(assemblies);
-                }
-
-                // Parse all source files and collect them
-                var allPrograms = new List<Program>();
-                var projectRootNamespace = project.RootNamespace ?? project.Name;
-                var projectClassName = project.ClassName ?? "Program";
-
-                if (project.SourceFiles.Count == 0)
-                {
-                    diagnostics.ReportError("No source files found in project");
-                    diagnostics.PrintSummary();
-                    return false;
-                }
-
-                diagnostics.ReportInfo($"Processing {project.SourceFiles.Count} source files:");
-
-                foreach (var sourceFileRelative in project.SourceFiles)
-                {
-                    // Resolve source file path relative to project directory
-                    var fullSourcePath = Path.IsPathRooted(sourceFileRelative) 
-                        ? sourceFileRelative 
-                        : Path.Combine(projectDir, sourceFileRelative);
-                    
-                    fullSourcePath = Path.GetFullPath(fullSourcePath);
-                    
-                    diagnostics.ReportInfo($"Processing: {Path.GetRelativePath(projectDir, fullSourcePath)}");
-                        
-                    if (!File.Exists(fullSourcePath))
+                    var project = await ProjectFile.LoadAsync(projectPath, diagnostics);
+                    if (project == null)
                     {
-                        diagnostics.ReportError($"Source file not found: {fullSourcePath}");
-                        continue;
+                        diagnostics.PrintSummary();
+                        return false;
                     }
 
-                    // Skip non-μHigh files
-                    if (!fullSourcePath.EndsWith(".uh", StringComparison.OrdinalIgnoreCase))
+                    diagnostics.ReportInfo($"Compiling project: {project.Name} (OutputType: {project.OutputType})");
+
+                    // Define projectDir for resolving relative paths
+                    var projectDir = Path.GetDirectoryName(Path.GetFullPath(projectPath)) ?? "";
+                    diagnostics.ReportInfo($"Project directory: {projectDir}");
+
+                    // Restore NuGet packages first
+                    var nugetManager = new NuGet.NuGetManager(diagnostics);
+                    var restoreSuccess = await nugetManager.RestorePackagesAsync(project, projectDir);
+                    if (!restoreSuccess)
                     {
-                        diagnostics.ReportWarning($"Skipping non-μHigh source file: {fullSourcePath}");
-                        continue;
+                        diagnostics.ReportWarning("Some packages failed to restore, compilation may fail");
                     }
 
-                    try
+                    // Get NuGet package assemblies with proper target framework
+                    var nugetAssemblies = new List<string>();
+                    using (var resolveTimer = new NuGet.OperationTimer("Resolving package assemblies", diagnostics, _verboseMode))
                     {
-                        var source = await File.ReadAllTextAsync(fullSourcePath);
-                        diagnostics.ReportInfo($"Read {source.Length} characters from {Path.GetFileName(fullSourcePath)}");
-                        
-                        // Compile to AST
-                        var ast = CompileToAST(source, diagnostics, Path.GetFileName(fullSourcePath));
+                        foreach (var package in project.Dependencies)
+                        {
+                            var assemblies = await nugetManager.GetPackageAssembliesAsync(package, project.Target);
+                            nugetAssemblies.AddRange(assemblies);
+                            
+                            diagnostics.ReportInfo($"Added {assemblies.Count} assemblies from package {package.Name} v{package.Version}");
+                        }
+
+                        if (nugetAssemblies.Count > 0)
+                        {
+                            diagnostics.ReportInfo($"Total NuGet assemblies found: {nugetAssemblies.Count}");
+                            if (_verboseMode)
+                            {
+                                foreach (var assembly in nugetAssemblies)
+                                {
+                                    diagnostics.ReportInfo($"  - {Path.GetFileName(assembly)}");
+                                }
+                            }
+                        }
+                    }
+
+                    // Parse all source files and collect them
+                    var allPrograms = new List<Program>();
+                    var projectRootNamespace = project.RootNamespace ?? project.Name;
+                    var projectClassName = project.ClassName ?? "Program";
+
+                    if (project.SourceFiles.Count == 0)
+                    {
+                        diagnostics.ReportError("No source files found in project");
+                        diagnostics.PrintSummary();
+                        return false;
+                    }
+
+                    using (var parseTimer = new NuGet.OperationTimer("Parsing source files", diagnostics, _verboseMode))
+                    {
+                        diagnostics.ReportInfo($"Processing {project.SourceFiles.Count} source files:");
+
+                        foreach (var sourceFileRelative in project.SourceFiles)
+                        {
+                            // Resolve source file path relative to project directory
+                            var fullSourcePath = Path.IsPathRooted(sourceFileRelative) 
+                                ? sourceFileRelative 
+                                : Path.Combine(projectDir, sourceFileRelative);
+                            
+
+                            fullSourcePath = Path.GetFullPath(fullSourcePath);
+                            
+
+                            diagnostics.ReportInfo($"Processing: {Path.GetRelativePath(projectDir, fullSourcePath)}");
+                                
+                            if (!File.Exists(fullSourcePath))
+                            {
+                                diagnostics.ReportError($"Source file not found: {fullSourcePath}");
+                                continue;
+                            }
+
+                            // Skip non-μHigh files
+                            if (!fullSourcePath.EndsWith(".uh", StringComparison.OrdinalIgnoreCase))
+                            {
+                                diagnostics.ReportWarning($"Skipping non-μHigh source file: {fullSourcePath}");
+                                continue;
+                            }
+
+                            try
+                            {
+                                var source = await File.ReadAllTextAsync(fullSourcePath);
+                                diagnostics.ReportInfo($"Read {source.Length} characters from {Path.GetFileName(fullSourcePath)}");
+                                
+                                // Compile to AST
+                                var ast = CompileToAST(source, diagnostics, Path.GetFileName(fullSourcePath));
+                                
+                                if (diagnostics.HasErrors)
+                                {
+                                    diagnostics.ReportError($"Failed to compile {fullSourcePath}");
+                                    continue;
+                                }
+                                
+                                allPrograms.Add(ast);
+                                diagnostics.ReportInfo($"Successfully compiled {Path.GetFileName(fullSourcePath)}");
+                            }
+                            catch (Exception ex)
+                            {
+                                diagnostics.ReportError($"Failed to process {fullSourcePath}: {ex.Message}");
+                                continue;
+                            }
+                        }
+                    }
+
+                    if (allPrograms.Count == 0)
+                    {
+                        diagnostics.ReportError("No valid source files were compiled");
+                        diagnostics.PrintSummary();
+                        return false;
+                    }
+
+                    diagnostics.ReportInfo($"Successfully processed {allPrograms.Count} source files");
+
+                    // Generate combined C# code
+                    string combinedCode;
+                    using (var generateTimer = new NuGet.OperationTimer("Generating C# code", diagnostics, _verboseMode))
+                    {
+                        var generator = new CSharpGenerator();
+                        combinedCode = generator.GenerateCombined(allPrograms, diagnostics, projectRootNamespace, projectClassName);
                         
                         if (diagnostics.HasErrors)
                         {
-                            diagnostics.ReportError($"Failed to compile {fullSourcePath}");
-                            continue;
+                            diagnostics.PrintSummary();
+                            return false;
                         }
+
+                        // Check for main method in executable projects
+                        var hasMainMethod = combinedCode.Contains("static void Main") || combinedCode.Contains("static async Task Main");
                         
-                        allPrograms.Add(ast);
-                        diagnostics.ReportInfo($"Successfully compiled {Path.GetFileName(fullSourcePath)}");
+                        if (!hasMainMethod && project.OutputType.Equals("Exe", StringComparison.OrdinalIgnoreCase))
+                        {
+                            diagnostics.ReportError("No main method found in executable project. Make sure you have a 'func main()' function.");
+                            diagnostics.PrintSummary();
+                            return false;
+                        }
+
+                        if (_verboseMode)
+                        {
+                            diagnostics.ReportInfo("Generated combined C# code:");
+                            Console.WriteLine("=".PadRight(50, '='));
+                            Console.WriteLine(combinedCode);
+                            Console.WriteLine("=".PadRight(50, '='));
+                            Console.WriteLine();
+                        }
                     }
-                    catch (Exception ex)
+
+                    // Use in-memory compiler with project configuration
+                    bool success;
+                    using (var compileTimer = new NuGet.OperationTimer("Compiling to executable", diagnostics, _verboseMode))
                     {
-                        diagnostics.ReportError($"Failed to process {fullSourcePath}: {ex.Message}");
-                        continue;
+                        var inMemoryCompiler = new InMemoryCompiler(_stdLibPath);
+                        
+                        if (outputFile != null)
+                        {
+                            // Resolve output file relative to project directory
+                            if (!Path.IsPathRooted(outputFile))
+                            {
+                                outputFile = Path.Combine(projectDir, outputFile);
+                            }
+                            
+                            success = await inMemoryCompiler.CompileToExecutable(combinedCode, outputFile, projectRootNamespace, projectClassName, project.OutputType, nugetAssemblies);
+                            if (success)
+                            {
+                                Console.WriteLine($"Project compiled successfully to: {outputFile}");
+                            }
+                        }
+                        else
+                        {
+                            // Default output file based on project name and type
+                            var defaultOutputFile = project.OutputType.Equals("Library", StringComparison.OrdinalIgnoreCase) 
+                                ? Path.Combine(projectDir, $"{project.Name}.dll")
+                                : Path.Combine(projectDir, $"{project.Name}.exe");
+                            
+                            success = await inMemoryCompiler.CompileToExecutable(combinedCode, defaultOutputFile, projectRootNamespace, projectClassName, project.OutputType, nugetAssemblies);
+                            if (success)
+                            {
+                                Console.WriteLine($"Project compiled successfully to: {defaultOutputFile}");
+                            }
+                        }
                     }
-                }
 
-                if (allPrograms.Count == 0)
-                {
-                    diagnostics.ReportError("No valid source files were compiled");
-                    diagnostics.PrintSummary();
-                    return false;
-                }
-
-                diagnostics.ReportInfo($"Successfully processed {allPrograms.Count} source files");
-
-                // Generate combined C# code
-                var generator = new CSharpGenerator();
-                var combinedCode = generator.GenerateCombined(allPrograms, diagnostics, projectRootNamespace, projectClassName);
-                
-                if (diagnostics.HasErrors)
-                {
-                    diagnostics.PrintSummary();
-                    return false;
-                }
-
-                // Check for main method in executable projects
-                var hasMainMethod = combinedCode.Contains("static void Main") || combinedCode.Contains("static async Task Main");
-                
-                if (!hasMainMethod && project.OutputType.Equals("Exe", StringComparison.OrdinalIgnoreCase))
-                {
-                    diagnostics.ReportError("No main method found in executable project. Make sure you have a 'func main()' function.");
-                    diagnostics.PrintSummary();
-                    return false;
-                }
-
-                if (_verboseMode)
-                {
-                    diagnostics.ReportInfo("Generated combined C# code:");
-                    Console.WriteLine("=".PadRight(50, '='));
-                    Console.WriteLine(combinedCode);
-                    Console.WriteLine("=".PadRight(50, '='));
-                    Console.WriteLine();
-                }
-
-                // Use in-memory compiler with project configuration
-                var inMemoryCompiler = new InMemoryCompiler(_stdLibPath);
-                
-                if (outputFile != null)
-                {
-                    // Resolve output file relative to project directory
-                    if (!Path.IsPathRooted(outputFile))
-                    {
-                        outputFile = Path.Combine(projectDir, outputFile);
-                    }
-                    
-                    var success = await inMemoryCompiler.CompileToExecutable(combinedCode, outputFile, projectRootNamespace, projectClassName, project.OutputType, nugetAssemblies);
-                    if (success)
-                    {
-                        Console.WriteLine($"Project compiled successfully to: {outputFile}");
-                    }
-                    diagnostics.PrintSummary();
-                    return success;
-                }
-                else
-                {
-                    // Default output file based on project name and type
-                    var defaultOutputFile = project.OutputType.Equals("Library", StringComparison.OrdinalIgnoreCase) 
-                        ? Path.Combine(projectDir, $"{project.Name}.dll")
-                        : Path.Combine(projectDir, $"{project.Name}.exe");
-                    
-                    var success = await inMemoryCompiler.CompileToExecutable(combinedCode, defaultOutputFile, projectRootNamespace, projectClassName, project.OutputType, nugetAssemblies);
-                    if (success)
-                    {
-                        Console.WriteLine($"Project compiled successfully to: {defaultOutputFile}");
-                    }
+                    overallTimer.Stop();
+                    diagnostics.ReportInfo($"Total compilation time: {NuGet.OperationTimer.FormatDuration(overallTimer.Elapsed)}");
                     diagnostics.PrintSummary();
                     return success;
                 }
             }
             catch (Exception ex)
             {
+                overallTimer.Stop();
                 diagnostics.ReportFatal($"Project compilation failed: {ex.Message}", exception: ex);
                 diagnostics.PrintSummary();
                 return false;

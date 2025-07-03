@@ -7,70 +7,103 @@ using System.Text.RegularExpressions;
 namespace uhigh.Net.NuGet
 {
     /// <summary>
+    /// The operation timer class for tracking timing information
+    /// </summary>
+    public class OperationTimer : IDisposable
+    {
+        private readonly string _operationName;
+        private readonly DiagnosticsReporter _diagnostics;
+        private readonly Stopwatch _stopwatch;
+        private readonly bool _verboseMode;
+
+        public OperationTimer(string operationName, DiagnosticsReporter diagnostics, bool verboseMode = false)
+        {
+            _operationName = operationName;
+            _diagnostics = diagnostics;
+            _verboseMode = verboseMode;
+            _stopwatch = Stopwatch.StartNew();
+            if (_verboseMode)
+            {
+                _diagnostics.ReportInfo($"Starting {_operationName}");
+            }
+        }
+
+        public void Dispose()
+        {
+            _stopwatch.Stop();
+            var elapsed = _stopwatch.Elapsed;
+            if (_verboseMode)
+            {
+                _diagnostics.ReportInfo($"Completed {_operationName} in {FormatDuration(elapsed)}");
+            }
+            else
+            {
+                _diagnostics.ReportInfo($"{_operationName} ({FormatDuration(elapsed)})");
+            }
+        }
+
+        public static string FormatDuration(TimeSpan duration)
+        {
+            if (duration.TotalMilliseconds < 1000)
+                return $"{duration.TotalMilliseconds:F0}ms";
+            if (duration.TotalSeconds < 60)
+                return $"{duration.TotalSeconds:F1}s";
+            return $"{duration.TotalMinutes:F1}m";
+        }
+    }
+
+    /// <summary>
     /// The nu get manager class
     /// </summary>
     public class NuGetManager
     {
-        /// <summary>
-        /// The diagnostics
-        /// </summary>
         private readonly DiagnosticsReporter _diagnostics;
-        /// <summary>
-        /// The global packages path
-        /// </summary>
         private readonly string _globalPackagesPath;
-        /// <summary>
-        /// The default sources
-        /// </summary>
         private readonly string[] _defaultSources = {
             "https://api.nuget.org/v3-flatcontainer/",
             "https://api.nuget.org/v3/index.json"
         };
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="NuGetManager"/> class
-        /// </summary>
-        /// <param name="diagnostics">The diagnostics</param>
         public NuGetManager(DiagnosticsReporter? diagnostics = null)
         {
             _diagnostics = diagnostics ?? new DiagnosticsReporter();
-            
-            // Use NuGet's global packages folder
-            _globalPackagesPath = Environment.GetEnvironmentVariable("NUGET_PACKAGES") 
+            _globalPackagesPath = Environment.GetEnvironmentVariable("NUGET_PACKAGES")
                 ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".nuget", "packages");
         }
 
-        /// <summary>
-        /// Restores the packages using the specified project
-        /// </summary>
-        /// <param name="project">The project</param>
-        /// <param name="projectDir">The project dir</param>
-        /// <param name="force">The force</param>
-        /// <returns>A task containing the bool</returns>
         public async Task<bool> RestorePackagesAsync(uhighProject project, string projectDir, bool force = false)
         {
+            using var timer = new OperationTimer("NuGet restore", _diagnostics, true);
             try
             {
-                _diagnostics.ReportInfo($"Restoring NuGet packages for {project.Name}");
-                
                 if (project.Dependencies.Count == 0)
                 {
                     _diagnostics.ReportInfo("No packages to restore");
                     return true;
                 }
 
+                _diagnostics.ReportInfo($"Restoring {project.Dependencies.Count} package(s) for {project.Name}");
+
                 var success = true;
+                var packageTasks = new List<Task<(string name, string version, bool success, TimeSpan duration)>>();
+
                 foreach (var package in project.Dependencies)
                 {
-                    var packageResult = await RestorePackageAsync(package, projectDir, force);
-                    if (!packageResult)
+                    packageTasks.Add(RestorePackageWithTimingAsync(package, projectDir, force));
+                }
+
+                var results = await Task.WhenAll(packageTasks);
+
+                foreach (var (name, version, packageSuccess, duration) in results)
+                {
+                    if (!packageSuccess)
                     {
                         success = false;
-                        _diagnostics.ReportError($"Failed to restore package: {package.Name} v{package.Version}");
+                        _diagnostics.ReportError($"Failed to restore package: {name} v{version}");
                     }
                     else
                     {
-                        _diagnostics.ReportInfo($"Restored: {package.Name} v{package.Version}");
+                        _diagnostics.ReportInfo($"  -> {name} v{version} ({OperationTimer.FormatDuration(duration)})");
                     }
                 }
 
@@ -83,32 +116,42 @@ namespace uhigh.Net.NuGet
             }
         }
 
-        /// <summary>
-        /// Restores the package using the specified package
-        /// </summary>
-        /// <param name="package">The package</param>
-        /// <param name="projectDir">The project dir</param>
-        /// <param name="force">The force</param>
-        /// <returns>A task containing the bool</returns>
+        private async Task<(string name, string version, bool success, TimeSpan duration)> RestorePackageWithTimingAsync(PackageReference package, string projectDir, bool force)
+        {
+            var stopwatch = Stopwatch.StartNew();
+            try
+            {
+                var success = await RestorePackageAsync(package, projectDir, force);
+                stopwatch.Stop();
+                return (package.Name, package.Version, success, stopwatch.Elapsed);
+            }
+            catch (Exception ex)
+            {
+                stopwatch.Stop();
+                _diagnostics.ReportError($"Failed to restore {package.Name}: {ex.Message}");
+                return (package.Name, package.Version, false, stopwatch.Elapsed);
+            }
+        }
+
         private async Task<bool> RestorePackageAsync(PackageReference package, string projectDir, bool force)
         {
             try
             {
                 var packageDir = Path.Combine(_globalPackagesPath, package.Name.ToLowerInvariant(), package.Version.ToLowerInvariant());
-                
+
                 if (Directory.Exists(packageDir) && !force)
                 {
                     _diagnostics.ReportInfo($"Package {package.Name} v{package.Version} already exists");
                     return true;
                 }
 
-                // Download package using dotnet restore if available, otherwise use direct download
+                using var dotnetTimer = new OperationTimer($"dotnet restore for {package.Name}", _diagnostics, false);
                 if (await TryDotNetRestoreAsync(package, projectDir))
                 {
                     return true;
                 }
 
-                // Fallback to direct download
+                using var downloadTimer = new OperationTimer($"direct download for {package.Name}", _diagnostics, false);
                 return await DownloadPackageDirectlyAsync(package);
             }
             catch (Exception ex)
@@ -118,17 +161,10 @@ namespace uhigh.Net.NuGet
             }
         }
 
-        /// <summary>
-        /// Tries the dot net restore using the specified package
-        /// </summary>
-        /// <param name="package">The package</param>
-        /// <param name="projectDir">The project dir</param>
-        /// <returns>A task containing the bool</returns>
         private async Task<bool> TryDotNetRestoreAsync(PackageReference package, string projectDir)
         {
             try
             {
-                // Create a temporary project file to restore the package
                 var tempProjPath = Path.Combine(Path.GetTempPath(), $"uhigh-restore-{Guid.NewGuid()}.csproj");
                 var tempProjContent = $@"<Project Sdk=""Microsoft.NET.Sdk"">
   <PropertyGroup>
@@ -157,7 +193,6 @@ namespace uhigh.Net.NuGet
                 process.Start();
                 await process.WaitForExitAsync();
 
-                // Clean up
                 try { File.Delete(tempProjPath); } catch { }
 
                 return process.ExitCode == 0;
@@ -168,25 +203,19 @@ namespace uhigh.Net.NuGet
             }
         }
 
-        /// <summary>
-        /// Downloads the package directly using the specified package
-        /// </summary>
-        /// <param name="package">The package</param>
-        /// <returns>A task containing the bool</returns>
         private async Task<bool> DownloadPackageDirectlyAsync(PackageReference package)
         {
             try
             {
                 var packageName = package.Name.ToLowerInvariant();
                 var packageVersion = package.Version.ToLowerInvariant();
-                
+
                 using var httpClient = new HttpClient();
-                
-                // Try to download from NuGet API
+
                 var downloadUrl = $"https://api.nuget.org/v3-flatcontainer/{packageName}/{packageVersion}/{packageName}.{packageVersion}.nupkg";
-                
+
                 _diagnostics.ReportInfo($"Downloading {package.Name} from {downloadUrl}");
-                
+
                 var response = await httpClient.GetAsync(downloadUrl);
                 if (!response.IsSuccessStatusCode)
                 {
@@ -195,16 +224,15 @@ namespace uhigh.Net.NuGet
                 }
 
                 var packageBytes = await response.Content.ReadAsByteArrayAsync();
-                
-                // Extract package to global packages folder
+
                 var packageDir = Path.Combine(_globalPackagesPath, packageName, packageVersion);
                 Directory.CreateDirectory(packageDir);
-                
+
                 using var packageStream = new MemoryStream(packageBytes);
                 using var archive = new ZipArchive(packageStream, ZipArchiveMode.Read);
-                
+
                 archive.ExtractToDirectory(packageDir, overwriteFiles: true);
-                
+
                 _diagnostics.ReportInfo($"Extracted {package.Name} to {packageDir}");
                 return true;
             }
@@ -215,27 +243,20 @@ namespace uhigh.Net.NuGet
             }
         }
 
-        /// <summary>
-        /// Gets the package assemblies using the specified package
-        /// </summary>
-        /// <param name="package">The package</param>
-        /// <param name="targetFramework">The target framework</param>
-        /// <returns>The assemblies</returns>
         public async Task<List<string>> GetPackageAssembliesAsync(PackageReference package, string targetFramework = "net8.0")
         {
             var assemblies = new List<string>();
-            
+
             try
             {
                 var packageDir = Path.Combine(_globalPackagesPath, package.Name.ToLowerInvariant(), package.Version.ToLowerInvariant());
-                
+
                 if (!Directory.Exists(packageDir))
                 {
                     _diagnostics.ReportWarning($"Package directory not found: {packageDir}");
                     return assemblies;
                 }
 
-                // Look for assemblies in lib folder with target framework compatibility
                 var libDir = Path.Combine(packageDir, "lib");
                 if (Directory.Exists(libDir))
                 {
@@ -248,12 +269,11 @@ namespace uhigh.Net.NuGet
                     {
                         var dlls = Directory.GetFiles(frameworkDir, "*.dll", SearchOption.TopDirectoryOnly);
                         assemblies.AddRange(dlls);
-                        
-                        if (assemblies.Count > 0) break; // Use the best matching framework
+
+                        if (assemblies.Count > 0) break;
                     }
                 }
 
-                // Also check ref folder for reference assemblies
                 var refDir = Path.Combine(packageDir, "ref");
                 if (Directory.Exists(refDir) && assemblies.Count == 0)
                 {
@@ -266,9 +286,17 @@ namespace uhigh.Net.NuGet
                     {
                         var dlls = Directory.GetFiles(frameworkDir, "*.dll", SearchOption.TopDirectoryOnly);
                         assemblies.AddRange(dlls);
-                        
+
                         if (assemblies.Count > 0) break;
                     }
+                }
+
+                if (assemblies.Count == 0)
+                {
+                    var allDlls = Directory.GetFiles(packageDir, "*.dll", SearchOption.AllDirectories)
+                        .Where(dll => !dll.Contains("runtimes") || dll.Contains("native"))
+                        .ToList();
+                    assemblies.AddRange(allDlls);
                 }
 
                 _diagnostics.ReportInfo($"Found {assemblies.Count} assemblies for {package.Name}");
@@ -281,33 +309,18 @@ namespace uhigh.Net.NuGet
             return assemblies;
         }
 
-        /// <summary>
-        /// Ises the compatible framework using the specified package framework
-        /// </summary>
-        /// <param name="packageFramework">The package framework</param>
-        /// <param name="targetFramework">The target framework</param>
-        /// <returns>The bool</returns>
         private bool IsCompatibleFramework(string packageFramework, string targetFramework)
         {
-            // Simplified framework compatibility check
-            // In a real implementation, you'd want more sophisticated logic
-            
             var targetParts = ParseFramework(targetFramework);
             var packageParts = ParseFramework(packageFramework);
-            
+
             if (targetParts.name != packageParts.name) return false;
-            
+
             return packageParts.version <= targetParts.version;
         }
 
-        /// <summary>
-        /// Parses the framework using the specified framework
-        /// </summary>
-        /// <param name="framework">The framework</param>
-        /// <returns>The string name version version</returns>
         private (string name, Version version) ParseFramework(string framework)
         {
-            // Parse frameworks like "net8.0", "netstandard2.0", "net48", etc.
             var match = Regex.Match(framework, @"^(net|netstandard|netcoreapp)(\d+\.?\d*)");
             if (match.Success)
             {
@@ -317,18 +330,12 @@ namespace uhigh.Net.NuGet
                     return (name, version);
                 }
             }
-            
+
             return ("unknown", new Version(0, 0));
         }
 
-        /// <summary>
-        /// Gets the framework priority using the specified framework
-        /// </summary>
-        /// <param name="framework">The framework</param>
-        /// <returns>The int</returns>
         private int GetFrameworkPriority(string framework)
         {
-            // Higher number = higher priority
             if (framework.StartsWith("net8")) return 80;
             if (framework.StartsWith("net7")) return 70;
             if (framework.StartsWith("net6")) return 60;
@@ -340,21 +347,15 @@ namespace uhigh.Net.NuGet
             return 0;
         }
 
-        /// <summary>
-        /// Searches the packages using the specified search term
-        /// </summary>
-        /// <param name="searchTerm">The search term</param>
-        /// <param name="take">The take</param>
-        /// <returns>A task containing a list of package search result</returns>
         public async Task<List<PackageSearchResult>> SearchPackagesAsync(string searchTerm, int take = 10)
         {
             try
             {
                 using var httpClient = new HttpClient();
                 var searchUrl = $"https://azuresearch-usnc.nuget.org/query?q={Uri.EscapeDataString(searchTerm)}&take={take}";
-                
+
                 _diagnostics.ReportInfo($"Searching for packages: {searchTerm}");
-                
+
                 var response = await httpClient.GetStringAsync(searchUrl);
                 var searchResult = JsonSerializer.Deserialize<NuGetSearchResponse>(response, new JsonSerializerOptions
                 {
@@ -362,7 +363,7 @@ namespace uhigh.Net.NuGet
                 });
 
                 var packages = new List<PackageSearchResult>();
-                
+
                 if (searchResult?.Data != null)
                 {
                     foreach (var package in searchResult.Data)
@@ -390,89 +391,31 @@ namespace uhigh.Net.NuGet
         }
     }
 
-    /// <summary>
-    /// The package search result class
-    /// </summary>
     public class PackageSearchResult
     {
-        /// <summary>
-        /// Gets or sets the value of the id
-        /// </summary>
         public string Id { get; set; } = "";
-        /// <summary>
-        /// Gets or sets the value of the version
-        /// </summary>
         public string Version { get; set; } = "";
-        /// <summary>
-        /// Gets or sets the value of the description
-        /// </summary>
         public string Description { get; set; } = "";
-        /// <summary>
-        /// Gets or sets the value of the authors
-        /// </summary>
         public List<string> Authors { get; set; } = new();
-        /// <summary>
-        /// Gets or sets the value of the tags
-        /// </summary>
         public List<string> Tags { get; set; } = new();
-        /// <summary>
-        /// Gets or sets the value of the total downloads
-        /// </summary>
         public long TotalDownloads { get; set; }
-        /// <summary>
-        /// Gets or sets the value of the project url
-        /// </summary>
         public string? ProjectUrl { get; set; }
     }
 
-    // JSON response models for NuGet API
-    /// <summary>
-    /// The nu get search response class
-    /// </summary>
     public class NuGetSearchResponse
     {
-        /// <summary>
-        /// Gets or sets the value of the total hits
-        /// </summary>
         public int TotalHits { get; set; }
-        /// <summary>
-        /// Gets or sets the value of the data
-        /// </summary>
         public List<NuGetPackage>? Data { get; set; }
     }
 
-    /// <summary>
-    /// The nu get package class
-    /// </summary>
     public class NuGetPackage
     {
-        /// <summary>
-        /// Gets or sets the value of the id
-        /// </summary>
         public string? Id { get; set; }
-        /// <summary>
-        /// Gets or sets the value of the version
-        /// </summary>
         public string? Version { get; set; }
-        /// <summary>
-        /// Gets or sets the value of the description
-        /// </summary>
         public string? Description { get; set; }
-        /// <summary>
-        /// Gets or sets the value of the authors
-        /// </summary>
         public string[]? Authors { get; set; }
-        /// <summary>
-        /// Gets or sets the value of the tags
-        /// </summary>
         public string[]? Tags { get; set; }
-        /// <summary>
-        /// Gets or sets the value of the total downloads
-        /// </summary>
         public long? TotalDownloads { get; set; }
-        /// <summary>
-        /// Gets or sets the value of the project url
-        /// </summary>
         public string? ProjectUrl { get; set; }
     }
 }
