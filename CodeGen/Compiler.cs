@@ -615,9 +615,10 @@ namespace uhigh.Net
                 diagnostics.ReportInfo($"Compiling project: {project.Name} (OutputType: {project.OutputType})");
 
                 // Define projectDir for resolving relative paths
-                var projectDir = Path.GetDirectoryName(projectPath) ?? "";
+                var projectDir = Path.GetDirectoryName(Path.GetFullPath(projectPath)) ?? "";
+                diagnostics.ReportInfo($"Project directory: {projectDir}");
 
-                // Restore NuGet packages
+                // Restore NuGet packages first
                 var nugetManager = new NuGet.NuGetManager(diagnostics);
                 var restoreSuccess = await nugetManager.RestorePackagesAsync(project, projectDir);
                 if (!restoreSuccess)
@@ -633,17 +634,30 @@ namespace uhigh.Net
                     nugetAssemblies.AddRange(assemblies);
                 }
 
-                // Parse all source files first
+                // Parse all source files and collect them
                 var allPrograms = new List<Program>();
                 var projectRootNamespace = project.RootNamespace ?? project.Name;
                 var projectClassName = project.ClassName ?? "Program";
 
-                foreach (var sourceFile in project.SourceFiles)
+                if (project.SourceFiles.Count == 0)
                 {
-                    // Resolve relative path
-                    var fullSourcePath = Path.IsPathRooted(sourceFile) 
-                        ? sourceFile 
-                        : Path.Combine(projectDir, sourceFile);
+                    diagnostics.ReportError("No source files found in project");
+                    diagnostics.PrintSummary();
+                    return false;
+                }
+
+                diagnostics.ReportInfo($"Processing {project.SourceFiles.Count} source files:");
+
+                foreach (var sourceFileRelative in project.SourceFiles)
+                {
+                    // Resolve source file path relative to project directory
+                    var fullSourcePath = Path.IsPathRooted(sourceFileRelative) 
+                        ? sourceFileRelative 
+                        : Path.Combine(projectDir, sourceFileRelative);
+                    
+                    fullSourcePath = Path.GetFullPath(fullSourcePath);
+                    
+                    diagnostics.ReportInfo($"Processing: {Path.GetRelativePath(projectDir, fullSourcePath)}");
                         
                     if (!File.Exists(fullSourcePath))
                     {
@@ -651,56 +665,47 @@ namespace uhigh.Net
                         continue;
                     }
 
-                    // Make sure we're not trying to compile the project file itself
-                    if (fullSourcePath.EndsWith(".uhighproj", StringComparison.OrdinalIgnoreCase))
-                    {
-                        diagnostics.ReportWarning($"Skipping project file in source files: {fullSourcePath}");
-                        continue;
-                    }
-
-                    // Only compile .uh files
+                    // Skip non-μHigh files
                     if (!fullSourcePath.EndsWith(".uh", StringComparison.OrdinalIgnoreCase))
                     {
                         diagnostics.ReportWarning($"Skipping non-μHigh source file: {fullSourcePath}");
                         continue;
                     }
 
-                    diagnostics.ReportInfo($"Processing source file: {sourceFile}");
-                    var source = await File.ReadAllTextAsync(fullSourcePath);
-                    
-                    // Parse to AST
-                    var lexer = new Lexer.Lexer(source, diagnostics);
-                    var tokens = lexer.Tokenize();
-                    
-                    if (diagnostics.HasErrors)
+                    try
                     {
-                        diagnostics.PrintSummary();
-                        return false;
+                        var source = await File.ReadAllTextAsync(fullSourcePath);
+                        diagnostics.ReportInfo($"Read {source.Length} characters from {Path.GetFileName(fullSourcePath)}");
+                        
+                        // Compile to AST
+                        var ast = CompileToAST(source, diagnostics, Path.GetFileName(fullSourcePath));
+                        
+                        if (diagnostics.HasErrors)
+                        {
+                            diagnostics.ReportError($"Failed to compile {fullSourcePath}");
+                            continue;
+                        }
+                        
+                        allPrograms.Add(ast);
+                        diagnostics.ReportInfo($"Successfully compiled {Path.GetFileName(fullSourcePath)}");
                     }
-                    
-                    var parser = new Parser.Parser(tokens, diagnostics);
-                    var ast = parser.Parse();
-                    
-                    // Handle include statements
-                    ast = ProcessIncludes(ast, diagnostics, new HashSet<string>());
-
-                    if (diagnostics.HasErrors)
+                    catch (Exception ex)
                     {
-                        diagnostics.PrintSummary();
-                        return false;
+                        diagnostics.ReportError($"Failed to process {fullSourcePath}: {ex.Message}");
+                        continue;
                     }
-                    
-                    allPrograms.Add(ast);
                 }
 
                 if (allPrograms.Count == 0)
                 {
-                    diagnostics.ReportError("No valid source files found to compile");
+                    diagnostics.ReportError("No valid source files were compiled");
                     diagnostics.PrintSummary();
                     return false;
                 }
 
-                // Generate combined C# code with proper class/function merging
+                diagnostics.ReportInfo($"Successfully processed {allPrograms.Count} source files");
+
+                // Generate combined C# code
                 var generator = new CSharpGenerator();
                 var combinedCode = generator.GenerateCombined(allPrograms, diagnostics, projectRootNamespace, projectClassName);
                 
@@ -710,12 +715,12 @@ namespace uhigh.Net
                     return false;
                 }
 
-                // Check for main method in the generated code
+                // Check for main method in executable projects
                 var hasMainMethod = combinedCode.Contains("static void Main") || combinedCode.Contains("static async Task Main");
                 
-                if (!hasMainMethod && project.OutputType == "Exe")
+                if (!hasMainMethod && project.OutputType.Equals("Exe", StringComparison.OrdinalIgnoreCase))
                 {
-                    diagnostics.ReportError("No main method found in project files");
+                    diagnostics.ReportError("No main method found in executable project. Make sure you have a 'func main()' function.");
                     diagnostics.PrintSummary();
                     return false;
                 }
@@ -723,27 +728,28 @@ namespace uhigh.Net
                 if (_verboseMode)
                 {
                     diagnostics.ReportInfo("Generated combined C# code:");
+                    Console.WriteLine("=".PadRight(50, '='));
                     Console.WriteLine(combinedCode);
+                    Console.WriteLine("=".PadRight(50, '='));
                     Console.WriteLine();
-                    
-                    if (nugetAssemblies.Count > 0)
-                    {
-                        diagnostics.ReportInfo($"Using {nugetAssemblies.Count} NuGet assemblies:");
-                        foreach (var assembly in nugetAssemblies)
-                        {
-                            Console.WriteLine($"  - {Path.GetFileName(assembly)}");
-                        }
-                        Console.WriteLine();
-                    }
                 }
 
-                // Use in-memory compiler with project configuration, standard library, and NuGet packages
+                // Use in-memory compiler with project configuration
                 var inMemoryCompiler = new InMemoryCompiler(_stdLibPath);
                 
                 if (outputFile != null)
                 {
-                    // Generate executable/library to specified output file
+                    // Resolve output file relative to project directory
+                    if (!Path.IsPathRooted(outputFile))
+                    {
+                        outputFile = Path.Combine(projectDir, outputFile);
+                    }
+                    
                     var success = await inMemoryCompiler.CompileToExecutable(combinedCode, outputFile, projectRootNamespace, projectClassName, project.OutputType, nugetAssemblies);
+                    if (success)
+                    {
+                        Console.WriteLine($"Project compiled successfully to: {outputFile}");
+                    }
                     diagnostics.PrintSummary();
                     return success;
                 }
@@ -751,10 +757,14 @@ namespace uhigh.Net
                 {
                     // Default output file based on project name and type
                     var defaultOutputFile = project.OutputType.Equals("Library", StringComparison.OrdinalIgnoreCase) 
-                        ? $"{project.Name}.dll" 
-                        : $"{project.Name}.exe";
+                        ? Path.Combine(projectDir, $"{project.Name}.dll")
+                        : Path.Combine(projectDir, $"{project.Name}.exe");
                     
                     var success = await inMemoryCompiler.CompileToExecutable(combinedCode, defaultOutputFile, projectRootNamespace, projectClassName, project.OutputType, nugetAssemblies);
+                    if (success)
+                    {
+                        Console.WriteLine($"Project compiled successfully to: {defaultOutputFile}");
+                    }
                     diagnostics.PrintSummary();
                     return success;
                 }

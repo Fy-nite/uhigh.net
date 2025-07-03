@@ -370,7 +370,7 @@ namespace uhigh.Net.Lexer
                 {
                     if (hasDecimalPoint)
                     {
-                        _diagnostics.ReportInvalidNumber(_source.Substring(start, _position - start + 1), line, column);
+                        // Stop here - don't include the second decimal point
                         break;
                     }
                     hasDecimalPoint = true;

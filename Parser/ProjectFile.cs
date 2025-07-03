@@ -57,16 +57,29 @@ namespace uhigh.Net
                 }
 
                 // Resolve relative paths relative to the project directory
-                var projectDir = Path.GetDirectoryName(projectPath) ?? "";
+                var projectDir = Path.GetDirectoryName(Path.GetFullPath(projectPath)) ?? "";
+                diagnostics?.ReportInfo($"Project directory: {projectDir}");
+                
+                // Keep source files as relative paths for now - they'll be resolved during compilation
+                // This allows the project file to remain portable
                 for (int i = 0; i < project.SourceFiles.Count; i++)
                 {
-                    if (!Path.IsPathRooted(project.SourceFiles[i]))
+                    var relativePath = project.SourceFiles[i];
+                    var fullPath = Path.IsPathRooted(relativePath) 
+                        ? relativePath 
+                        : Path.Combine(projectDir, relativePath);
+                    
+                    var exists = File.Exists(fullPath);
+                    diagnostics?.ReportInfo($"Source file: {relativePath} (exists: {exists})");
+                    
+                    if (!exists)
                     {
-                        project.SourceFiles[i] = Path.Combine(projectDir, project.SourceFiles[i]);
+                        diagnostics?.ReportWarning($"Source file not found: {fullPath}");
                     }
                 }
 
-                diagnostics?.ReportInfo($"Loaded project: {project.Name} v{project.Version}");
+                diagnostics?.ReportInfo($"Loaded project: {project.Name} v{project.Version} with {project.SourceFiles.Count} source files");
+                
                 return project;
             }
             catch (Exception ex)

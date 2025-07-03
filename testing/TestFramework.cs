@@ -425,20 +425,5 @@ namespace uhigh.Net.Testing
             Console.ResetColor();
             Console.WriteLine($"Duration: {totalDuration.TotalMilliseconds:F2}ms");
         }
-
-        // Add helper method for parsing source code in tests
-        /// <summary>
-        /// Parses the source using the specified source
-        /// </summary>
-        /// <param name="source">The source</param>
-        /// <returns>The program</returns>
-        public static Program ParseSource(string source)
-        {
-            var diagnostics = new uhigh.Net.Diagnostics.DiagnosticsReporter();
-            var lexer = new uhigh.Net.Lexer.Lexer(source, diagnostics);
-            var tokens = lexer.Tokenize();
-            var parser = new uhigh.Net.Parser.Parser(tokens, diagnostics);
-            return parser.Parse();
-        }
     }
 }

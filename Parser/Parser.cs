@@ -127,7 +127,70 @@ namespace uhigh.Net.Parser
                         modifiers.Add(Advance().Value);
                     }
 
-                    if (Check(TokenType.Class))
+                    if (Check(TokenType.Namespace))
+                    {
+                        Advance(); // Skip 'namespace'
+                        var namespaceName = Consume(TokenType.Identifier, "Expected namespace name").Value;
+                        
+                        // Skip to namespace body
+                        while (!Check(TokenType.LeftBrace) && !IsAtEnd())
+                        {
+                            Advance();
+                        }
+                        
+                        if (Check(TokenType.LeftBrace))
+                        {
+                            Advance(); // Skip '{'
+                            
+                            // Process namespace contents
+                            while (!Check(TokenType.RightBrace) && !IsAtEnd())
+                            {
+                                if (Check(TokenType.Class))
+                                {
+                                    Advance(); // Skip 'class'
+                                    var classNameToken = Consume(TokenType.Identifier, "Expected class name");
+                                    var fullClassName = $"{namespaceName}.{classNameToken.Value}";
+                                    
+                                    // Skip to class body and register methods
+                                    while (!Check(TokenType.LeftBrace) && !IsAtEnd())
+                                    {
+                                        Advance();
+                                    }
+                                    
+                                    if (Check(TokenType.LeftBrace))
+                                    {
+                                        Advance(); // Skip '{'
+                                        
+                                        while (!Check(TokenType.RightBrace) && !IsAtEnd())
+                                        {
+                                            if (Check(TokenType.Func))
+                                            {
+                                                Advance(); // Skip 'func'
+                                                var methodNameToken = Consume(TokenType.Identifier, "Expected method name");
+                                                
+                                                var method = new MethodDeclaration { Name = methodNameToken.Value };
+                                                var methodLocation = new SourceLocation(methodNameToken.Line, methodNameToken.Column);
+                                                _methodChecker.RegisterMethod(method, fullClassName, methodLocation);
+                                            }
+                                            else
+                                            {
+                                                Advance();
+                                            }
+                                        }
+                                        
+                                        if (Check(TokenType.RightBrace)) Advance(); // Skip '}'
+                                    }
+                                }
+                                else
+                                {
+                                    Advance();
+                                }
+                            }
+                            
+                            if (Check(TokenType.RightBrace)) Advance(); // Skip '}'
+                        }
+                    }
+                    else if (Check(TokenType.Class))
                     {
                         Advance(); // Skip 'class'
 
@@ -145,21 +208,7 @@ namespace uhigh.Net.Parser
                         {
                             _diagnostics.ReportInfo($"Skipping registration for external class: {fullClassName}");
                             // Skip to end of class declaration
-                            while (!Check(TokenType.LeftBrace) && !IsAtEnd())
-                            {
-                                Advance();
-                            }
-                            if (Check(TokenType.LeftBrace))
-                            {
-                                Advance(); // Skip opening brace
-                                var braceCount = 1;
-                                while (braceCount > 0 && !IsAtEnd())
-                                {
-                                    if (Check(TokenType.LeftBrace)) braceCount++;
-                                    else if (Check(TokenType.RightBrace)) braceCount--;
-                                    Advance();
-                                }
-                            }
+                            SkipToEndOfBlock();
                             continue;
                         }
 
@@ -168,7 +217,7 @@ namespace uhigh.Net.Parser
                         {
                             Name = fullClassName,
                             Modifiers = modifiers,
-                            Attributes = attributes, // Add this
+                            Attributes = attributes,
                             Members = new List<Statement>()
                         };
 
@@ -202,6 +251,8 @@ namespace uhigh.Net.Parser
                                     Advance();
                                 }
                             }
+                            
+                            if (Check(TokenType.RightBrace)) Advance(); // Skip '}'
                         }
                     }
                     else if (Check(TokenType.Func))
@@ -222,138 +273,85 @@ namespace uhigh.Net.Parser
                         if (hasDotNetFuncAttribute || hasExternalAttribute)
                         {
                             _diagnostics.ReportInfo($"Skipping registration for external/dotnet function: {functionName}");
-                            // Skip to end of function declaration
-                            while (!Check(TokenType.LeftBrace) && !IsAtEnd())
-                            {
-                                Advance();
-                            }
-                            if (Check(TokenType.LeftBrace))
-                            {
-                                Advance(); // Skip opening brace
-                                // Skip function body
-                                var braceCount = 1;
-                                while (braceCount > 0 && !IsAtEnd())
-                                {
-                                    if (Check(TokenType.LeftBrace)) braceCount++;
-                                    else if (Check(TokenType.RightBrace)) braceCount--;
-                                    Advance();
-                                }
-                            }
+                            SkipToEndOfBlock();
                             continue;
                         }
 
-                        // Parse parameters properly
-                        var parameters = new List<Parameter>();
-                        Consume(TokenType.LeftParen, "Expected '(' after function name");
-
-                        if (!Check(TokenType.RightParen))
-                        {
-                            do
-                            {
-                                var paramName = Consume(TokenType.Identifier, "Expected parameter name").Value;
-                                string? paramType = null;
-
-                                if (Match(TokenType.Colon))
-                                {
-                                    // Handle type tokens properly
-                                    if (Check(TokenType.StringType))
-                                    {
-                                        paramType = "string";
-                                        Advance();
-                                    }
-                                    else if (Check(TokenType.Int))
-                                    {
-                                        paramType = "int";
-                                        Advance();
-                                    }
-                                    else if (Check(TokenType.Float))
-                                    {
-                                        paramType = "float";
-                                        Advance();
-                                    }
-                                    else if (Check(TokenType.Bool))
-                                    {
-                                        paramType = "bool";
-                                        Advance();
-                                    }
-                                    else
-                                    {
-                                        paramType = ParseTypeName();
-                                    }
-                                }
-
-                                parameters.Add(new Parameter { Name = paramName, Type = paramType });
-                            } while (Match(TokenType.Comma));
-                        }
-
-                        Consume(TokenType.RightParen, "Expected ')' after parameters");
-
-                        // Parse return type if present
-                        string? returnType = null;
-                        if (Match(TokenType.Colon))
-                        {
-                            if (Check(TokenType.StringType))
-                            {
-                                returnType = "string";
-                                Advance();
-                            }
-                            else if (Check(TokenType.Int))
-                            {
-                                returnType = "int";
-                                Advance();
-                            }
-                            else if (Check(TokenType.Float))
-                            {
-                                returnType = "float";
-                                Advance();
-                            }
-                            else if (Check(TokenType.Bool))
-                            {
-                                returnType = "bool";
-                                Advance();
-                            }
-                            else if (Check(TokenType.Void))
-                            {
-                                returnType = "void";
-                                Advance();
-                            }
-                            else
-                            {
-                                returnType = Consume(TokenType.Identifier, "Expected return type").Value;
-                            }
-                        }
-
-                        // Skip to function body
-                        while (!Check(TokenType.LeftBrace) && !IsAtEnd())
-                        {
-                            Advance();
-                        }
+                        // Skip function parameters and body for registration
+                        SkipFunctionSignature();
+                        SkipToEndOfBlock();
 
                         // Create function declaration for registration
                         var func = new FunctionDeclaration
                         {
                             Name = functionName,
-                            Parameters = parameters,
-                            ReturnType = returnType,
+                            Parameters = new List<Parameter>(),
+                            ReturnType = null,
                             Attributes = attributes
                         };
                         var location = new SourceLocation(nameToken.Line, nameToken.Column);
                         _methodChecker.RegisterMethod(func, location);
 
-                        _diagnostics.ReportInfo($"Registered function: {functionName} with {parameters.Count} parameters");
+                        _diagnostics.ReportInfo($"Registered function: {functionName}");
                     }
                     else
                     {
                         Advance();
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
+                    _diagnostics.ReportWarning($"Error during method registration: {ex.Message}");
                     Advance();
                 }
             }
 
-            _current = tempCurrent;
+            _current = tempCurrent; // Reset to original position
+        }
+
+        // Helper method to skip to end of block
+        private void SkipToEndOfBlock()
+        {
+            while (!Check(TokenType.LeftBrace) && !IsAtEnd())
+            {
+                Advance();
+            }
+            
+            if (Check(TokenType.LeftBrace))
+            {
+                Advance(); // Skip opening brace
+                var braceCount = 1;
+                while (braceCount > 0 && !IsAtEnd())
+                {
+                    if (Check(TokenType.LeftBrace)) braceCount++;
+                    else if (Check(TokenType.RightBrace)) braceCount--;
+                    Advance();
+                }
+            }
+        }
+
+        // Helper method to skip function signature
+        private void SkipFunctionSignature()
+        {
+            // Skip parameters
+            if (Check(TokenType.LeftParen))
+            {
+                Advance(); // Skip '('
+                var parenCount = 1;
+                while (parenCount > 0 && !IsAtEnd())
+                {
+                    if (Check(TokenType.LeftParen)) parenCount++;
+                    else if (Check(TokenType.RightParen)) parenCount--;
+                    Advance();
+                }
+            }
+            
+            // Skip return type
+            if (Check(TokenType.Colon))
+            {
+                Advance(); // Skip ':'
+                Advance(); // Skip return type
+            }
         }
 
         /// <summary>
@@ -427,6 +425,7 @@ namespace uhigh.Net.Parser
                 if (Match(TokenType.Break)) return ParseBreakStatement();
                 if (Match(TokenType.Continue)) return ParseContinueStatement();
                 if (Match(TokenType.Sharp)) return ParseSharpBlock();
+                // Fix: Parse match as a statement, not an expression
                 if (Match(TokenType.Match)) return ParseMatchStatement();
 
                 // Handle legacy using statements
@@ -1651,12 +1650,8 @@ namespace uhigh.Net.Parser
                 return new UnaryExpression { Operator = op, Operand = expr };
             }
 
-            // Handle match expressions
-            if (Check(TokenType.Match))
-            {
-                Advance(); // consume 'match'
-                return ParseMatchExpression(expr);
-            }
+            // Remove the match expression parsing from here - match should only be parsed as statements
+            // The match keyword should be handled in ParseStatement(), not as a postfix operator
 
             return expr;
         }
@@ -1964,8 +1959,9 @@ namespace uhigh.Net.Parser
                 }
             }
 
-            // last thing, turn everything into expression and return it
-            
+            // Remove match expression parsing from primary expressions
+            // Match should only be parsed as statements, not expressions
+
             throw new ParseException($"Unexpected token: {Peek().Value}");
         }
 
@@ -1976,9 +1972,19 @@ namespace uhigh.Net.Parser
         /// <returns>The expression</returns>
         private Expression ParseMatchExpression(Expression? value = null)
         {
-            // If value is null, parse it (for legacy/fallback)
+            // If value is null, parse it (this should not happen in postfix context)
             if (value == null)
-                value = ParseExpression();
+            {
+                _diagnostics.ReportParseError("Match expression missing value", Peek());
+                return new LiteralExpression { Value = null, Type = TokenType.String };
+            }
+
+            // Expect opening brace immediately after match keyword and value
+            if (!Check(TokenType.LeftBrace))
+            {
+                _diagnostics.ReportParseError($"Expected '{{' after match value, found '{Peek().Value}'", Peek());
+                return new LiteralExpression { Value = null, Type = TokenType.String };
+            }
 
             Consume(TokenType.LeftBrace, "Expected '{' after match value");
 
@@ -2657,7 +2663,7 @@ namespace uhigh.Net.Parser
         /// <returns>The statement</returns>
         private Statement ParseMatchStatement()
         {
-            // Parse: match <value> { ... }
+            // Parse: match <value> { ... } (match keyword already consumed)
             var value = ParseExpression();
             Consume(TokenType.LeftBrace, "Expected '{' after match value");
 

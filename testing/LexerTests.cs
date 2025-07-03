@@ -69,6 +69,25 @@ namespace uhigh.Net.Testing
         }
 
         /// <summary>
+        /// Tests version number parsing doesn't fail
+        /// </summary>
+        [Test]
+        public void TestVersionNumberParsing()
+        {
+            var lexer = CreateLexer("1.0.0");
+            var tokens = lexer.Tokenize();
+
+            // Should tokenize as: 1.0, ., 0, EOF
+            Assert.AreEqual(4, tokens.Count);
+            Assert.AreEqual(TokenType.Number, tokens[0].Type);
+            Assert.AreEqual("1.0", tokens[0].Value);
+            Assert.AreEqual(TokenType.Dot, tokens[1].Type);
+            Assert.AreEqual(TokenType.Number, tokens[2].Type);
+            Assert.AreEqual("0", tokens[2].Value);
+            Assert.AreEqual(TokenType.EOF, tokens[3].Type);
+        }
+
+        /// <summary>
         /// Tests that test keywords
         /// </summary>
         [Test]
@@ -379,6 +398,9 @@ namespace uhigh.Net.Testing
             Assert.AreEqual(TokenType.EOF, tokens[6].Type);
         }
 
+        /// <summary>
+        /// Tests simple attribute tokenization
+        /// </summary>
         [Test]
         public void TestSimpleAttributeTokenization()
         {

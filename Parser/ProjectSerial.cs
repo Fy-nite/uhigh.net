@@ -97,7 +97,7 @@ namespace uhigh.Net
                 Version = "1.0.0",
                 Target = "net9.0",
                 OutputType = "Exe",
-                SourceFiles = new List<string> { "main.uh" }, // Update file extension to .uh
+                SourceFiles = new List<string> { "main.uh" }, // This will be resolved relative to project directory
                 RootNamespace = projectName,
                 ClassName = "Program",
                 Nullable = true

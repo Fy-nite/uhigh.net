@@ -132,6 +132,33 @@ namespace uhigh.Net.Testing
         }
 
         /// <summary>
+        /// Tests that test match statement parsing
+        /// </summary>
+        [Test]
+        public void TestMatchStatementParsing()
+        {
+            var program = ParseSource(@"
+                match cmd {
+                    ""help"" => print(""Help""),
+                    ""exit"" => exit(),
+                    _ => print(""Unknown"")
+                }");
+
+            Assert.AreEqual(1, program.Statements.Count);
+            Assert.IsTrue(program.Statements[0] is MatchStatement);
+            
+            var matchStmt = (MatchStatement)program.Statements[0];
+            Assert.IsNotNull(matchStmt.Value);
+            Assert.IsTrue(matchStmt.Value is IdentifierExpression);
+            
+            var valueExpr = (IdentifierExpression)matchStmt.Value;
+            Assert.AreEqual("cmd", valueExpr.Name);
+            
+            Assert.AreEqual(3, matchStmt.Arms.Count);
+            Assert.IsTrue(matchStmt.Arms[2].IsDefault);
+        }
+
+        /// <summary>
         /// Tests that test while loop
         /// </summary>
         [Test]
@@ -367,7 +394,8 @@ namespace uhigh.Net.Testing
             Assert.IsTrue(program.Statements[0] is VariableDeclaration);
             
             var varDecl = (VariableDeclaration)program.Statements[0];
-            Assert.IsTrue(varDecl.Initializer is MatchExpression);
+            Assert.IsTrue(varDecl.Initializer is MatchExpression, 
+                $"Expected MatchExpression, got {varDecl.Initializer?.GetType().Name}");
             
             var matchExpr = (MatchExpression)varDecl.Initializer;
             Assert.IsTrue(matchExpr.Value is IdentifierExpression);
@@ -379,6 +407,31 @@ namespace uhigh.Net.Testing
             
             // Test default arm
             Assert.IsTrue(matchExpr.Arms[2].IsDefault);
+        }
+
+        /// <summary>
+        /// Tests simple match expression syntax
+        /// </summary>
+        [Test]
+        public void TestSimpleMatchExpression()
+        {
+            var program = ParseSource(@"
+                var x = 1
+                var result = x match {
+                    1 => ""one"",
+                    2 => ""two"",
+                    _ => ""other""
+                }");
+
+            Assert.AreEqual(2, program.Statements.Count);
+            
+            var resultDecl = (VariableDeclaration)program.Statements[1];
+            Assert.IsTrue(resultDecl.Initializer is MatchExpression);
+            
+            var matchExpr = (MatchExpression)resultDecl.Initializer;
+            Assert.IsTrue(matchExpr.Value is IdentifierExpression);
+            var valueExpr = (IdentifierExpression)matchExpr.Value;
+            Assert.AreEqual("x", valueExpr.Name);
         }
 
         /// <summary>
@@ -707,6 +760,27 @@ namespace uhigh.Net.Testing
             Assert.AreEqual("items", funcDecl.Parameters[0].Name);
             Assert.AreEqual("string[]", funcDecl.Parameters[0].Type);
             Assert.AreEqual("void", funcDecl.ReturnType);
+        }
+
+        /// <summary>
+        /// Tests that test project compilation
+        /// </summary>
+        [Test]
+        public void TestProjectCompilation()
+        {
+            var projectPath = Path.Combine(Environment.CurrentDirectory, "testing", "uh", "simple-project.uhighproj");
+            
+            // Ensure the test files exist
+            Assert.IsTrue(File.Exists(projectPath), $"Project file should exist at {projectPath}");
+            
+            var mainPath = Path.Combine(Path.GetDirectoryName(projectPath)!, "main.uh");
+            Assert.IsTrue(File.Exists(mainPath), $"Main file should exist at {mainPath}");
+            
+            // Test loading the project
+            var project = ProjectFile.LoadAsync(projectPath).Result;
+            Assert.IsNotNull(project, "Project should load successfully");
+            Assert.AreEqual("simple-project", project.Name);
+            Assert.AreEqual("Exe", project.OutputType);
         }
     }
 }
