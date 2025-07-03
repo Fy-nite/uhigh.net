@@ -100,9 +100,20 @@ namespace uhigh.Net.CodeGen
                 MetadataReference.CreateFromFile(typeof(System.Collections.IEnumerable).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(System.Collections.Generic.List<>).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(System.Linq.Enumerable).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(uhigh.StdLib.Temporal<>).Assembly.Location)
-                
+                MetadataReference.CreateFromFile(typeof(InMemoryCompiler).Assembly.Location),
+                MetadataReference.CreateFromFile(typeof(StdLib.Temporal<>).Assembly.Location)
             });
+
+            // Add μHigh compiler assembly (uhigh.dll) if present
+            var uhighDllPath = Path.Combine(AppContext.BaseDirectory, "uhigh.dll");
+            if (File.Exists(uhighDllPath))
+            {
+                try
+                {
+                    references.Add(MetadataReference.CreateFromFile(uhighDllPath));
+                }
+                catch { /* ignore if already loaded or error */ }
+            }
 
             // Add standard library references with caching
             var stdLibReferences = GetStandardLibraryReferences(stdLibPath);
@@ -681,6 +692,18 @@ namespace uhigh.Net.CodeGen
                 }
             }
             
+            // Copy μHigh compiler assembly (uhigh.dll) to build directory if present
+            var uhighDllPath = Path.Combine(AppContext.BaseDirectory, "uhigh.dll");
+            if (File.Exists(uhighDllPath))
+            {
+                var destPath = Path.Combine(buildDir, "uhigh.dll");
+                if (!File.Exists(destPath))
+                {
+                    File.Copy(uhighDllPath, destPath);
+                    Console.WriteLine("Copied μHigh compiler assembly: uhigh.dll");
+                }
+            }
+
             // Copy NuGet package assemblies to build directory
             if (additionalAssemblies != null)
             {
