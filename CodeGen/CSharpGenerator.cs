@@ -331,12 +331,10 @@ namespace uhigh.Net.CodeGen
             }
             else
             {
-                // System namespace
-                var lastDotIndex = import.ClassName.LastIndexOf('.');
-                if (lastDotIndex > 0)
+                // System namespace or any namespace: add the full namespace
+                if (!string.IsNullOrWhiteSpace(import.ClassName))
                 {
-                    var namespaceToAdd = import.ClassName.Substring(0, lastDotIndex);
-                    _usings.Add(namespaceToAdd);
+                    _usings.Add(import.ClassName);
                 }
             }
         }
@@ -1510,8 +1508,16 @@ namespace uhigh.Net.CodeGen
                         if (blockExpr.Statements.Count > 0 && 
                             blockExpr.Statements.Last() is ExpressionStatement lastExpr)
                         {
-                            // Replace the last expression statement with a return
-                            // This is a simplification - in practice you'd want better handling
+                            Indent();
+                            _output.Append("return ");
+                            GenerateExpression(lastExpr.Expression);
+                            _output.AppendLine(";");
+                        }
+                        else
+                        {
+                            // If no expression, just return null
+                            Indent();
+                            _output.AppendLine("return null;");
                         }
                     }
                     else
@@ -1587,11 +1593,13 @@ namespace uhigh.Net.CodeGen
         private void GenerateFunctionCall(string functionName, List<Expression> arguments)
         {
             // Handle special function names that are C# keywords
-            if (functionName == "println")
-            {
-                functionName = "Console.WriteLine"; // Map println to Console.WriteLine
-            }
-            
+
+            // this is now a function inside the standard libarary
+            // if (functionName == "println")
+            // {
+            //     functionName = "Console.WriteLine"; // Map println to Console.WriteLine
+            // }
+
             // Handle qualified method calls (e.g., Console.WriteLine)
             if (functionName.Contains('.'))
             {
