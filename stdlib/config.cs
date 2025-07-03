@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 
-namespace uhigh.StdLib
+namespace StdLib
 {
     /// <summary>
     /// Configuration management utilities

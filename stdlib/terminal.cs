@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-namespace uhigh.StdLib
+namespace StdLib
 {
     /// <summary>
     /// Terminal interface for user interaction
     /// </summary>
-    public static class Terminal
+    public static class IO
     {
 
         /// <summary>

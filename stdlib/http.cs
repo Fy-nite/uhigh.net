@@ -6,7 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace uhigh.StdLib
+namespace StdLib
 {
     /// <summary>
     /// HTTP client utilities for web requests

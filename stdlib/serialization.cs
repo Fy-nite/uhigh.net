@@ -9,7 +9,7 @@ using System.Xml.Serialization;
 using System.Reflection;
 using System.Threading.Tasks;
 
-namespace uhigh.StdLib
+namespace StdLib
 {
     /// <summary>
     /// Serialization format enumeration

@@ -4,7 +4,7 @@ using System.Web;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 
-namespace uhigh.StdLib
+namespace StdLib
 {
     /// <summary>
     /// Encoding and decoding utilities

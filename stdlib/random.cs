@@ -4,7 +4,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace uhigh.StdLib
+namespace StdLib
 {
     /// <summary>
     /// Random number generation and probability utilities

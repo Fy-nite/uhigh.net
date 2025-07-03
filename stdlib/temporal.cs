@@ -4,7 +4,7 @@ using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Linq;
 
-namespace uhigh.StdLib
+namespace StdLib
 {
     /// <summary>
     /// Represents a snapshot of an object at a specific point in time

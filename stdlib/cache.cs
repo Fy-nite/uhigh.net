@@ -3,7 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace uhigh.StdLib
+namespace StdLib
 {
     /// <summary>
     /// In-memory cache with expiration and LRU eviction

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace uhigh.StdLib
+namespace StdLib
 {
     /// <summary>
     /// Advanced mathematical functions and utilities

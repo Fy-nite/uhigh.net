@@ -1,4 +1,4 @@
-namespace uhigh.StdLib
+namespace StdLib
 {
     /// <summary>
     /// The funnies class

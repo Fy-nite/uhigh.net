@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using uhigh.StdLib;
+using StdLib;
 
-namespace uhigh.StdLib.Examples
+namespace StdLib.Examples
 {
     /// <summary>
     /// Example data model for serialization demos
