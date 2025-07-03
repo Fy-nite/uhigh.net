@@ -427,32 +427,9 @@ namespace uhigh.Net.CodeGen
         /// </summary>
         private void GenerateBuiltInFunctions()
         {
-            // Reduce built-in functions since we'll rely more on reflection
-            // Keep only the most essential ones that need special handling
-            
-            // Type conversion functions that need special naming
-            Indent();
-            _output.AppendLine("public static int @int(string s) => int.Parse(s);");
-            Indent();
-            _output.AppendLine("public static int @int(double d) => (int)d;");
-            Indent();
-            _output.AppendLine("public static double @float(string s) => double.Parse(s);");
-            Indent();
-            _output.AppendLine("public static double @float(int i) => (double)i;");
-            Indent();
-            _output.AppendLine("public static string @string(object obj) => obj?.ToString() ?? \"\";");
-            Indent();
-            _output.AppendLine("public static bool @bool(object obj) => obj != null && !obj.Equals(0) && !obj.Equals(\"\");");
-            
-            // Special functions that don't map directly to .NET - these return void
-            Indent();
-            _output.AppendLine("public static void print(object value) => Console.WriteLine(value);");
-            Indent();
-            _output.AppendLine("public static void println(object value) => Console.WriteLine(value);");
-            Indent();
-            _output.AppendLine("public static string input() => Console.ReadLine() ?? \"\";");
-            
-            _output.AppendLine();
+            // don't generate built-in functions since we have the standard library
+            _output.AppendLine("// Built-in functions are now part of the standard library");
+            _output.AppendLine("// You can use them directly without generating here\n");
         }
 
         /// <summary>

@@ -542,7 +542,7 @@ namespace uhigh.Net.CodeGen
                             Console.WriteLine($"Compilation Error: {diagnostic.GetMessage()}");
                         }
                     }
-                    return null;
+                    Environment.Exit(1); // exit on fai
                 }
                 
                 return memoryStream.ToArray();
@@ -621,7 +621,8 @@ namespace uhigh.Net.CodeGen
                             Console.WriteLine($"  Error: {diagnostic.GetMessage()}");
                         }
                     }
-                    return false;
+                    
+                    Environment.Exit(1);    
                 }
                 
                 // Copy required assemblies to build directory

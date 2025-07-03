@@ -5,11 +5,11 @@
             "name": ".NET Launch μHigh Compiler",
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "build", // optional, if you have a build task
-            "program": "${workspaceFolder}/bin/Debug/net8.0/uhigh.dll", // adjust for your output path and target framework
+          
+            "program": "${workspaceFolder}/bin/Debug/net9.0/uhigh.dll", // adjust for your output path and target framework
             "args": [
                 // Add any command-line arguments you want to test here, e.g.:
-                "testing/main.uh"
+                "testing/uh/meow.uh"
             ],
             "cwd": "${workspaceFolder}",
             "console": "integratedTerminal",

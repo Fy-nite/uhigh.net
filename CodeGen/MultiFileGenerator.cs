@@ -84,6 +84,9 @@ namespace uhigh.Net.CodeGen
             _globalUsings.Add("System");
             _globalUsings.Add("System.Collections.Generic");
             _globalUsings.Add("System.Linq");
+            _globalUsings.Add("System.Text");
+            _globalUsings.Add("System.Threading.Tasks");
+            _globalUsings.Add("System.Net");
         }
 
         /// <summary>
