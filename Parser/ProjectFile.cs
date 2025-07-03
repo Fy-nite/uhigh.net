@@ -104,7 +104,7 @@ namespace uhigh.Net
                 {
                     Indent = true,
                     IndentChars = "  ",
-                    NewLineChars = "\n\n",
+                    NewLineChars = "\n",
                     Async = true
                 };
 
