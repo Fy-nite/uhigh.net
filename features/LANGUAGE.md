@@ -76,13 +76,13 @@ for i = 0; i < 10; i = i + 1 {
 
 // Range-based for loop
 for i in range(10) {
-        print i
+        Console.WriteLine(i)
 }
 
 // For-each loop (for arrays)
 var numbers = [1, 2, 3, 4, 5]
 for num in numbers {
-        print num
+        Console.WriteLine(num)
 }
 ```
 
@@ -97,7 +97,7 @@ var names = ["Alice", "Bob", "Charlie"]
 var empty = []
 
 // Array access
-print numbers[0]  // prints 1
+Console.WriteLine(numbers[0])  // prints 1
 names[1] = "Robert"
 
 // Array methods
@@ -264,13 +264,7 @@ func optimized_add(a, b) {
 }
 ```
 
-### Include
 
-Include other μHigh files:
-
-```go
-include "utils.uh"
-```
 
 ### Comments
 
