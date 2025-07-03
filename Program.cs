@@ -1,6 +1,7 @@
 using uhigh.Net;
 using uhigh.Net.CommandLine;
-using CommandLine;
+using System.CommandLine;
+using System.CommandLine.Parsing;
 
 /// <summary>
 /// The entry point class
@@ -11,7 +12,7 @@ public class EntryPoint
     /// Main the args
     /// </summary>
     /// <param name="args">The args</param>
-    public static async Task Main(string[] args)
+    public static async Task<int> Main(string[] args)
     {
         // Handle the case where user provides a file directly without a verb
         if (args.Length > 0 && !args[0].StartsWith("-") && 
@@ -24,40 +25,537 @@ public class EntryPoint
             args = compileArgs.ToArray();
         }
 
-        await Parser.Default.ParseArguments<
-            CompileOptions, 
-            CreateOptions, 
-            BuildOptions, 
-            RunOptions, 
-            InfoOptions, 
-            AddFileOptions, 
-            AddPackageOptions, 
-            InstallPackagesOptions,
-            SearchPackagesOptions,
-            ListPackagesOptions,
-            RestorePackagesOptions,
-            AstOptions,
-            LspOptions, 
-            TestOptions,
-            ReplOptions>(args)
-            .MapResult(
-                (CompileOptions opts) => HandleCompileCommand(opts),
-                (CreateOptions opts) => HandleCreateCommand(opts),
-                (BuildOptions opts) => HandleBuildCommand(opts),
-                (RunOptions opts) => HandleRunCommand(opts),
-                (InfoOptions opts) => HandleInfoCommand(opts),
-                (AddFileOptions opts) => HandleAddFileCommand(opts),
-                (AddPackageOptions opts) => HandleAddPackageCommand(opts),
-                (InstallPackagesOptions opts) => HandleInstallPackagesCommand(opts),
-                (SearchPackagesOptions opts) => HandleSearchPackagesCommand(opts),
-                (ListPackagesOptions opts) => HandleListPackagesCommand(opts),
-                (RestorePackagesOptions opts) => HandleRestorePackagesCommand(opts),
-                (AstOptions opts) => HandleAstCommand(opts),
-                (LspOptions opts) => HandleLspCommand(opts),
-                (TestOptions opts) => HandleTestCommand(opts),
-                (ReplOptions opts) => HandleReplCommand(opts),
-                
-                errors => HandleParseError(errors));
+        var rootCommand = CreateRootCommand();
+        return await rootCommand.InvokeAsync(args);
+    }
+
+    /// <summary>
+    /// Creates the root command with all subcommands
+    /// </summary>
+    /// <returns>The root command</returns>
+    private static RootCommand CreateRootCommand()
+    {
+        var rootCommand = new RootCommand("μHigh compiler and toolchain");
+
+        // Add all subcommands
+        rootCommand.AddCommand(CreateCompileCommand());
+        rootCommand.AddCommand(CreateCreateCommand());
+        rootCommand.AddCommand(CreateBuildCommand());
+        rootCommand.AddCommand(CreateRunCommand());
+        rootCommand.AddCommand(CreateInfoCommand());
+        rootCommand.AddCommand(CreateAddFileCommand());
+        rootCommand.AddCommand(CreateAddPackageCommand());
+        rootCommand.AddCommand(CreateInstallPackagesCommand());
+        rootCommand.AddCommand(CreateSearchPackagesCommand());
+        rootCommand.AddCommand(CreateListPackagesCommand());
+        rootCommand.AddCommand(CreateRestorePackagesCommand());
+        rootCommand.AddCommand(CreateAstCommand());
+        rootCommand.AddCommand(CreateLspCommand());
+        rootCommand.AddCommand(CreateTestCommand());
+        rootCommand.AddCommand(CreateReplCommand());
+
+        return rootCommand;
+    }
+
+    /// <summary>
+    /// Creates the compile command
+    /// </summary>
+    private static Command CreateCompileCommand()
+    {
+        var sourceFileArg = CommonOptions.CreateSourceFileArgument();
+        var verboseOption = CommonOptions.CreateVerboseOption();
+        var stdLibOption = CommonOptions.CreateStdLibPathOption();
+        var saveCsOption = CommonOptions.CreateSaveCSharpOption();
+        var outputOption = new Option<string?>("--output", "Output executable file path");
+        var runInMemoryOption = new Option<bool>("--run", "Run the compiled code in memory");
+
+        var command = new Command("compile", "Compile a μHigh source file")
+        {
+            sourceFileArg,
+            verboseOption,
+            stdLibOption,
+            saveCsOption,
+            outputOption,
+            runInMemoryOption
+        };
+
+        command.SetHandler(async (sourceFile, verbose, stdLibPath, saveCsTo, output, runInMemory) =>
+        {
+            var options = new CompileOptions
+            {
+                SourceFile = sourceFile,
+                Verbose = verbose,
+                StdLibPath = stdLibPath,
+                SaveCSharpTo = saveCsTo,
+                OutputFile = output,
+                RunInMemory = runInMemory
+            };
+            Environment.ExitCode = await HandleCompileCommand(options);
+        }, sourceFileArg, verboseOption, stdLibOption, saveCsOption, outputOption, runInMemoryOption);
+
+        return command;
+    }
+
+    /// <summary>
+    /// Creates the create command
+    /// </summary>
+    private static Command CreateCreateCommand()
+    {
+        var projectNameArg = new Argument<string>("project-name", "Name of the project to create");
+        var verboseOption = CommonOptions.CreateVerboseOption();
+        var stdLibOption = CommonOptions.CreateStdLibPathOption();
+        var directoryOption = new Option<string?>("--directory", "Directory to create the project in");
+        var descriptionOption = new Option<string?>("--description", "Project description");
+        var authorOption = new Option<string?>("--author", "Project author");
+        var outputTypeOption = new Option<string>("--output-type", () => "Exe", "Output type (Exe, Library)");
+        var targetFrameworkOption = new Option<string>("--target-framework", () => "net8.0", "Target framework");
+
+        var command = new Command("create", "Create a new μHigh project")
+        {
+            projectNameArg,
+            verboseOption,
+            stdLibOption,
+            directoryOption,
+            descriptionOption,
+            authorOption,
+            outputTypeOption,
+            targetFrameworkOption
+        };
+
+        command.SetHandler(async (projectName, verbose, stdLibPath, directory, description, author, outputType, targetFramework) =>
+        {
+            var options = new CreateOptions
+            {
+                ProjectName = projectName,
+                Verbose = verbose,
+                StdLibPath = stdLibPath,
+                Directory = directory,
+                Description = description,
+                Author = author,
+                OutputType = outputType,
+                TargetFramework = targetFramework
+            };
+            Environment.ExitCode = await HandleCreateCommand(options);
+        }, projectNameArg, verboseOption, stdLibOption, directoryOption, descriptionOption, authorOption, outputTypeOption, targetFrameworkOption);
+
+        return command;
+    }
+
+    /// <summary>
+    /// Creates the build command
+    /// </summary>
+    private static Command CreateBuildCommand()
+    {
+        var projectFileArg = CommonOptions.CreateProjectFileArgument();
+        var verboseOption = CommonOptions.CreateVerboseOption();
+        var stdLibOption = CommonOptions.CreateStdLibPathOption();
+        var saveCsOption = CommonOptions.CreateSaveCSharpOption();
+        var outputOption = new Option<string?>("--output", "Output executable file path");
+
+        var command = new Command("build", "Build a μHigh project")
+        {
+            projectFileArg,
+            verboseOption,
+            stdLibOption,
+            saveCsOption,
+            outputOption
+        };
+
+        command.SetHandler(async (projectFile, verbose, stdLibPath, saveCsTo, output) =>
+        {
+            var options = new BuildOptions
+            {
+                ProjectFile = projectFile,
+                Verbose = verbose,
+                StdLibPath = stdLibPath,
+                SaveCSharpTo = saveCsTo,
+                OutputFile = output
+            };
+            Environment.ExitCode = await HandleBuildCommand(options);
+        }, projectFileArg, verboseOption, stdLibOption, saveCsOption, outputOption);
+
+        return command;
+    }
+
+    /// <summary>
+    /// Creates the run command
+    /// </summary>
+    private static Command CreateRunCommand()
+    {
+        var projectFileArg = CommonOptions.CreateProjectFileArgument();
+        var verboseOption = CommonOptions.CreateVerboseOption();
+        var stdLibOption = CommonOptions.CreateStdLibPathOption();
+        var saveCsOption = CommonOptions.CreateSaveCSharpOption();
+
+        var command = new Command("run", "Run a μHigh project")
+        {
+            projectFileArg,
+            verboseOption,
+            stdLibOption,
+            saveCsOption
+        };
+
+        command.SetHandler(async (projectFile, verbose, stdLibPath, saveCsTo) =>
+        {
+            var options = new RunOptions
+            {
+                ProjectFile = projectFile,
+                Verbose = verbose,
+                StdLibPath = stdLibPath,
+                SaveCSharpTo = saveCsTo
+            };
+            Environment.ExitCode = await HandleRunCommand(options);
+        }, projectFileArg, verboseOption, stdLibOption, saveCsOption);
+
+        return command;
+    }
+
+    /// <summary>
+    /// Creates the info command
+    /// </summary>
+    private static Command CreateInfoCommand()
+    {
+        var projectFileArg = CommonOptions.CreateProjectFileArgument();
+        var verboseOption = CommonOptions.CreateVerboseOption();
+        var stdLibOption = CommonOptions.CreateStdLibPathOption();
+
+        var command = new Command("info", "Show project information")
+        {
+            projectFileArg,
+            verboseOption,
+            stdLibOption
+        };
+
+        command.SetHandler(async (projectFile, verbose, stdLibPath) =>
+        {
+            var options = new InfoOptions
+            {
+                ProjectFile = projectFile,
+                Verbose = verbose,
+                StdLibPath = stdLibPath
+            };
+            Environment.ExitCode = await HandleInfoCommand(options);
+        }, projectFileArg, verboseOption, stdLibOption);
+
+        return command;
+    }
+
+    /// <summary>
+    /// Creates the add-file command
+    /// </summary>
+    private static Command CreateAddFileCommand()
+    {
+        var projectFileArg = CommonOptions.CreateProjectFileArgument();
+        var sourceFileArg = CommonOptions.CreateSourceFileArgument();
+        var verboseOption = CommonOptions.CreateVerboseOption();
+        var stdLibOption = CommonOptions.CreateStdLibPathOption();
+        var createFileOption = new Option<bool>("--create", "Create the file if it doesn't exist");
+
+        var command = new Command("add-file", "Add a source file to a project")
+        {
+            projectFileArg,
+            sourceFileArg,
+            verboseOption,
+            stdLibOption,
+            createFileOption
+        };
+
+        command.SetHandler(async (projectFile, sourceFile, verbose, stdLibPath, createFile) =>
+        {
+            var options = new AddFileOptions
+            {
+                ProjectFile = projectFile,
+                SourceFile = sourceFile,
+                Verbose = verbose,
+                StdLibPath = stdLibPath,
+                CreateFile = createFile
+            };
+            Environment.ExitCode = await HandleAddFileCommand(options);
+        }, projectFileArg, sourceFileArg, verboseOption, stdLibOption, createFileOption);
+
+        return command;
+    }
+
+    /// <summary>
+    /// Creates the add-package command
+    /// </summary>
+    private static Command CreateAddPackageCommand()
+    {
+        var projectFileArg = CommonOptions.CreateProjectFileArgument();
+        var packageNameArg = new Argument<string>("package-name", "Name of the package to add");
+        var verboseOption = CommonOptions.CreateVerboseOption();
+        var stdLibOption = CommonOptions.CreateStdLibPathOption();
+        var versionOption = new Option<string?>("--version", "Package version");
+
+        var command = new Command("add-package", "Add a NuGet package to a project")
+        {
+            projectFileArg,
+            packageNameArg,
+            verboseOption,
+            stdLibOption,
+            versionOption
+        };
+
+        command.SetHandler(async (projectFile, packageName, verbose, stdLibPath, version) =>
+        {
+            var options = new AddPackageOptions
+            {
+                ProjectFile = projectFile,
+                PackageName = packageName,
+                Verbose = verbose,
+                StdLibPath = stdLibPath,
+                Version = version
+            };
+            Environment.ExitCode = await HandleAddPackageCommand(options);
+        }, projectFileArg, packageNameArg, verboseOption, stdLibOption, versionOption);
+
+        return command;
+    }
+
+    /// <summary>
+    /// Creates the install-packages command
+    /// </summary>
+    private static Command CreateInstallPackagesCommand()
+    {
+        var projectFileArg = CommonOptions.CreateProjectFileArgument();
+        var verboseOption = CommonOptions.CreateVerboseOption();
+        var stdLibOption = CommonOptions.CreateStdLibPathOption();
+
+        var command = new Command("install-packages", "Install all packages for a project")
+        {
+            projectFileArg,
+            verboseOption,
+            stdLibOption
+        };
+
+        command.SetHandler(async (projectFile, verbose, stdLibPath) =>
+        {
+            var options = new InstallPackagesOptions
+            {
+                ProjectFile = projectFile,
+                Verbose = verbose,
+                StdLibPath = stdLibPath
+            };
+            Environment.ExitCode = await HandleInstallPackagesCommand(options);
+        }, projectFileArg, verboseOption, stdLibOption);
+
+        return command;
+    }
+
+    /// <summary>
+    /// Creates the search-packages command
+    /// </summary>
+    private static Command CreateSearchPackagesCommand()
+    {
+        var searchTermArg = new Argument<string>("search-term", "Term to search for");
+        var verboseOption = CommonOptions.CreateVerboseOption();
+        var takeOption = new Option<int>("--take", () => 10, "Number of results to return");
+
+        var command = new Command("search-packages", "Search for NuGet packages")
+        {
+            searchTermArg,
+            verboseOption,
+            takeOption
+        };
+
+        command.SetHandler(async (searchTerm, verbose, take) =>
+        {
+            var options = new SearchPackagesOptions
+            {
+                SearchTerm = searchTerm,
+                Verbose = verbose,
+                Take = take
+            };
+            Environment.ExitCode = await HandleSearchPackagesCommand(options);
+        }, searchTermArg, verboseOption, takeOption);
+
+        return command;
+    }
+
+    /// <summary>
+    /// Creates the list-packages command
+    /// </summary>
+    private static Command CreateListPackagesCommand()
+    {
+        var projectFileArg = CommonOptions.CreateProjectFileArgument();
+        var verboseOption = CommonOptions.CreateVerboseOption();
+
+        var command = new Command("list-packages", "List packages in a project")
+        {
+            projectFileArg,
+            verboseOption
+        };
+
+        command.SetHandler(async (projectFile, verbose) =>
+        {
+            var options = new ListPackagesOptions
+            {
+                ProjectFile = projectFile,
+                Verbose = verbose
+            };
+            Environment.ExitCode = await HandleListPackagesCommand(options);
+        }, projectFileArg, verboseOption);
+
+        return command;
+    }
+
+    /// <summary>
+    /// Creates the restore-packages command
+    /// </summary>
+    private static Command CreateRestorePackagesCommand()
+    {
+        var projectFileArg = CommonOptions.CreateProjectFileArgument();
+        var verboseOption = CommonOptions.CreateVerboseOption();
+        var stdLibOption = CommonOptions.CreateStdLibPathOption();
+        var forceOption = new Option<bool>("--force", "Force restore even if packages exist");
+
+        var command = new Command("restore-packages", "Restore packages for a project")
+        {
+            projectFileArg,
+            verboseOption,
+            stdLibOption,
+            forceOption
+        };
+
+        command.SetHandler(async (projectFile, verbose, stdLibPath, force) =>
+        {
+            var options = new RestorePackagesOptions
+            {
+                ProjectFile = projectFile,
+                Verbose = verbose,
+                StdLibPath = stdLibPath,
+                Force = force
+            };
+            Environment.ExitCode = await HandleRestorePackagesCommand(options);
+        }, projectFileArg, verboseOption, stdLibOption, forceOption);
+
+        return command;
+    }
+
+    /// <summary>
+    /// Creates the ast command
+    /// </summary>
+    private static Command CreateAstCommand()
+    {
+        var sourceFileArg = CommonOptions.CreateSourceFileArgument();
+        var verboseOption = CommonOptions.CreateVerboseOption();
+        var stdLibOption = CommonOptions.CreateStdLibPathOption();
+
+        var command = new Command("ast", "Print the AST for a source file")
+        {
+            sourceFileArg,
+            verboseOption,
+            stdLibOption
+        };
+
+        command.SetHandler(async (sourceFile, verbose, stdLibPath) =>
+        {
+            var options = new AstOptions
+            {
+                SourceFile = sourceFile,
+                Verbose = verbose,
+                StdLibPath = stdLibPath
+            };
+            Environment.ExitCode = await HandleAstCommand(options);
+        }, sourceFileArg, verboseOption, stdLibOption);
+
+        return command;
+    }
+
+    /// <summary>
+    /// Creates the lsp command
+    /// </summary>
+    private static Command CreateLspCommand()
+    {
+        var verboseOption = CommonOptions.CreateVerboseOption();
+        var stdLibOption = CommonOptions.CreateStdLibPathOption();
+        var portOption = new Option<int?>("--port", "Port for LSP server");
+        var useStdioOption = new Option<bool>("--stdio", () => true, "Use stdio for communication");
+
+        var command = new Command("lsp", "Start the Language Server Protocol server")
+        {
+            verboseOption,
+            stdLibOption,
+            portOption,
+            useStdioOption
+        };
+
+        command.SetHandler(async (verbose, stdLibPath, port, useStdio) =>
+        {
+            var options = new LspOptions
+            {
+                Verbose = verbose,
+                StdLibPath = stdLibPath,
+                Port = port,
+                UseStdio = useStdio
+            };
+            Environment.ExitCode = await HandleLspCommand(options);
+        }, verboseOption, stdLibOption, portOption, useStdioOption);
+
+        return command;
+    }
+
+    /// <summary>
+    /// Creates the test command
+    /// </summary>
+    private static Command CreateTestCommand()
+    {
+        var verboseOption = CommonOptions.CreateVerboseOption();
+        var stdLibOption = CommonOptions.CreateStdLibPathOption();
+        var filterOption = new Option<string?>("--filter", "Filter tests to run");
+        var listTestsOption = new Option<bool>("--list", "List available tests");
+
+        var command = new Command("test", "Run tests")
+        {
+            verboseOption,
+            stdLibOption,
+            filterOption,
+            listTestsOption
+        };
+
+        command.SetHandler(async (verbose, stdLibPath, filter, listTests) =>
+        {
+            var options = new TestOptions
+            {
+                Verbose = verbose,
+                StdLibPath = stdLibPath,
+                Filter = filter,
+                ListTests = listTests
+            };
+            Environment.ExitCode = await HandleTestCommand(options);
+        }, verboseOption, stdLibOption, filterOption, listTestsOption);
+
+        return command;
+    }
+
+    /// <summary>
+    /// Creates the repl command
+    /// </summary>
+    private static Command CreateReplCommand()
+    {
+        var verboseOption = CommonOptions.CreateVerboseOption();
+        var stdLibOption = CommonOptions.CreateStdLibPathOption();
+        var saveCsOption = CommonOptions.CreateSaveCSharpOption();
+
+        var command = new Command("repl", "Start the interactive REPL")
+        {
+            verboseOption,
+            stdLibOption,
+            saveCsOption
+        };
+
+        command.SetHandler(async (verbose, stdLibPath, saveCsTo) =>
+        {
+            var options = new ReplOptions
+            {
+                Verbose = verbose,
+                StdLibPath = stdLibPath,
+                SaveCSharpTo = saveCsTo
+            };
+            Environment.ExitCode = await HandleReplCommand(options);
+        }, verboseOption, stdLibOption, saveCsOption);
+
+        return command;
     }
 
     /// <summary>
@@ -551,12 +1049,13 @@ public class EntryPoint
     /// </summary>
     /// <param name="errors">The errors</param>
     /// <returns>A task containing the int</returns>
-    private static async Task<int> HandleParseError(IEnumerable<Error> errors)
+    private static async Task<int> HandleParseError(IEnumerable<ParseError> errors)
     {
         var errorsList = errors.ToList();
-        if (errorsList.Any(e => e is HelpRequestedError || e is VersionRequestedError))
+
+        if (!errorsList.Any())
         {
-            return 0; // Help/version requested is not an error
+            return 0;
         }
         
         Console.WriteLine("Command line parsing failed:");
