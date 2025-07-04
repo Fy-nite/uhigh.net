@@ -43,8 +43,9 @@ namespace uhigh.Net.Parser
         public ReflectionTypeResolver(DiagnosticsReporter diagnostics)
         {
             _diagnostics = diagnostics;
-            ScanDefaultAssemblies();
-            InitializeAttributeResolver(); // Add this
+            ScanAllAssembliesInAppDomain();
+            ScanAssembliesInAppDirectory();
+            InitializeAttributeResolver();
         }
 
         /// <summary>
@@ -66,44 +67,44 @@ namespace uhigh.Net.Parser
         }
 
         /// <summary>
-        /// Scans the default assemblies
+        /// Scans all loaded assemblies in the current AppDomain
         /// </summary>
-        private void ScanDefaultAssemblies()
+        private void ScanAllAssembliesInAppDomain()
         {
-            // Scan core .NET assemblies
-            ScanAssembly(typeof(object).Assembly);           // mscorlib/System.Private.CoreLib
-            ScanAssembly(typeof(Console).Assembly);          // System.Console
-            ScanAssembly(typeof(List<>).Assembly);           // System.Collections
-            ScanAssembly(typeof(Enumerable).Assembly);       // System.Linq
-            ScanAssembly(typeof(System.IO.File).Assembly);   // System.IO
-            ScanAssembly(typeof(System.Text.StringBuilder).Assembly); // System.Text
-            ScanAssembly(typeof(System.Threading.Tasks.Task).Assembly); // System.Threading.Tasks
-            ScanAssembly(typeof(System.Collections.Generic.Dictionary<,>).Assembly); // System.Collections.Generic
-            ScanAssembly(typeof(System.Collections.IEnumerable).Assembly); // System.Collections
-            ScanAssembly(typeof(System.Collections.Generic.List<>).Assembly); // System.Collections.Generic.List
-            ScanAssembly(typeof(System.Collections.Generic.HashSet<>).Assembly); // System.Collections.Generic.HashSet
-            
-            // Try to scan uhigh.StdLib assembly more reliably
-            try 
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
             {
-                var stdLibAssembly = Assembly.LoadFrom("uhigh.StdLib.dll");
-                ScanAssembly(stdLibAssembly);
-            }
-            catch
-            {
-                // Try to find it in current app domain
-                var stdLibAssembly = AppDomain.CurrentDomain.GetAssemblies()
-                    .FirstOrDefault(a => a.GetName().Name?.Contains("uhigh.StdLib") == true);
-                if (stdLibAssembly != null)
+                try
                 {
-                    ScanAssembly(stdLibAssembly);
+                    ScanAssembly(assembly);
+                }
+                catch { /* Ignore bad assemblies */ }
+            }
+        }
+
+        /// <summary>
+        /// Scans all assemblies in the application directory (for plugins, user DLLs, etc.)
+        /// </summary>
+        private void ScanAssembliesInAppDirectory()
+        {
+            try
+            {
+                var baseDir = AppContext.BaseDirectory;
+                var dllFiles = Directory.GetFiles(baseDir, "*.dll", SearchOption.TopDirectoryOnly);
+                foreach (var dll in dllFiles)
+                {
+                    try
+                    {
+                        var assemblyName = AssemblyName.GetAssemblyName(dll);
+                        if (!_scannedAssemblies.Any(a => a.GetName().Name == assemblyName.Name))
+                        {
+                            var assembly = Assembly.LoadFrom(dll);
+                            ScanAssembly(assembly);
+                        }
+                    }
+                    catch { /* Ignore load errors */ }
                 }
             }
-            
-            // Scan current assembly for custom types
-            ScanAssembly(Assembly.GetExecutingAssembly());
-
-            _diagnostics.ReportInfo($"Discovered {_discoveredTypes.Count} types and {_discoveredMethods.Values.Sum(m => m.Count)} methods via reflection");
+            catch { /* Ignore directory errors */ }
         }
 
         /// <summary>
@@ -119,15 +120,28 @@ namespace uhigh.Net.Parser
 
             try
             {
-                var types = assembly.GetExportedTypes();
+                var types = assembly.GetTypes();
                 foreach (var type in types)
                 {
                     RegisterType(type);
+
+                    // Register nested types
+                    foreach (var nested in type.GetNestedTypes(BindingFlags.Public | BindingFlags.NonPublic))
+                    {
+                        RegisterType(nested);
+                    }
                 }
                 _diagnostics.ReportInfo($"Scanned assembly {assembly.GetName().Name} - found {types.Length} types");
-                
-                // Also scan for attributes
                 _attributeResolver?.ScanAssembly(assembly);
+            }
+            catch (ReflectionTypeLoadException ex)
+            {
+                foreach (var type in ex.Types)
+                {
+                    if (type != null)
+                        RegisterType(type);
+                }
+                _diagnostics.ReportWarning($"Failed to scan some types in assembly {assembly.FullName}: {ex.Message}", 0, 0, "UH301");
             }
             catch (Exception ex)
             {
@@ -141,38 +155,54 @@ namespace uhigh.Net.Parser
         /// <param name="type">The type</param>
         private void RegisterType(Type type)
         {
+            if (type == null) return;
+
             // Register type by simple name
-            if (!_discoveredTypes.ContainsKey(type.Name))
+            if (!string.IsNullOrEmpty(type.Name) && !_discoveredTypes.ContainsKey(type.Name))
             {
                 _discoveredTypes[type.Name] = type;
             }
 
             // Register type by full name
-            if (!_discoveredTypes.ContainsKey(type.FullName))
+            if (!string.IsNullOrEmpty(type.FullName) && !_discoveredTypes.ContainsKey(type.FullName))
             {
                 _discoveredTypes[type.FullName] = type;
             }
 
-            // Register shortened namespace.type for common ones
-            if (type.Namespace?.StartsWith("System") == true)
+            // Register type by assembly-qualified name
+            if (!string.IsNullOrEmpty(type.AssemblyQualifiedName) && !_discoveredTypes.ContainsKey(type.AssemblyQualifiedName))
             {
-                var shortName = type.FullName.Replace("System.", "");
-                if (!_discoveredTypes.ContainsKey(shortName))
+                _discoveredTypes[type.AssemblyQualifiedName] = type;
+            }
+
+            // Register type by namespace-qualified name (Namespace.Type)
+            if (!string.IsNullOrEmpty(type.Namespace))
+            {
+                var nsQualified = $"{type.Namespace}.{type.Name}";
+                if (!_discoveredTypes.ContainsKey(nsQualified))
                 {
-                    _discoveredTypes[shortName] = type;
+                    _discoveredTypes[nsQualified] = type;
+                }
+            }
+
+            // Register nested types with + notation (for reflection)
+            if (type.DeclaringType != null && !string.IsNullOrEmpty(type.DeclaringType.FullName))
+            {
+                var nestedName = $"{type.DeclaringType.FullName}+{type.Name}";
+                if (!_discoveredTypes.ContainsKey(nestedName))
+                {
+                    _discoveredTypes[nestedName] = type;
                 }
             }
 
             // Register generic type definitions
             if (type.IsGenericTypeDefinition)
             {
-                var genericName = type.Name.Split('`')[0]; // Remove `1, `2, etc.
+                var genericName = type.Name.Split('`')[0];
                 if (!_genericTypeDefinitions.ContainsKey(genericName))
                 {
                     _genericTypeDefinitions[genericName] = type;
                 }
-                
-                // Also register with full namespace
                 if (!string.IsNullOrEmpty(type.Namespace))
                 {
                     var fullGenericName = $"{type.Namespace}.{genericName}";
@@ -252,34 +282,48 @@ namespace uhigh.Net.Parser
                 return true;
             }
 
-            // Try to resolve generic type first
-            if (TryResolveGenericType(typeName, out type))
-            {
-                return true;
-            }
-
+            // Try exact match
             if (_discoveredTypes.TryGetValue(typeName, out type))
             {
                 return true;
             }
 
-            // Try case-insensitive lookup
-            var match = _discoveredTypes.FirstOrDefault(kvp => 
+            // Try case-insensitive match
+            var match = _discoveredTypes.FirstOrDefault(kvp =>
                 string.Equals(kvp.Key, typeName, StringComparison.OrdinalIgnoreCase));
-            
             if (!match.Equals(default(KeyValuePair<string, Type>)))
             {
                 type = match.Value;
                 return true;
             }
 
-            // Try partial matching for common types
+            // Try partial match (ends with)
             var partialMatch = _discoveredTypes.FirstOrDefault(kvp =>
                 kvp.Key.EndsWith(typeName, StringComparison.OrdinalIgnoreCase));
-
             if (!partialMatch.Equals(default(KeyValuePair<string, Type>)))
             {
                 type = partialMatch.Value;
+                return true;
+            }
+
+            // Try nested type with + notation
+            foreach (var kvp in _discoveredTypes)
+            {
+                if (kvp.Key.Replace("+", ".").EndsWith(typeName, StringComparison.OrdinalIgnoreCase))
+                {
+                    type = kvp.Value;
+                    return true;
+                }
+            }
+
+            // Fuzzy match (Levenshtein distance <= 2)
+            var fuzzy = _discoveredTypes.Keys
+                .Select(k => new { Name = k, Distance = LevenshteinDistance(typeName, k) })
+                .OrderBy(x => x.Distance)
+                .FirstOrDefault(x => x.Distance <= 2);
+            if (fuzzy != null)
+            {
+                type = _discoveredTypes[fuzzy.Name];
                 return true;
             }
 
@@ -608,6 +652,24 @@ namespace uhigh.Net.Parser
             catch (Exception ex)
             {
                 _diagnostics.ReportError($"Failed to load assembly {assemblyPath}: {ex.Message}", 0, 0, "UH302");
+            }
+        }
+
+        /// <summary>
+        /// Explicitly scan all assemblies in a directory (for plugins, user DLLs, etc.)
+        /// </summary>
+        /// <param name="directory">The directory</param>
+        public void ScanAssembliesInDirectory(string directory)
+        {
+            if (!Directory.Exists(directory)) return;
+            foreach (var dll in Directory.GetFiles(directory, "*.dll"))
+            {
+                try
+                {
+                    var assembly = Assembly.LoadFrom(dll);
+                    ScanAssembly(assembly);
+                }
+                catch { /* Ignore load errors */ }
             }
         }
 

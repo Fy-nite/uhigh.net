@@ -1,0 +1,907 @@
+Loaded 76 source lines from uhigh.uhighproj
+info: Starting μHigh compilation pipeline
+  --> Called from: Compiler.CompileToCS at Compiler.cs:182
+  --> Call stack:
+      Compiler.CompileToCS at Compiler.cs:182
+      <CompileAndRunInMemory>d__5.MoveNext at Compiler.cs:136
+      ExecutionContext.RunFromThreadPoolDispatchLoop
+      AsyncStateMachineBox`1.MoveNext
+      ThreadPoolWorkQueue.Dispatch
+
+info: Starting tokenization of 3108 characters
+  --> Called from: Lexer.Tokenize at Lexer.cs:141
+  --> Call stack:
+      Lexer.Tokenize at Lexer.cs:141
+      Compiler.CompileToCS at Compiler.cs:187
+      <CompileAndRunInMemory>d__5.MoveNext at Compiler.cs:136
+      ExecutionContext.RunFromThreadPoolDispatchLoop
+      AsyncStateMachineBox`1.MoveNext
+
+info: Tokenization completed. Generated 730 tokens
+  --> Called from: Lexer.Tokenize at Lexer.cs:163
+  --> Call stack:
+      Lexer.Tokenize at Lexer.cs:163
+      Compiler.CompileToCS at Compiler.cs:187
+      <CompileAndRunInMemory>d__5.MoveNext at Compiler.cs:136
+      ExecutionContext.RunFromThreadPoolDispatchLoop
+      AsyncStateMachineBox`1.MoveNext
+
+info: Loaded 356 types from uhigh
+  --> Called from: ReflectionMethodResolver.LoadAssembly at ReflectionMethodResolver.cs:122
+  --> Call stack:
+      ReflectionMethodResolver.LoadAssembly at ReflectionMethodResolver.cs:122
+      ReflectionMethodResolver.LoadSystemTypes at ReflectionMethodResolver.cs:82
+      ReflectionMethodResolver..ctor at ReflectionMethodResolver.cs:34
+      MethodChecker..ctor at MethodChecker.cs:296
+      Parser..ctor at Parser.cs:43
+
+info: Scanned assembly System.Private.CoreLib - found 2630 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      MethodChecker..ctor at MethodChecker.cs:297
+      Parser..ctor at Parser.cs:43
+
+info: Scanned assembly uhigh - found 356 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      MethodChecker..ctor at MethodChecker.cs:297
+      Parser..ctor at Parser.cs:43
+
+info: Scanned assembly System.Runtime - found 0 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      MethodChecker..ctor at MethodChecker.cs:297
+      Parser..ctor at Parser.cs:43
+
+info: Scanned assembly System.CommandLine - found 263 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      MethodChecker..ctor at MethodChecker.cs:297
+      Parser..ctor at Parser.cs:43
+
+info: Scanned assembly System.Collections - found 74 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      MethodChecker..ctor at MethodChecker.cs:297
+      Parser..ctor at Parser.cs:43
+
+info: Scanned assembly System.ComponentModel - found 5 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      MethodChecker..ctor at MethodChecker.cs:297
+      Parser..ctor at Parser.cs:43
+
+info: Scanned assembly System.Memory - found 26 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      MethodChecker..ctor at MethodChecker.cs:297
+      Parser..ctor at Parser.cs:43
+
+info: Scanned assembly System.Linq - found 110 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      MethodChecker..ctor at MethodChecker.cs:297
+      Parser..ctor at Parser.cs:43
+
+info: Scanned assembly System.Net.Primitives - found 83 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      MethodChecker..ctor at MethodChecker.cs:297
+      Parser..ctor at Parser.cs:43
+
+info: Scanned assembly System.Private.Uri - found 48 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      MethodChecker..ctor at MethodChecker.cs:297
+      Parser..ctor at Parser.cs:43
+
+info: Scanned assembly System.Runtime.InteropServices - found 74 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      MethodChecker..ctor at MethodChecker.cs:297
+      Parser..ctor at Parser.cs:43
+
+info: Scanned assembly System.Console - found 48 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      MethodChecker..ctor at MethodChecker.cs:297
+      Parser..ctor at Parser.cs:43
+
+info: Scanned assembly System.Threading - found 17 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      MethodChecker..ctor at MethodChecker.cs:297
+      Parser..ctor at Parser.cs:43
+
+info: Scanned assembly System.Runtime.Serialization.Formatters - found 43 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      MethodChecker..ctor at MethodChecker.cs:297
+      Parser..ctor at Parser.cs:43
+
+info: Scanned assembly Microsoft.Win32.Primitives - found 0 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      MethodChecker..ctor at MethodChecker.cs:297
+      Parser..ctor at Parser.cs:43
+
+info: Scanned assembly System.Diagnostics.StackTrace - found 16 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      MethodChecker..ctor at MethodChecker.cs:297
+      Parser..ctor at Parser.cs:43
+
+info: Scanned assembly System.Reflection.Metadata - found 527 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      MethodChecker..ctor at MethodChecker.cs:297
+      Parser..ctor at Parser.cs:43
+
+info: Scanned assembly System.Collections.Immutable - found 198 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      MethodChecker..ctor at MethodChecker.cs:297
+      Parser..ctor at Parser.cs:43
+
+info: Scanned assembly System.IO.MemoryMappedFiles - found 27 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      MethodChecker..ctor at MethodChecker.cs:297
+      Parser..ctor at Parser.cs:43
+
+info: Scanned assembly System.Text.Encoding.Extensions - found 0 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      MethodChecker..ctor at MethodChecker.cs:297
+      Parser..ctor at Parser.cs:43
+
+info: Scanned assembly System.Text.RegularExpressions - found 213 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      MethodChecker..ctor at MethodChecker.cs:297
+      Parser..ctor at Parser.cs:43
+
+info: Scanned assembly System.Linq.Queryable - found 18 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      MethodChecker..ctor at MethodChecker.cs:297
+      Parser..ctor at Parser.cs:43
+
+info: Scanned assembly System.Threading.Thread - found 0 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      MethodChecker..ctor at MethodChecker.cs:297
+      Parser..ctor at Parser.cs:43
+
+info: Scanned assembly System.Net.Http - found 423 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      MethodChecker..ctor at MethodChecker.cs:297
+      Parser..ctor at Parser.cs:43
+
+info: Scanned assembly Microsoft.CodeAnalysis - found 2258 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      MethodChecker..ctor at MethodChecker.cs:297
+      Parser..ctor at Parser.cs:43
+
+info: Scanned assembly Microsoft.CodeAnalysis.Scripting - found 114 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      MethodChecker..ctor at MethodChecker.cs:297
+      Parser..ctor at Parser.cs:43
+
+info: Scanned assembly Microsoft.CodeAnalysis.CSharp - found 2838 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAssembliesInAppDirectory at ReflectionTypeResolver.cs:101
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:47
+      MethodChecker..ctor at MethodChecker.cs:297
+      Parser..ctor at Parser.cs:43
+
+info: Scanned assembly Microsoft.CodeAnalysis.CSharp.Scripting - found 13 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAssembliesInAppDirectory at ReflectionTypeResolver.cs:101
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:47
+      MethodChecker..ctor at MethodChecker.cs:297
+      Parser..ctor at Parser.cs:43
+
+info: Scanned assembly System.Private.CoreLib - found 222 attribute types
+  --> Called from: ReflectionAttributeResolver.ScanAssembly at ReflectionAttributeResolver.cs:135
+  --> Call stack:
+      ReflectionAttributeResolver.ScanAssembly at ReflectionAttributeResolver.cs:135
+      ReflectionAttributeResolver.ScanDefaultAssemblies at ReflectionAttributeResolver.cs:94
+      ReflectionAttributeResolver..ctor at ReflectionAttributeResolver.cs:85
+      ReflectionTypeResolver.InitializeAttributeResolver at ReflectionTypeResolver.cs:56
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:48
+
+info: Scanned assembly System.ComponentModel.Annotations - found 38 attribute types
+  --> Called from: ReflectionAttributeResolver.ScanAssembly at ReflectionAttributeResolver.cs:135
+  --> Call stack:
+      ReflectionAttributeResolver.ScanAssembly at ReflectionAttributeResolver.cs:135
+      ReflectionAttributeResolver.ScanDefaultAssemblies at ReflectionAttributeResolver.cs:95
+      ReflectionAttributeResolver..ctor at ReflectionAttributeResolver.cs:85
+      ReflectionTypeResolver.InitializeAttributeResolver at ReflectionTypeResolver.cs:56
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:48
+
+info: Scanned assembly System.Text.Json - found 16 attribute types
+  --> Called from: ReflectionAttributeResolver.ScanAssembly at ReflectionAttributeResolver.cs:135
+  --> Call stack:
+      ReflectionAttributeResolver.ScanAssembly at ReflectionAttributeResolver.cs:135
+      ReflectionAttributeResolver.ScanDefaultAssemblies at ReflectionAttributeResolver.cs:96
+      ReflectionAttributeResolver..ctor at ReflectionAttributeResolver.cs:85
+      ReflectionTypeResolver.InitializeAttributeResolver at ReflectionTypeResolver.cs:56
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:48
+
+info: Scanned assembly System.Runtime.Serialization.Primitives - found 7 attribute types
+  --> Called from: ReflectionAttributeResolver.ScanAssembly at ReflectionAttributeResolver.cs:135
+  --> Call stack:
+      ReflectionAttributeResolver.ScanAssembly at ReflectionAttributeResolver.cs:135
+      ReflectionAttributeResolver.ScanDefaultAssemblies at ReflectionAttributeResolver.cs:97
+      ReflectionAttributeResolver..ctor at ReflectionAttributeResolver.cs:85
+      ReflectionTypeResolver.InitializeAttributeResolver at ReflectionTypeResolver.cs:56
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:48
+
+info: Scanned assembly uhigh - found 4 attribute types
+  --> Called from: ReflectionAttributeResolver.ScanAssembly at ReflectionAttributeResolver.cs:135
+  --> Call stack:
+      ReflectionAttributeResolver.ScanAssembly at ReflectionAttributeResolver.cs:135
+      ReflectionAttributeResolver.ScanDefaultAssemblies at ReflectionAttributeResolver.cs:108
+      ReflectionAttributeResolver..ctor at ReflectionAttributeResolver.cs:85
+      ReflectionTypeResolver.InitializeAttributeResolver at ReflectionTypeResolver.cs:56
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:48
+
+info: Discovered 575 attribute types via reflection
+  --> Called from: ReflectionAttributeResolver.ScanDefaultAssemblies at ReflectionAttributeResolver.cs:110
+  --> Call stack:
+      ReflectionAttributeResolver.ScanDefaultAssemblies at ReflectionAttributeResolver.cs:110
+      ReflectionAttributeResolver..ctor at ReflectionAttributeResolver.cs:85
+      ReflectionTypeResolver.InitializeAttributeResolver at ReflectionTypeResolver.cs:56
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:48
+      MethodChecker..ctor at MethodChecker.cs:297
+
+info: Starting parsing of 730 tokens
+  --> Called from: Parser.Parse at Parser.cs:55
+  --> Call stack:
+      Parser.Parse at Parser.cs:55
+      Compiler.CompileToCS at Compiler.cs:196
+      <CompileAndRunInMemory>d__5.MoveNext at Compiler.cs:136
+      ExecutionContext.RunFromThreadPoolDispatchLoop
+      AsyncStateMachineBox`1.MoveNext
+
+info: Registered 0 user-defined classes
+  --> Called from: MethodChecker.PrintMethodSummary at MethodChecker.cs:745
+  --> Call stack:
+      MethodChecker.PrintMethodSummary at MethodChecker.cs:745
+      Parser.Parse at Parser.cs:86
+      Compiler.CompileToCS at Compiler.cs:196
+      <CompileAndRunInMemory>d__5.MoveNext at Compiler.cs:136
+      ExecutionContext.RunFromThreadPoolDispatchLoop
+
+info: Registered 11 user-defined global methods
+  --> Called from: MethodChecker.PrintMethodSummary at MethodChecker.cs:746
+  --> Call stack:
+      MethodChecker.PrintMethodSummary at MethodChecker.cs:746
+      Parser.Parse at Parser.cs:86
+      Compiler.CompileToCS at Compiler.cs:196
+      <CompileAndRunInMemory>d__5.MoveNext at Compiler.cs:136
+      ExecutionContext.RunFromThreadPoolDispatchLoop
+
+info: Registered 0 user-defined class methods
+  --> Called from: MethodChecker.PrintMethodSummary at MethodChecker.cs:747
+  --> Call stack:
+      MethodChecker.PrintMethodSummary at MethodChecker.cs:747
+      Parser.Parse at Parser.cs:86
+      Compiler.CompileToCS at Compiler.cs:196
+      <CompileAndRunInMemory>d__5.MoveNext at Compiler.cs:136
+      ExecutionContext.RunFromThreadPoolDispatchLoop
+
+info: Discovered 31633 types via reflection
+  --> Called from: MethodChecker.PrintMethodSummary at MethodChecker.cs:748
+  --> Call stack:
+      MethodChecker.PrintMethodSummary at MethodChecker.cs:748
+      Parser.Parse at Parser.cs:86
+      Compiler.CompileToCS at Compiler.cs:196
+      <CompileAndRunInMemory>d__5.MoveNext at Compiler.cs:136
+      ExecutionContext.RunFromThreadPoolDispatchLoop
+
+info: Discovered 334398 methods via reflection
+  --> Called from: MethodChecker.PrintMethodSummary at MethodChecker.cs:749
+  --> Call stack:
+      MethodChecker.PrintMethodSummary at MethodChecker.cs:749
+      Parser.Parse at Parser.cs:86
+      Compiler.CompileToCS at Compiler.cs:196
+      <CompileAndRunInMemory>d__5.MoveNext at Compiler.cs:136
+      ExecutionContext.RunFromThreadPoolDispatchLoop
+
+info: Parsing completed. Generated AST with 0 statements
+  --> Called from: Parser.Parse at Parser.cs:87
+  --> Call stack:
+      Parser.Parse at Parser.cs:87
+      Compiler.CompileToCS at Compiler.cs:196
+      <CompileAndRunInMemory>d__5.MoveNext at Compiler.cs:136
+      ExecutionContext.RunFromThreadPoolDispatchLoop
+      AsyncStateMachineBox`1.MoveNext
+
+info: Scanned assembly System.Private.CoreLib - found 2630 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly uhigh - found 356 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly System.Runtime - found 0 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly System.CommandLine - found 263 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly System.Collections - found 74 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly System.ComponentModel - found 5 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly System.Memory - found 26 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly System.Linq - found 110 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly System.Net.Primitives - found 83 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly System.Private.Uri - found 48 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly System.Runtime.InteropServices - found 74 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly System.Console - found 48 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly System.Threading - found 17 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly System.Runtime.Serialization.Formatters - found 43 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly Microsoft.Win32.Primitives - found 0 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly System.Diagnostics.StackTrace - found 16 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly System.Reflection.Metadata - found 527 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly System.Collections.Immutable - found 198 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly System.IO.MemoryMappedFiles - found 27 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly System.Text.Encoding.Extensions - found 0 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly System.Text.RegularExpressions - found 213 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly System.Linq.Queryable - found 18 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly System.Threading.Thread - found 0 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly System.Net.Http - found 423 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly Microsoft.CodeAnalysis - found 2258 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly Microsoft.CodeAnalysis.Scripting - found 114 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly System.Diagnostics.Tracing - found 0 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly System.Reflection.Emit.ILGeneration - found 0 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly System.Linq.Expressions - found 715 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly System.Diagnostics.DiagnosticSource - found 173 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly System.Xml.XDocument - found 0 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly System.Private.Xml.Linq - found 102 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly System.Private.Xml - found 1706 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly System.Security.Cryptography - found 541 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly System.Runtime.Numerics - found 38 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly System.Runtime.Loader - found 0 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly System.IO.Compression - found 73 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly Microsoft.CodeAnalysis.CSharp - found 2838 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly System.Collections.Concurrent - found 58 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly Microsoft.CodeAnalysis.CSharp.Scripting - found 13 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly System.ComponentModel.Annotations - found 82 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly System.Text.Json - found 357 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly System.Runtime.Serialization.Primitives - found 12 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly System.ComponentModel.TypeConverter - found 308 types
+  --> Called from: ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+  --> Call stack:
+      ReflectionTypeResolver.ScanAssembly at ReflectionTypeResolver.cs:134
+      ReflectionTypeResolver.ScanAllAssembliesInAppDomain at ReflectionTypeResolver.cs:78
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:46
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+      Compiler.CompileToCS at Compiler.cs:208
+
+info: Scanned assembly System.Private.CoreLib - found 222 attribute types
+  --> Called from: ReflectionAttributeResolver.ScanAssembly at ReflectionAttributeResolver.cs:135
+  --> Call stack:
+      ReflectionAttributeResolver.ScanAssembly at ReflectionAttributeResolver.cs:135
+      ReflectionAttributeResolver.ScanDefaultAssemblies at ReflectionAttributeResolver.cs:94
+      ReflectionAttributeResolver..ctor at ReflectionAttributeResolver.cs:85
+      ReflectionTypeResolver.InitializeAttributeResolver at ReflectionTypeResolver.cs:56
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:48
+
+info: Scanned assembly System.ComponentModel.Annotations - found 38 attribute types
+  --> Called from: ReflectionAttributeResolver.ScanAssembly at ReflectionAttributeResolver.cs:135
+  --> Call stack:
+      ReflectionAttributeResolver.ScanAssembly at ReflectionAttributeResolver.cs:135
+      ReflectionAttributeResolver.ScanDefaultAssemblies at ReflectionAttributeResolver.cs:95
+      ReflectionAttributeResolver..ctor at ReflectionAttributeResolver.cs:85
+      ReflectionTypeResolver.InitializeAttributeResolver at ReflectionTypeResolver.cs:56
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:48
+
+info: Scanned assembly System.Text.Json - found 16 attribute types
+  --> Called from: ReflectionAttributeResolver.ScanAssembly at ReflectionAttributeResolver.cs:135
+  --> Call stack:
+      ReflectionAttributeResolver.ScanAssembly at ReflectionAttributeResolver.cs:135
+      ReflectionAttributeResolver.ScanDefaultAssemblies at ReflectionAttributeResolver.cs:96
+      ReflectionAttributeResolver..ctor at ReflectionAttributeResolver.cs:85
+      ReflectionTypeResolver.InitializeAttributeResolver at ReflectionTypeResolver.cs:56
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:48
+
+info: Scanned assembly System.Runtime.Serialization.Primitives - found 7 attribute types
+  --> Called from: ReflectionAttributeResolver.ScanAssembly at ReflectionAttributeResolver.cs:135
+  --> Call stack:
+      ReflectionAttributeResolver.ScanAssembly at ReflectionAttributeResolver.cs:135
+      ReflectionAttributeResolver.ScanDefaultAssemblies at ReflectionAttributeResolver.cs:97
+      ReflectionAttributeResolver..ctor at ReflectionAttributeResolver.cs:85
+      ReflectionTypeResolver.InitializeAttributeResolver at ReflectionTypeResolver.cs:56
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:48
+
+info: Scanned assembly uhigh - found 4 attribute types
+  --> Called from: ReflectionAttributeResolver.ScanAssembly at ReflectionAttributeResolver.cs:135
+  --> Call stack:
+      ReflectionAttributeResolver.ScanAssembly at ReflectionAttributeResolver.cs:135
+      ReflectionAttributeResolver.ScanDefaultAssemblies at ReflectionAttributeResolver.cs:108
+      ReflectionAttributeResolver..ctor at ReflectionAttributeResolver.cs:85
+      ReflectionTypeResolver.InitializeAttributeResolver at ReflectionTypeResolver.cs:56
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:48
+
+info: Discovered 575 attribute types via reflection
+  --> Called from: ReflectionAttributeResolver.ScanDefaultAssemblies at ReflectionAttributeResolver.cs:110
+  --> Call stack:
+      ReflectionAttributeResolver.ScanDefaultAssemblies at ReflectionAttributeResolver.cs:110
+      ReflectionAttributeResolver..ctor at ReflectionAttributeResolver.cs:85
+      ReflectionTypeResolver.InitializeAttributeResolver at ReflectionTypeResolver.cs:56
+      ReflectionTypeResolver..ctor at ReflectionTypeResolver.cs:48
+      CSharpGenerator.Generate at CSharpGenerator.cs:61
+
+info: Starting C# code generation
+  --> Called from: CSharpGenerator.Generate at CSharpGenerator.cs:70
+  --> Call stack:
+      CSharpGenerator.Generate at CSharpGenerator.cs:70
+      Compiler.CompileToCS at Compiler.cs:208
+      <CompileAndRunInMemory>d__5.MoveNext at Compiler.cs:136
+      ExecutionContext.RunFromThreadPoolDispatchLoop
+      AsyncStateMachineBox`1.MoveNext
+
+info: C# code generation completed. Generated 19 lines
+  --> Called from: CSharpGenerator.Generate at CSharpGenerator.cs:94
+  --> Call stack:
+      CSharpGenerator.Generate at CSharpGenerator.cs:94
+      Compiler.CompileToCS at Compiler.cs:208
+      <CompileAndRunInMemory>d__5.MoveNext at Compiler.cs:136
+      ExecutionContext.RunFromThreadPoolDispatchLoop
+      AsyncStateMachineBox`1.MoveNext
+
+info: μHigh compilation pipeline completed successfully
+  --> Called from: Compiler.CompileToCS at Compiler.cs:212
+  --> Call stack:
+      Compiler.CompileToCS at Compiler.cs:212
+      <CompileAndRunInMemory>d__5.MoveNext at Compiler.cs:136
+      ExecutionContext.RunFromThreadPoolDispatchLoop
+      AsyncStateMachineBox`1.MoveNext
+      ThreadPoolWorkQueue.Dispatch
+
+Generated C# code:
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+
+namespace Generated
+{
+	public class Program
+	{
+// Built-in functions are now part of the standard library
+// You can use them directly without generating here
+
+		public static void Main(string[] args)
+		{
+		}
+
+	}
+}
+
+
+    Finished μHigh compilation successfully
+
+For more information about these diagnostics, run with --verbose

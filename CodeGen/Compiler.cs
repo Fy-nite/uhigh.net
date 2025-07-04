@@ -770,6 +770,8 @@ namespace uhigh.Net
                                 Console.WriteLine();
                             }
                         }
+                        // If there are no μHigh files but there are C# files, skip code generation
+                        // and just proceed with the C# syntax trees.
                     }
 
                     // Use in-memory compiler with project configuration
