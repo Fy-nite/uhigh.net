@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <Name>meow</Name>
+  <Version>1.0.0</Version>
+  <Target>net9.0</Target>
+  <OutputType>Exe</OutputType>
+  <SourceFiles>
+    <File>main.uh</File>
+    <File>utils.cs</File>
+  </SourceFiles>
+  <Dependencies />
+  <Properties />
+  <RootNamespace>meow</RootNamespace>
+  <ClassName>Program</ClassName>
+  <Nullable>true</Nullable>
+</Project>

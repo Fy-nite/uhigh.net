@@ -101,7 +101,12 @@ namespace uhigh.Net.CodeGen
                 MetadataReference.CreateFromFile(typeof(System.Collections.Generic.List<>).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(System.Linq.Enumerable).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(InMemoryCompiler).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(StdLib.Temporal<>).Assembly.Location)
+                MetadataReference.CreateFromFile(typeof(StdLib.Temporal<>).Assembly.Location),
+                MetadataReference.CreateFromFile(typeof(System.Net.Http.HttpClient).Assembly.Location),
+                MetadataReference.CreateFromFile(typeof(System.Xml.XmlDocument).Assembly.Location),
+                MetadataReference.CreateFromFile(typeof(System.ComponentModel.BrowsableAttribute).Assembly.Location),
+                MetadataReference.CreateFromFile(typeof(System.IO.FileSystemInfo).Assembly.Location),
+                MetadataReference.CreateFromFile(typeof(System.Net.WebClient).Assembly.Location)
             });
 
             // Add μHigh compiler assembly (uhigh.dll) if present
@@ -619,6 +624,104 @@ namespace uhigh.Net.CodeGen
                     new CSharpCompilationOptions(
                         outputKind,
                         mainTypeName: outputKind == OutputKind.ConsoleApplication && sourceInfo.HasMainMethod ? mainTypeName : null));
+                
+                var emitResult = compilation.Emit(finalPath);
+                
+                if (!emitResult.Success)
+                {
+                    Console.WriteLine("Compilation failed:");
+                    foreach (var diagnostic in emitResult.Diagnostics)
+                    {
+                        if (diagnostic.Severity == DiagnosticSeverity.Error)
+                        {
+                            Console.WriteLine($"  Error: {diagnostic.GetMessage()}");
+                        }
+                    }
+                    
+                    Environment.Exit(1);    
+                }
+                
+                // Copy required assemblies to build directory
+                await CopyRequiredAssemblies(buildDir, additionalAssemblies);
+                
+                // Create runtime configuration file only for executables
+                if (outputKind == OutputKind.ConsoleApplication)
+                {
+                    await CreateRuntimeConfigAsync(finalPath);
+                    Console.WriteLine($"Executable created: {finalPath}");
+                    Console.WriteLine($"Run with: dotnet \"{finalPath}\"");
+                }
+                else
+                {
+                    Console.WriteLine($"Library created: {finalPath}");
+                }
+                
+                Console.WriteLine($"Build directory: {buildDir}");
+                
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Compilation failed: {ex.Message}");
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Compiles the to executable using the specified syntax trees
+        /// </summary>
+        /// <param name="syntaxTrees">The syntax trees</param>
+        /// <param name="outputPath">The output path</param>
+        /// <param name="rootNamespace">The root namespace</param>
+        /// <param name="className">The class name</param>
+        /// <param name="outputType">The output type</param>
+        /// <param name="additionalAssemblies">The additional assemblies</param>
+        /// <returns>A task containing the bool</returns>
+        public async Task<bool> CompileToExecutable(
+            List<Microsoft.CodeAnalysis.SyntaxTree> syntaxTrees,
+            string outputPath,
+            string? rootNamespace = null,
+            string? className = null,
+            string outputType = "Exe",
+            List<string>? additionalAssemblies = null)
+        {
+            try
+            {
+                // Extract source information from the first syntax tree
+                var sourceInfo = ExtractSourceInfo(syntaxTrees[0]);
+                
+                var references = GetAssemblyReferences(_stdLibPath, additionalAssemblies);
+                
+                // Use extracted info or provided parameters or defaults
+                var actualRootNamespace = rootNamespace ?? sourceInfo.Namespace ?? "Generated";
+                var actualClassName = className ?? sourceInfo.MainClassName ?? "Program";
+                var mainTypeName = $"{actualRootNamespace}.{actualClassName}";
+                
+                var outputKind = outputType.Equals("Library", StringComparison.OrdinalIgnoreCase) 
+                    ? OutputKind.DynamicallyLinkedLibrary 
+                    : OutputKind.ConsoleApplication;
+                
+                // Adjust output path extension based on output type
+                if (outputType.Equals("Library", StringComparison.OrdinalIgnoreCase))
+                {
+                    outputPath = Path.ChangeExtension(outputPath, ".dll");
+                }
+                else
+                {
+                    outputPath = Path.ChangeExtension(outputPath, ".exe");
+                }
+                
+                // Create build directory
+                var buildDir = Path.Combine(Path.GetDirectoryName(outputPath)!, "build");
+                Directory.CreateDirectory(buildDir);
+                var finalPath = Path.Combine(buildDir, Path.GetFileName(outputPath));
+                var compilation = CSharpCompilation.Create(
+                    Path.GetFileNameWithoutExtension(outputPath),
+                    syntaxTrees, // Use all syntax trees (μHigh + .cs)
+                    references,
+                    new CSharpCompilationOptions(
+                        outputKind,
+                        mainTypeName: outputKind == OutputKind.ConsoleApplication ? $"{rootNamespace}.{className}" : null));
                 
                 var emitResult = compilation.Emit(finalPath);
                 

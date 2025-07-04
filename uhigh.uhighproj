@@ -1,0 +1,76 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <Name>uhigh</Name>
+  <Version>1.1.2</Version>
+  <Target>net9.0</Target>
+  <OutputType>Exe</OutputType>
+  <SourceFiles>
+    <File>Program.cs</File>
+    <File>CommandLine/Options.cs</File>
+    <File>CommandLine/Commands.cs</File>
+    <File>CommandLine/CommandOptions.cs</File>
+    <File>CommandLine/CommandLineOptions.cs</File>
+    <File>CodeGen/Compiler.cs</File>
+    <File>CodeGen/CSharpGenerator.cs</File>
+    <File>CodeGen/InMemoryCompiler.cs</File>
+    <File>CodeGen/MultiFileGenerator.cs</File>
+    <File>CodeGen/NuGetPackageResolver.cs</File>
+    <File>CodeGen/NuGetResolver.cs</File>
+    <File>CodeGen/ReferenceValidator.cs</File>
+    <File>Diagnostics/Diagnostics.cs</File>
+    <File>Diagnostics/DiagnosticsReporter.cs</File>
+    <File>Lexer/Lexer.cs</File>
+    <File>Lexer/Token.cs</File>
+    <File>NuGet/NuGetManager.cs</File>
+    <File>Parser/AST.cs</File>
+    <File>Parser/ASTNodes.cs</File>
+    <File>Parser/ASTValidator.cs</File>
+    <File>Parser/MethodChecker.cs</File>
+    <File>Parser/ParseException.cs</File>
+    <File>Parser/Parser.cs</File>
+    <File>Parser/ProjectFile.cs</File>
+    <File>Parser/ProjectSerial.cs</File>
+    <File>Parser/ReflectionAttributeResolver.cs</File>
+    <File>Parser/ReflectionMethodResolver.cs</File>
+    <File>Parser/ReflectionTypeResolver.cs</File>
+    <File>Repl/Repl.cs</File>
+    <File>Repl/RoslynRepl.cs</File>
+    <File>SimpleLSPTest.cs</File>
+    <File>TestLSP.cs</File>
+    <File>testing/ASTTests.cs</File>
+    <File>testing/AttributeTests.cs</File>
+    <File>testing/CodeGenTests.cs</File>
+    <File>testing/LexerTests.cs</File>
+    <File>testing/ParserTests.cs</File>
+    <File>testing/ReplTests.cs</File>
+    <File>testing/TestAttribute.cs</File>
+    <File>testing/TestFramework.cs</File>
+    <File>testing/TestRunner.cs</File>
+    <File>stdlib/array.cs</File>
+    <File>stdlib/cache.cs</File>
+    <File>stdlib/collections.cs</File>
+    <File>stdlib/config.cs</File>
+    <File>stdlib/encoding.cs</File>
+    <File>stdlib/examples_serialization.cs</File>
+    <File>stdlib/files.cs</File>
+    <File>stdlib/funnies.cs</File>
+    <File>stdlib/http.cs</File>
+    <File>stdlib/logging.cs</File>
+    <File>stdlib/math.cs</File>
+    <File>stdlib/random.cs</File>
+    <File>stdlib/reactive.cs</File>
+    <File>stdlib/serialization.cs</File>
+    <File>stdlib/temporal.cs</File>
+    <File>stdlib/terminal.cs</File>
+    <File>stdlib/validation.cs</File>
+  </SourceFiles>
+  <Dependencies>
+    <Package Include="System.CommandLine" Version="2.0.0-beta4.22272.1" CompileOnly="false" />
+    <Package Include="Microsoft.CodeAnalysis.CSharp" Version="4.7.0" CompileOnly="false" />
+    <Package Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="4.7.0" CompileOnly="false" />
+    <Package Include="System.Text.Json" Version="9.0.0" CompileOnly="false" />
+    <Package Include="System.IO.Compression" Version="4.3.0" CompileOnly="false" />
+  </Dependencies>
+  <Properties />
+  <Nullable>true</Nullable>
+</Project>

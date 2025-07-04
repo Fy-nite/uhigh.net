@@ -656,6 +656,7 @@ namespace uhigh.Net
 
                     // Parse all source files and collect them
                     var allPrograms = new List<Program>();
+                    var csharpSyntaxTrees = new List<Microsoft.CodeAnalysis.SyntaxTree>();
                     var projectRootNamespace = project.RootNamespace ?? project.Name;
                     var projectClassName = project.ClassName ?? "Program";
 
@@ -676,10 +677,8 @@ namespace uhigh.Net
                             var fullSourcePath = Path.IsPathRooted(sourceFileRelative) 
                                 ? sourceFileRelative 
                                 : Path.Combine(projectDir, sourceFileRelative);
-                            
 
                             fullSourcePath = Path.GetFullPath(fullSourcePath);
-                            
 
                             diagnostics.ReportInfo($"Processing: {Path.GetRelativePath(projectDir, fullSourcePath)}");
                                 
@@ -689,77 +688,87 @@ namespace uhigh.Net
                                 continue;
                             }
 
-                            // Skip non-μHigh files
-                            if (!fullSourcePath.EndsWith(".uh", StringComparison.OrdinalIgnoreCase))
+                            if (fullSourcePath.EndsWith(".uh", StringComparison.OrdinalIgnoreCase))
                             {
-                                diagnostics.ReportWarning($"Skipping non-μHigh source file: {fullSourcePath}");
-                                continue;
-                            }
-
-                            try
-                            {
-                                var source = await File.ReadAllTextAsync(fullSourcePath);
-                                diagnostics.ReportInfo($"Read {source.Length} characters from {Path.GetFileName(fullSourcePath)}");
-                                
-                                // Compile to AST
-                                var ast = CompileToAST(source, diagnostics, Path.GetFileName(fullSourcePath));
-                                
-                                if (diagnostics.HasErrors)
+                                try
                                 {
-                                    diagnostics.ReportError($"Failed to compile {fullSourcePath}");
+                                    var source = await File.ReadAllTextAsync(fullSourcePath);
+                                    diagnostics.ReportInfo($"Read {source.Length} characters from {Path.GetFileName(fullSourcePath)}");
+                                    
+                                    // Compile to AST
+                                    var ast = CompileToAST(source, diagnostics, Path.GetFileName(fullSourcePath));
+                                    
+                                    if (diagnostics.HasErrors)
+                                    {
+                                        diagnostics.ReportError($"Failed to compile {fullSourcePath}");
+                                        continue;
+                                    }
+                                    
+                                    allPrograms.Add(ast);
+                                    diagnostics.ReportInfo($"Successfully compiled {Path.GetFileName(fullSourcePath)}");
+                                }
+                                catch (Exception ex)
+                                {
+                                    diagnostics.ReportError($"Failed to process {fullSourcePath}: {ex.Message}");
                                     continue;
                                 }
-                                
-                                allPrograms.Add(ast);
-                                diagnostics.ReportInfo($"Successfully compiled {Path.GetFileName(fullSourcePath)}");
                             }
-                            catch (Exception ex)
+                            else if (fullSourcePath.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
                             {
-                                diagnostics.ReportError($"Failed to process {fullSourcePath}: {ex.Message}");
-                                continue;
+                                // Directly parse C# files and add to syntax trees
+                                var csSource = await File.ReadAllTextAsync(fullSourcePath);
+                                var syntaxTree = Microsoft.CodeAnalysis.CSharp.CSharpSyntaxTree.ParseText(csSource);
+                                csharpSyntaxTrees.Add(syntaxTree);
+                                diagnostics.ReportInfo($"Included C# file: {Path.GetFileName(fullSourcePath)}");
+                            }
+                            else
+                            {
+                                diagnostics.ReportWarning($"Skipping unsupported source file: {fullSourcePath}");
                             }
                         }
                     }
 
-                    if (allPrograms.Count == 0)
+                    if (allPrograms.Count == 0 && csharpSyntaxTrees.Count == 0)
                     {
                         diagnostics.ReportError("No valid source files were compiled");
                         diagnostics.PrintSummary();
                         return false;
                     }
 
-                    diagnostics.ReportInfo($"Successfully processed {allPrograms.Count} source files");
+                    diagnostics.ReportInfo($"Successfully processed {allPrograms.Count} μHigh files and {csharpSyntaxTrees.Count} C# files");
 
                     // Generate combined C# code
-                    string combinedCode;
+                    string combinedCode = "";
                     using (var generateTimer = new NuGet.OperationTimer("Generating C# code", diagnostics, _verboseMode))
                     {
-                        var generator = new CSharpGenerator();
-                        combinedCode = generator.GenerateCombined(allPrograms, diagnostics, projectRootNamespace, projectClassName);
-                        
-                        if (diagnostics.HasErrors)
+                        if (allPrograms.Count > 0)
                         {
-                            diagnostics.PrintSummary();
-                            return false;
-                        }
+                            var generator = new CSharpGenerator();
+                            combinedCode = generator.GenerateCombined(allPrograms, diagnostics, projectRootNamespace, projectClassName);
 
-                        // Check for main method in executable projects
-                        var hasMainMethod = combinedCode.Contains("static void Main") || combinedCode.Contains("static async Task Main");
-                        
-                        if (!hasMainMethod && project.OutputType.Equals("Exe", StringComparison.OrdinalIgnoreCase))
-                        {
-                            diagnostics.ReportError("No main method found in executable project. Make sure you have a 'func main()' function.");
-                            diagnostics.PrintSummary();
-                            return false;
-                        }
+                            if (diagnostics.HasErrors)
+                            {
+                                diagnostics.PrintSummary();
+                                return false;
+                            }
 
-                        if (_verboseMode)
-                        {
-                            diagnostics.ReportInfo("Generated combined C# code:");
-                            Console.WriteLine("=".PadRight(50, '='));
-                            Console.WriteLine(combinedCode);
-                            Console.WriteLine("=".PadRight(50, '='));
-                            Console.WriteLine();
+                            // Check for main method in executable projects
+                            var hasMainMethod = combinedCode.Contains("static void Main") || combinedCode.Contains("static async Task Main");
+                            if (!hasMainMethod && project.OutputType.Equals("Exe", StringComparison.OrdinalIgnoreCase) && csharpSyntaxTrees.Count == 0)
+                            {
+                                diagnostics.ReportError("No main method found in executable project. Make sure you have a 'func main()' function.");
+                                diagnostics.PrintSummary();
+                                return false;
+                            }
+
+                            if (_verboseMode)
+                            {
+                                diagnostics.ReportInfo("Generated combined C# code:");
+                                Console.WriteLine("=".PadRight(50, '='));
+                                Console.WriteLine(combinedCode);
+                                Console.WriteLine("=".PadRight(50, '='));
+                                Console.WriteLine();
+                            }
                         }
                     }
 
@@ -768,7 +777,13 @@ namespace uhigh.Net
                     using (var compileTimer = new NuGet.OperationTimer("Compiling to executable", diagnostics, _verboseMode))
                     {
                         var inMemoryCompiler = new InMemoryCompiler(_stdLibPath);
-                        
+
+                        // Prepare all syntax trees for Roslyn
+                        var syntaxTrees = new List<Microsoft.CodeAnalysis.SyntaxTree>();
+                        if (!string.IsNullOrWhiteSpace(combinedCode))
+                            syntaxTrees.Add(Microsoft.CodeAnalysis.CSharp.CSharpSyntaxTree.ParseText(combinedCode));
+                        syntaxTrees.AddRange(csharpSyntaxTrees);
+
                         if (outputFile != null)
                         {
                             // Resolve output file relative to project directory
@@ -776,8 +791,9 @@ namespace uhigh.Net
                             {
                                 outputFile = Path.Combine(projectDir, outputFile);
                             }
-                            
-                            success = await inMemoryCompiler.CompileToExecutable(combinedCode, outputFile, projectRootNamespace, projectClassName, project.OutputType, nugetAssemblies);
+
+                            success = await inMemoryCompiler.CompileToExecutable(
+                                syntaxTrees, outputFile, projectRootNamespace, projectClassName, project.OutputType, nugetAssemblies);
                             if (success)
                             {
                                 Console.WriteLine($"Project compiled successfully to: {outputFile}");
@@ -789,8 +805,9 @@ namespace uhigh.Net
                             var defaultOutputFile = project.OutputType.Equals("Library", StringComparison.OrdinalIgnoreCase) 
                                 ? Path.Combine(projectDir, $"{project.Name}.dll")
                                 : Path.Combine(projectDir, $"{project.Name}.exe");
-                            
-                            success = await inMemoryCompiler.CompileToExecutable(combinedCode, defaultOutputFile, projectRootNamespace, projectClassName, project.OutputType, nugetAssemblies);
+
+                            success = await inMemoryCompiler.CompileToExecutable(
+                                syntaxTrees, defaultOutputFile, projectRootNamespace, projectClassName, project.OutputType, nugetAssemblies);
                             if (success)
                             {
                                 Console.WriteLine($"Project compiled successfully to: {defaultOutputFile}");
