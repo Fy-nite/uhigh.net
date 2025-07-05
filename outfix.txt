@@ -14,6 +14,7 @@ Type	2
 IEnumerable<>	3
 FileSystemWatcher	2
 Exception	86
+
 DateTime	1
 IReadOnlyList<>	1
 MetadataReference	6

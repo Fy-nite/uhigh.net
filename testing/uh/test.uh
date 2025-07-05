@@ -1,0 +1,10 @@
+namespace Meow{
+    public class Program
+    {
+        public static func Main(args: string[]): void
+        {
+            Console.WriteLine("Hello, World!");
+        }
+    }
+
+}

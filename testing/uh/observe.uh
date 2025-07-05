@@ -1,0 +1,23 @@
+Using uhigh.StdLib
+namespace testing
+{
+
+    class Program
+    {
+        static field cats: Observable<string> = new Observable<string>(null,false)
+        public static func Main(args: string[]): void
+        {
+            cats.Subscribe((cat) => { Console.WriteLine("Cat sound: " + cat); });
+            cats.Add("purr")
+            cats.Add("meow")
+            for var cat in cats
+            {
+                Console.WriteLine("Cat sound in history: " + cat);
+            }
+            Console.WriteLine("Total cat sounds: " + cats.Count))
+        }
+        
+     
+    }
+
+}

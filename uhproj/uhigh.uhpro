@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+﻿<!-- <?xml version="1.0" encoding="utf-8"?>
 <Project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
   <Name>uhigh</Name>
   <Version>1.1.2</Version>
@@ -35,7 +35,6 @@
     <File>Parser/ReflectionTypeResolver.cs</File>
     <File>Repl/Repl.cs</File>
     <File>Repl/RoslynRepl.cs</File>
-    <File>SimpleLSPTest.cs</File>
     <File>TestLSP.cs</File>
     <File>testing/ASTTests.cs</File>
     <File>testing/AttributeTests.cs</File>
@@ -73,4 +72,4 @@
   </Dependencies>
   <Properties />
   <Nullable>true</Nullable>
-</Project>
+</Project> -->

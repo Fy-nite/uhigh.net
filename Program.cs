@@ -984,9 +984,17 @@ public class EntryPoint
     /// <returns>A task containing the int</returns>
     private static async Task<int> HandleLspCommand(LspOptions options)
     {
-        // For now, redirect to the simple LSP test
-        await SimpleLSPTest.TestMain(new[] { "simple-lsp" });
-        return 0;
+        try
+        {
+
+            await UhighLanguageServer.srv.StartServerAsync();
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            WriteError($"LSP server failed: {ex.Message}");
+            return 1;
+        }
     }
 
     /// <summary>

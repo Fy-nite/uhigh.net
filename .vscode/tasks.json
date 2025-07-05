@@ -2,7 +2,7 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"label": "Start uhigh LSP Server",
+			"label": "Start μHigh LSP Server",
 			"type": "shell",
 			"command": "dotnet",
 			"args": [
@@ -10,7 +10,8 @@
 				"--framework",
 				"net8.0",
 				"--",
-				"--lsp"
+				"lsp",
+				"--stdio"
 			],
 			"group": "build",
 			"isBackground": true,

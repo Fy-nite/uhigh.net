@@ -1,0 +1,21 @@
+Using uhigh.StdLib.StdLib
+namespace testing
+{
+
+    class Program
+    {
+        static field time: Temporal<string> = new Temporal<string>("time event")
+        public static func Main(args: string[]): void
+        {
+            Console.WriteLine("Temporal event " + time.GetFirstChange().Value)
+            time.Update("new time event")
+            for var t in time.GetHistory()
+            {
+                Console.WriteLine("Temporal events " + t.Value)
+            }
+            Console.WriteLine("last Temporal event " + time.GetLastChange().Value)
+            time.Update("another time event, meow :3")
+            
+        }
+    }
+}
