@@ -91,10 +91,10 @@ namespace uhigh.Net.Parser
         private void ScanDefaultAssemblies()
         {
             // Scan core .NET assemblies for attributes
-            ScanAssembly(typeof(object).Assembly);           // System.Private.CoreLib
-            ScanAssembly(typeof(System.ComponentModel.DataAnnotations.RequiredAttribute).Assembly); // DataAnnotations
-            ScanAssembly(typeof(System.Text.Json.Serialization.JsonPropertyNameAttribute).Assembly); // System.Text.Json
-            ScanAssembly(typeof(System.Runtime.Serialization.DataMemberAttribute).Assembly); // System.Runtime.Serialization
+            // // ScanAssembly(typeof(object).Assembly);           // System.Private.CoreLib
+            // ScanAssembly(typeof(System.ComponentModel.DataAnnotations.RequiredAttribute).Assembly); // DataAnnotations
+            // ScanAssembly(typeof(System.Text.Json.Serialization.JsonPropertyNameAttribute).Assembly); // System.Text.Json
+            // ScanAssembly(typeof(System.Runtime.Serialization.DataMemberAttribute).Assembly); // System.Runtime.Serialization
             
             // Try to scan common attribute assemblies
             try 

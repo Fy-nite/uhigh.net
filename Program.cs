@@ -53,6 +53,7 @@ public class EntryPoint
         rootCommand.AddCommand(CreateLspCommand());
         rootCommand.AddCommand(CreateTestCommand());
         rootCommand.AddCommand(CreateReplCommand());
+        rootCommand.AddOption(CommonOptions.CreateNoExceptionOption());
 
         return rootCommand;
     }

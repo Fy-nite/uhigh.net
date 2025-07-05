@@ -331,10 +331,13 @@ namespace uhigh.Net.CodeGen
             }
             else
             {
-                // System namespace or any namespace: add the full namespace
+                // Add the namespace part
                 if (!string.IsNullOrWhiteSpace(import.ClassName))
                 {
-                    _usings.Add(import.ClassName);
+
+                  
+                        _usings.Add(import.ClassName);
+                    
                 }
             }
         }

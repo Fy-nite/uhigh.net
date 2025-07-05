@@ -90,24 +90,23 @@ namespace uhigh.Net.CodeGen
             }
             
             var references = new List<MetadataReference>();
-            
+
             // Use only the basic, compatible references
-            references.AddRange(new[]
+            // Dynamically add all loaded assemblies that are not dynamic and have a location
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
             {
-                MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(Console).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(System.Runtime.GCSettings).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(System.Collections.IEnumerable).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(System.Collections.Generic.List<>).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(System.Linq.Enumerable).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(InMemoryCompiler).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(StdLib.Temporal<>).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(System.Net.Http.HttpClient).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(System.Xml.XmlDocument).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(System.ComponentModel.BrowsableAttribute).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(System.IO.FileSystemInfo).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(System.Net.WebClient).Assembly.Location)
-            });
+                try
+                {
+                    if (!assembly.IsDynamic && !string.IsNullOrEmpty(assembly.Location))
+                    {
+                        references.Add(MetadataReference.CreateFromFile(assembly.Location));
+                    }
+                }
+                catch
+                {
+                    // Ignore assemblies that can't be loaded or have no location
+                }
+            }
 
             // Add μHigh compiler assembly (uhigh.dll) if present
             var uhighDllPath = Path.Combine(AppContext.BaseDirectory, "uhigh.dll");
@@ -683,7 +682,8 @@ namespace uhigh.Net.CodeGen
             string? rootNamespace = null,
             string? className = null,
             string outputType = "Exe",
-            List<string>? additionalAssemblies = null)
+            List<string>? additionalAssemblies = null,
+            string? targetFramework = null) // <-- Add targetFramework param
         {
             try
             {
@@ -745,7 +745,7 @@ namespace uhigh.Net.CodeGen
                 // Create runtime configuration file only for executables
                 if (outputKind == OutputKind.ConsoleApplication)
                 {
-                    await CreateRuntimeConfigAsync(finalPath);
+                    await CreateRuntimeConfigAsync(finalPath, targetFramework); // <-- Pass targetFramework
                     Console.WriteLine($"Executable created: {finalPath}");
                     Console.WriteLine($"Run with: dotnet \"{finalPath}\"");
                 }
@@ -807,6 +807,31 @@ namespace uhigh.Net.CodeGen
                 }
             }
 
+            // Copy System.Private.CoreLib.dll to build directory and write its version
+            var corelibAssembly = typeof(object).Assembly;
+            var corelibPath = corelibAssembly.Location;
+            var corelibVersion = corelibAssembly.GetName().Version?.ToString() ?? "unknown";
+            var corelibDestPath = Path.Combine(buildDir, "System.Private.CoreLib.dll");
+            if (File.Exists(corelibPath) && !File.Exists(corelibDestPath))
+            {
+                try
+                {
+                    File.Copy(corelibPath, corelibDestPath);
+                    Console.WriteLine($"Copied System.Private.CoreLib.dll (version {corelibVersion})");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Warning: Could not copy System.Private.CoreLib.dll: {ex.Message}");
+                }
+            }
+            // Optionally, write version info to a text file
+            var versionInfoPath = Path.Combine(buildDir, "corelib-version.txt");
+            try
+            {
+                await File.WriteAllTextAsync(versionInfoPath, $"System.Private.CoreLib version: {corelibVersion}\nPath: {corelibPath}");
+            }
+            catch { /* ignore errors */ }
+
             // Copy NuGet package assemblies to build directory
             if (additionalAssemblies != null)
             {
@@ -866,14 +891,26 @@ namespace uhigh.Net.CodeGen
         /// Creates the runtime config using the specified executable path
         /// </summary>
         /// <param name="executablePath">The executable path</param>
-        private async Task CreateRuntimeConfigAsync(string executablePath)
+        private async Task CreateRuntimeConfigAsync(string executablePath, string? targetFramework = null)
         {
             var runtimeConfigPath = Path.ChangeExtension(executablePath, ".runtimeconfig.json");
-            
-            // Get the actual runtime version
-            var runtimeVersion = Environment.Version;
-            var tfm = $"net{runtimeVersion.Major}.{runtimeVersion.Minor}";
-            
+
+            // Use the provided targetFramework, or fallback to Environment.Version
+            string tfm;
+            string runtimeVersion;
+            if (!string.IsNullOrWhiteSpace(targetFramework))
+            {
+                tfm = targetFramework.StartsWith("net") ? targetFramework : $"net{targetFramework}";
+                var versionMatch = System.Text.RegularExpressions.Regex.Match(tfm, @"net(\d+\.?\d*)");
+                runtimeVersion = versionMatch.Success ? $"{versionMatch.Groups[1].Value}.0" : $"{Environment.Version.Major}.{Environment.Version.Minor}.0";
+            }
+            else
+            {
+                var envVersion = Environment.Version;
+                tfm = $"net{envVersion.Major}.{envVersion.Minor}";
+                runtimeVersion = $"{envVersion.Major}.{envVersion.Minor}.0";
+            }
+
             var runtimeConfig = new
             {
                 runtimeOptions = new
@@ -882,7 +919,7 @@ namespace uhigh.Net.CodeGen
                     framework = new
                     {
                         name = "Microsoft.NETCore.App",
-                        version = $"{runtimeVersion.Major}.{runtimeVersion.Minor}.0"
+                        version = runtimeVersion
                     },
                     configProperties = new
                     {
@@ -890,12 +927,12 @@ namespace uhigh.Net.CodeGen
                     }
                 }
             };
-            
+
             var json = System.Text.Json.JsonSerializer.Serialize(runtimeConfig, new System.Text.Json.JsonSerializerOptions
             {
                 WriteIndented = true
             });
-            
+
             await File.WriteAllTextAsync(runtimeConfigPath, json);
             Console.WriteLine($"Runtime config created: {runtimeConfigPath}");
         }

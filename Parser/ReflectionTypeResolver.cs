@@ -275,6 +275,15 @@ namespace uhigh.Net.Parser
                 }
             }
 
+            // Handle generic types
+            if (IsGenericType(typeName))
+            {
+                if (TryResolveGenericType(typeName, out type))
+                {
+                    return true;
+                }
+            }
+
             // Handle type parameters (T, U, etc.) - allow them through
             if (IsTypeParameter(typeName))
             {

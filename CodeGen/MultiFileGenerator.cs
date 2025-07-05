@@ -107,6 +107,10 @@ namespace uhigh.Net.CodeGen
                     var namespaceToAdd = import.ClassName.Substring(0, lastDotIndex);
                     _globalUsings.Add(namespaceToAdd);
                 }
+                else
+                {
+                    _globalUsings.Add(import.ClassName);
+                }
             }
         }
 

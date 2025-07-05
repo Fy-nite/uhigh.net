@@ -171,7 +171,7 @@ namespace uhigh.Net
         /// <exception cref="Exception">Parsing failed</exception>
         /// <exception cref="Exception">Tokenization failed</exception>
         /// <returns>The string</returns>
-        public string CompileToCS(string source, DiagnosticsReporter? diagnostics = null, string? rootNamespace = null, string? className = null)
+        public string CompileToCS(string source, DiagnosticsReporter? diagnostics = null, string? rootNamespace = null, string? className = null, bool noExceptionMode = false)
         {
             diagnostics ??= new DiagnosticsReporter(_verboseMode);
             
@@ -183,7 +183,7 @@ namespace uhigh.Net
                 }
                 
                 // Tokenize
-                var lexer = new Lexer.Lexer(source, diagnostics, _verboseMode);
+                var lexer = new Lexer.Lexer(source, diagnostics, _verboseMode, noExceptionMode);
                 var tokens = lexer.Tokenize();
                 
                 if (diagnostics.HasErrors)
@@ -192,7 +192,7 @@ namespace uhigh.Net
                 }
                 
                 // Parse
-                var parser = new Parser.Parser(tokens, diagnostics, _verboseMode);
+                var parser = new Parser.Parser(tokens, diagnostics, _verboseMode, noExceptionMode);
                 var ast = parser.Parse();
 
                 // Handle include statements before code generation
@@ -229,7 +229,7 @@ namespace uhigh.Net
         /// <exception cref="Exception">Parsing failed</exception>
         /// <exception cref="Exception">Tokenization failed</exception>
         /// <returns>The program</returns>
-        public Program CompileToAST(string source, DiagnosticsReporter? diagnostics = null)
+        public Program CompileToAST(string source, DiagnosticsReporter? diagnostics = null, bool noExceptionMode = false)
         {
             diagnostics ??= new DiagnosticsReporter(_verboseMode);
             
@@ -241,7 +241,7 @@ namespace uhigh.Net
                 }
                 
                 // Tokenize
-                var lexer = new Lexer.Lexer(source, diagnostics, _verboseMode);
+                var lexer = new Lexer.Lexer(source, diagnostics, _verboseMode, noExceptionMode);
                 var tokens = lexer.Tokenize();
                 
                 if (diagnostics.HasErrors)
@@ -250,7 +250,7 @@ namespace uhigh.Net
                 }
                 
                 // Parse
-                var parser = new Parser.Parser(tokens, diagnostics, _verboseMode);
+                var parser = new Parser.Parser(tokens, diagnostics, _verboseMode, noExceptionMode);
                 var ast = parser.Parse();
 
                 // Handle include statements
@@ -287,7 +287,7 @@ namespace uhigh.Net
             try
             {
                 var source = await File.ReadAllTextAsync(sourceFile);
-                var ast = CompileToAST(source, diagnostics);
+                var ast = CompileToAST(source, diagnostics, null);
                 
                 if (diagnostics.HasErrors)
                 {
@@ -786,6 +786,8 @@ namespace uhigh.Net
                             syntaxTrees.Add(Microsoft.CodeAnalysis.CSharp.CSharpSyntaxTree.ParseText(combinedCode));
                         syntaxTrees.AddRange(csharpSyntaxTrees);
 
+                        var targetFramework = project.Target; // <-- Use project.Target
+
                         if (outputFile != null)
                         {
                             // Resolve output file relative to project directory
@@ -795,7 +797,7 @@ namespace uhigh.Net
                             }
 
                             success = await inMemoryCompiler.CompileToExecutable(
-                                syntaxTrees, outputFile, projectRootNamespace, projectClassName, project.OutputType, nugetAssemblies);
+                                syntaxTrees, outputFile, projectRootNamespace, projectClassName, project.OutputType, nugetAssemblies, targetFramework);
                             if (success)
                             {
                                 Console.WriteLine($"Project compiled successfully to: {outputFile}");
@@ -809,7 +811,7 @@ namespace uhigh.Net
                                 : Path.Combine(projectDir, $"{project.Name}.exe");
 
                             success = await inMemoryCompiler.CompileToExecutable(
-                                syntaxTrees, defaultOutputFile, projectRootNamespace, projectClassName, project.OutputType, nugetAssemblies);
+                                syntaxTrees, defaultOutputFile, projectRootNamespace, projectClassName, project.OutputType, nugetAssemblies, targetFramework);
                             if (success)
                             {
                                 Console.WriteLine($"Project compiled successfully to: {defaultOutputFile}");
@@ -868,7 +870,7 @@ namespace uhigh.Net
         /// <exception cref="Exception">Parsing failed for {fileName}</exception>
         /// <exception cref="Exception">Tokenization failed for {fileName}</exception>
         /// <returns>The program</returns>
-        private Program CompileToAST(string source, DiagnosticsReporter diagnostics, string fileName = "")
+        private Program CompileToAST(string source, DiagnosticsReporter diagnostics, string fileName = "", bool noExceptionMode = false)
         {
             try
             {
@@ -878,12 +880,12 @@ namespace uhigh.Net
                 }
                 
                 // Tokenize
-                var lexer = new Lexer.Lexer(source, diagnostics, _verboseMode);
+                var lexer = new Lexer.Lexer(source, diagnostics, _verboseMode, noExceptionMode);
                 var tokens = lexer.Tokenize();
                 
                 if (diagnostics.HasErrors)
                 {
-                    throw new Exception($"Tokenization failed for {fileName}");
+                    //throw new Exception($"Tokenization failed for {fileName}");
                 }
                 
                 if (_verboseMode)
@@ -892,12 +894,12 @@ namespace uhigh.Net
                 }
                 
                 // Parse
-                var parser = new Parser.Parser(tokens, diagnostics, _verboseMode);
+                var parser = new Parser.Parser(tokens, diagnostics, _verboseMode, noExceptionMode);
                 var ast = parser.Parse();
 
                 if (diagnostics.HasErrors)
                 {
-                    throw new Exception($"Parsing failed for {fileName}");
+                    //throw new Exception($"Parsing failed for {fileName}");
                 }
                 
                 if (_verboseMode)
@@ -910,7 +912,7 @@ namespace uhigh.Net
 
                 if (diagnostics.HasErrors)
                 {
-                    throw new Exception($"Include processing failed for {fileName}");
+                    //throw new Exception($"Include processing failed for {fileName}");
                 }
 
                 return ast;
@@ -1128,10 +1130,10 @@ namespace uhigh.Net
 </Project>";
 
             var projectPath = Path.Combine(outputFolder, $"{uhighProject.Name}.csproj");
-            await File.WriteAllTextAsync(projectPath, projectContent);
-            Console.WriteLine($"Project file created: {projectPath}");
-            Console.WriteLine($"Build with: dotnet build \"{projectPath}\"");
-            Console.WriteLine($"Run with: dotnet run --project \"{projectPath}\"");
+            // await File.WriteAllTextAsync(projectPath, projectContent);
+            // Console.WriteLine($"Project file created: {projectPath}");
+            // Console.WriteLine($"Build with: dotnet build \"{projectPath}\"");
+            // Console.WriteLine($"Run with: dotnet run --project \"{projectPath}\"");
         }
 
         /// <summary>
@@ -1554,9 +1556,9 @@ namespace uhigh.Net
 </Project>";
 
             var projectPath = Path.Combine(outputFolder, $"{uhighProject.Name}.csproj");
-            await File.WriteAllTextAsync(projectPath, projectContent);
+            // await File.WriteAllTextAsync(projectPath, projectContent);
             
-            Console.WriteLine($"Project file created: {projectPath}");
+            // Console.WriteLine($"Project file created: {projectPath}");
             Console.WriteLine($"Build with: dotnet build \"{projectPath}\"");
             if (outputType.Equals("Exe", StringComparison.OrdinalIgnoreCase))
             {

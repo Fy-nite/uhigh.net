@@ -56,6 +56,16 @@ namespace uhigh.Net.CommandLine
                 name: "source-file", 
                 description: "Path to the source file");
         }
+
+        /// <summary>
+        /// Creates a no-exception mode option
+        /// </summary>
+        public static Option<bool> CreateNoExceptionOption()
+        {
+            return new Option<bool>(
+                aliases: new[] { "--no-exception" },
+                description: "Suppress exceptions in lexer/parser and report errors via diagnostics only");
+        }
     }
 
     /// <summary>
@@ -65,5 +75,6 @@ namespace uhigh.Net.CommandLine
     {
         public bool Verbose { get; set; }
         public string? StdLibPath { get; set; }
+        public bool NoException { get; set; } // Add this property
     }
 }

@@ -144,26 +144,6 @@ namespace UhighLanguageServer
                         problems++;
                     }
                 }
-
-                // Example: warn if string literal is too long
-                if (token.Type == uhigh.Net.Lexer.TokenType.String)
-                {
-                    if (token.Value.Length > 10)
-                    {
-                        diagnostics.Add(new Diagnostic
-                        {
-                            severity = DiagnosticSeverity.Warning,
-                            range = new LanguageServer.Parameters.Range
-                            {
-                                start = new Position { line = token.Line, character = token.Column },
-                                end = new Position { line = token.Line, character = token.Column + token.Value.Length }
-                            },
-                            message = "test: String length exceeds 10 characters",
-                            source = "lexer"
-                        });
-                        problems++;
-                    }
-                }
             }
 
             // Warn if block depth is too deep (arbitrary threshold, e.g., 5)

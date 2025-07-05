@@ -28,6 +28,7 @@ namespace uhigh.Net.Lexer
         /// The diagnostics
         /// </summary>
         private readonly DiagnosticsReporter _diagnostics;
+        private readonly bool _noExceptionMode; // Add this
         
         /// <summary>
         /// The match
@@ -124,10 +125,12 @@ namespace uhigh.Net.Lexer
         /// <param name="source">The source</param>
         /// <param name="diagnostics">The diagnostics</param>
         /// <param name="verboseMode">The verbose mode</param>
-        public Lexer(string source, DiagnosticsReporter? diagnostics = null, bool verboseMode = false)
+        /// <param name="noExceptionMode">The no exception mode</param>
+        public Lexer(string source, DiagnosticsReporter? diagnostics = null, bool verboseMode = false, bool noExceptionMode = false)
         {
             _source = source;
             _diagnostics = diagnostics ?? new DiagnosticsReporter(verboseMode);
+            _noExceptionMode = noExceptionMode; // Add this
         }
 
         /// <summary>
@@ -209,7 +212,8 @@ namespace uhigh.Net.Lexer
                 catch (Exception)
                 {
                     _diagnostics.ReportUnterminatedString(line, column);
-                    return null;
+                    if (_noExceptionMode) return null;
+                    throw;
                 }
             }
 
@@ -239,6 +243,7 @@ namespace uhigh.Net.Lexer
             }
 
             _diagnostics.ReportUnknownCharacter(current, line, column);
+            if (_noExceptionMode) return null;
             throw new Exception($"Unexpected character '{current}' at line {line}, column {column}");
         }
 
@@ -343,6 +348,7 @@ namespace uhigh.Net.Lexer
             if (_position >= _source.Length)
             {
                 _diagnostics.ReportUnterminatedString(line, column);
+                if (_noExceptionMode) return null;
                 throw new Exception($"Unterminated string at line {line}");
             }
             
@@ -385,6 +391,7 @@ namespace uhigh.Net.Lexer
             if (!double.TryParse(value, out _))
             {
                 _diagnostics.ReportInvalidNumber(value, line, column);
+                if (_noExceptionMode) return null;
             }
             
             return new Token(TokenType.Number, value, line, column);

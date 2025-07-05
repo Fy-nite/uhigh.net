@@ -29,6 +29,7 @@ namespace uhigh.Net.Parser
         /// The attribute resolver
         /// </summary>
         private readonly ReflectionAttributeResolver _attributeResolver;
+        private readonly bool _noExceptionMode; // Add this
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Parser"/> class
@@ -36,12 +37,14 @@ namespace uhigh.Net.Parser
         /// <param name="tokens">The tokens</param>
         /// <param name="diagnostics">The diagnostics</param>
         /// <param name="verboseMode">The verbose mode</param>
-        public Parser(List<Token> tokens, DiagnosticsReporter? diagnostics = null, bool verboseMode = false)
+        /// <param name="noExceptionMode">The no exception mode</param>
+        public Parser(List<Token> tokens, DiagnosticsReporter? diagnostics = null, bool verboseMode = false, bool noExceptionMode = false)
         {
             _tokens = tokens;
             _diagnostics = diagnostics ?? new DiagnosticsReporter(verboseMode);
             _methodChecker = new MethodChecker(_diagnostics);
             _attributeResolver = _methodChecker.GetAttributeResolver();
+            _noExceptionMode = noExceptionMode; // Add this
         }
 
         /// <summary>
@@ -453,13 +456,15 @@ namespace uhigh.Net.Parser
             catch (ParseException)
             {
                 Synchronize();
-                return null;
+                if (_noExceptionMode) return null;
+                throw;
             }
             catch (Exception ex)
             {
                 _diagnostics.ReportParseError($"Unexpected error: {ex.Message}", Peek());
                 Synchronize();
-                return null;
+                if (_noExceptionMode) return null;
+                throw;
             }
         }
 
@@ -1810,36 +1815,47 @@ namespace uhigh.Net.Parser
             {
                 return ParseInterpolatedString();
             }
-            
+
             if (Match(TokenType.New))
             {
-                var className = Consume(TokenType.Identifier, "Expected class name after 'new'").Value;
-                
-                // Handle qualified class names (e.g., microshell.shell)
-                while (Match(TokenType.Dot))
+                // Support: new() or new ClassName(...)
+                string className;
+
+                if (Check(TokenType.LeftParen))
                 {
-                    className += "." + Consume(TokenType.Identifier, "Expected identifier after '.'").Value;
+                    // Handle new() -- anonymous or default constructor (type inferred)
+                    className = ""; // or null, depending on your AST
                 }
-                
-                // Handle generic type parameters
-                if (Match(TokenType.Less))
+                else
                 {
-                    className += "<";
-                    do
+                    className = Consume(TokenType.Identifier, "Expected class name after 'new'").Value;
+
+                    // Handle qualified class names (e.g., microshell.shell)
+                    while (Match(TokenType.Dot))
                     {
-                        var typeArg = ParseTypeName();
-                        className += typeArg;
-                        if (Match(TokenType.Comma))
+                        className += "." + Consume(TokenType.Identifier, "Expected identifier after '.'").Value;
+                    }
+
+                    // Handle generic type parameters
+                    if (Match(TokenType.Less))
+                    {
+                        className += "<";
+                        do
                         {
-                            className += ", ";
-                        }
-                    } while (!Check(TokenType.Greater) && !IsAtEnd());
-                    
-                    Consume(TokenType.Greater, "Expected '>' after generic type arguments");
-                    className += ">";
+                            var typeArg = ParseTypeName();
+                            className += typeArg;
+                            if (Match(TokenType.Comma))
+                            {
+                                className += ", ";
+                            }
+                        } while (!Check(TokenType.Greater) && !IsAtEnd());
+
+                        Consume(TokenType.Greater, "Expected '>' after generic type arguments");
+                        className += ">";
+                    }
                 }
-                
-                Consume(TokenType.LeftParen, "Expected '(' after class name");
+
+                Consume(TokenType.LeftParen, "Expected '(' after class name or 'new'");
                 var arguments = new List<Expression>();
 
                 if (!Check(TokenType.RightParen))
@@ -1851,7 +1867,7 @@ namespace uhigh.Net.Parser
                 }
 
                 Consume(TokenType.RightParen, "Expected ')' after constructor arguments");
-                
+
                 return new ConstructorCallExpression
                 {
                     ClassName = className,
@@ -2355,6 +2371,7 @@ namespace uhigh.Net.Parser
 
             // Only report the error once here
             _diagnostics.ReportUnexpectedToken(Peek(), message);
+            if (_noExceptionMode) return null!;
             throw new ParseException($"{message}. Got {Peek().Type}");
         }
 
@@ -2671,7 +2688,7 @@ namespace uhigh.Net.Parser
             while (!Check(TokenType.RightBrace) && !IsAtEnd())
             {
                 arms.Add(ParseMatchArm());
-                if (Check(TokenType.Comma))
+                if ( Check(TokenType.Comma))
                     Advance();
             }
             Consume(TokenType.RightBrace, "Expected '}' after match arms");

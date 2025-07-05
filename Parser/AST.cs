@@ -309,6 +309,8 @@ namespace uhigh.Net.Parser
         /// Gets or sets the value of the is constant
         /// </summary>
         public bool IsConstant { get; set; }
+        public int Line { get; set; } // New: line number for better error reporting
+        public int Column { get; set; } // New: column number for better error reporting
     }
     
     /// <summary>
@@ -945,17 +947,10 @@ namespace uhigh.Net.Parser
     /// <seealso cref="Exception"/>
     public class ParseException : Exception
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ParseException"/> class
-        /// </summary>
-        /// <param name="message">The message</param>
         public ParseException(string message) : base(message) { }
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ParseException"/> class
-        /// </summary>
-        /// <param name="message">The message</param>
-        /// <param name="innerException">The inner exception</param>
         public ParseException(string message, Exception innerException) : base(message, innerException) { }
+        // Optionally, you could add a static flag here for global no-exception mode
+        // public static bool NoExceptionMode = false;
     }
 
     // Add new AST nodes for your keywords

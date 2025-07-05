@@ -11,6 +11,7 @@ namespace uhigh.Net.CommandLine
         public string? OutputFile { get; set; }
         public bool RunInMemory { get; set; }
         public string? SaveCSharpTo { get; set; }
+        public bool NoException { get; set; } // Add this
     }
 
     /// <summary>
@@ -19,6 +20,7 @@ namespace uhigh.Net.CommandLine
     public class ReplOptions : BaseCommandOptions
     {
         public string? SaveCSharpTo { get; set; }
+        public bool NoException { get; set; } // Add this
     }
 
     /// <summary>
@@ -32,6 +34,7 @@ namespace uhigh.Net.CommandLine
         public string? Author { get; set; }
         public string OutputType { get; set; } = "Exe";
         public string TargetFramework { get; set; } = "net8.0";
+        public bool NoException { get; set; } // Add this
     }
 
     /// <summary>
@@ -42,6 +45,7 @@ namespace uhigh.Net.CommandLine
         public string ProjectFile { get; set; } = "";
         public string? OutputFile { get; set; }
         public string? SaveCSharpTo { get; set; }
+        public bool NoException { get; set; } // Add this
     }
 
     /// <summary>
@@ -51,6 +55,7 @@ namespace uhigh.Net.CommandLine
     {
         public string ProjectFile { get; set; } = "";
         public string? SaveCSharpTo { get; set; }
+        public bool NoException { get; set; } // Add this
     }
 
     /// <summary>
@@ -59,6 +64,7 @@ namespace uhigh.Net.CommandLine
     public class InfoOptions : BaseCommandOptions
     {
         public string ProjectFile { get; set; } = "";
+        public bool NoException { get; set; } // Add this
     }
 
     /// <summary>
@@ -69,6 +75,7 @@ namespace uhigh.Net.CommandLine
         public string ProjectFile { get; set; } = "";
         public string SourceFile { get; set; } = "";
         public bool CreateFile { get; set; }
+        public bool NoException { get; set; } // Add this
     }
 
     /// <summary>
@@ -82,6 +89,7 @@ namespace uhigh.Net.CommandLine
         public bool CompileTimeOnly { get; set; }
         public bool IncludePrerelease { get; set; }
         public string? Source { get; set; }
+        public bool NoException { get; set; } // Add this
     }
 
     /// <summary>
@@ -91,6 +99,7 @@ namespace uhigh.Net.CommandLine
     {
         public string ProjectFile { get; set; } = "";
         public bool Force { get; set; }
+        public bool NoException { get; set; } // Add this
     }
 
     /// <summary>
@@ -99,6 +108,7 @@ namespace uhigh.Net.CommandLine
     public class InstallPackagesOptions : BaseCommandOptions
     {
         public string ProjectFile { get; set; } = "";
+        public bool NoException { get; set; } // Add this
     }
 
     /// <summary>
@@ -126,6 +136,7 @@ namespace uhigh.Net.CommandLine
     public class AstOptions : BaseCommandOptions
     {
         public string SourceFile { get; set; } = "";
+        public bool NoException { get; set; } // Add this
     }
 
     /// <summary>
@@ -135,6 +146,7 @@ namespace uhigh.Net.CommandLine
     {
         public string? Filter { get; set; }
         public bool ListTests { get; set; }
+        public bool NoException { get; set; } // Add this
     }
 
     /// <summary>
@@ -144,5 +156,6 @@ namespace uhigh.Net.CommandLine
     {
         public int? Port { get; set; }
         public bool UseStdio { get; set; } = true;
+        public bool NoException { get; set; } // Add this
     }
 }

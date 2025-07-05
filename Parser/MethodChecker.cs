@@ -897,7 +897,7 @@ public bool ValidateCall(string functionName, List<Expression> arguments, Token 
             {
                 return true;
             }
-
+            //Console.WriteLine(typeName);
             _diagnostics.ReportError(
                 $"Unknown type: {typeName}",
                 token.Line, token.Column, "UH202"

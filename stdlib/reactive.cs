@@ -12,7 +12,7 @@ namespace StdLib
         /// <summary>
         /// The value
         /// </summary>
-        private T _value;
+        private T? _value;
         /// <summary>
         /// The observers
         /// </summary>
@@ -27,10 +27,9 @@ namespace StdLib
         /// </summary>
         /// <param name="initialValue">The initial value</param>
         /// <param name="trackHistory">The track history</param>
-        public Observable(T initialValue, bool trackHistory = false)
+        public Observable(bool? trackHistory = false)
         {
-            _value = initialValue;
-            if (trackHistory && typeof(T).IsClass)
+            if (trackHistory == true && typeof(T).IsClass)
             {
                 _temporal = new Temporal<T>(_value as dynamic);
             }
@@ -39,7 +38,7 @@ namespace StdLib
         /// <summary>
         /// Gets or sets the value of the value
         /// </summary>
-        public T Value
+        public T? Value
         {
             get => _value;
             set

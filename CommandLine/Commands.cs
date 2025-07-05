@@ -54,6 +54,7 @@ namespace uhigh.Net.CommandLine
             command.AddOption(verboseOption);
             command.AddOption(stdlibOption);
             command.AddOption(saveCsOption);
+            command.AddOption(CommonOptions.CreateNoExceptionOption()); // Add here
 
             return command;
         }
@@ -68,6 +69,7 @@ namespace uhigh.Net.CommandLine
             command.AddOption(CommonOptions.CreateVerboseOption());
             command.AddOption(CommonOptions.CreateStdLibPathOption());
             command.AddOption(CommonOptions.CreateSaveCSharpOption());
+            command.AddOption(CommonOptions.CreateNoExceptionOption()); // Add here
 
             return command;
         }
@@ -95,6 +97,7 @@ namespace uhigh.Net.CommandLine
             command.AddOption(frameworkOption);
             command.AddOption(CommonOptions.CreateVerboseOption());
             command.AddOption(CommonOptions.CreateStdLibPathOption());
+            command.AddOption(CommonOptions.CreateNoExceptionOption()); // Add here
 
             return command;
         }
@@ -114,6 +117,7 @@ namespace uhigh.Net.CommandLine
             command.AddOption(CommonOptions.CreateVerboseOption());
             command.AddOption(CommonOptions.CreateStdLibPathOption());
             command.AddOption(CommonOptions.CreateSaveCSharpOption());
+            command.AddOption(CommonOptions.CreateNoExceptionOption()); // Add here
 
             return command;
         }
@@ -129,6 +133,7 @@ namespace uhigh.Net.CommandLine
             command.AddOption(CommonOptions.CreateVerboseOption());
             command.AddOption(CommonOptions.CreateStdLibPathOption());
             command.AddOption(CommonOptions.CreateSaveCSharpOption());
+            command.AddOption(CommonOptions.CreateNoExceptionOption()); // Add here
 
             return command;
         }
@@ -143,6 +148,7 @@ namespace uhigh.Net.CommandLine
             command.AddArgument(CommonOptions.CreateProjectFileArgument());
             command.AddOption(CommonOptions.CreateVerboseOption());
             command.AddOption(CommonOptions.CreateStdLibPathOption());
+            command.AddOption(CommonOptions.CreateNoExceptionOption()); // Add here
 
             return command;
         }
@@ -163,6 +169,7 @@ namespace uhigh.Net.CommandLine
             command.AddOption(createOption);
             command.AddOption(CommonOptions.CreateVerboseOption());
             command.AddOption(CommonOptions.CreateStdLibPathOption());
+            command.AddOption(CommonOptions.CreateNoExceptionOption()); // Add here
 
             return command;
         }
@@ -190,6 +197,7 @@ namespace uhigh.Net.CommandLine
             command.AddOption(sourceOption);
             command.AddOption(CommonOptions.CreateVerboseOption());
             command.AddOption(CommonOptions.CreateStdLibPathOption());
+            command.AddOption(CommonOptions.CreateNoExceptionOption()); // Add here
 
             return command;
         }
@@ -207,6 +215,7 @@ namespace uhigh.Net.CommandLine
             command.AddOption(forceOption);
             command.AddOption(CommonOptions.CreateVerboseOption());
             command.AddOption(CommonOptions.CreateStdLibPathOption());
+            command.AddOption(CommonOptions.CreateNoExceptionOption()); // Add here
 
             return command;
         }
@@ -221,6 +230,7 @@ namespace uhigh.Net.CommandLine
             command.AddArgument(CommonOptions.CreateProjectFileArgument());
             command.AddOption(CommonOptions.CreateVerboseOption());
             command.AddOption(CommonOptions.CreateStdLibPathOption());
+            command.AddOption(CommonOptions.CreateNoExceptionOption()); // Add here
 
             return command;
         }
@@ -238,6 +248,7 @@ namespace uhigh.Net.CommandLine
             command.AddArgument(searchTermArg);
             command.AddOption(takeOption);
             command.AddOption(CommonOptions.CreateVerboseOption());
+            command.AddOption(CommonOptions.CreateNoExceptionOption()); // Add here
 
             return command;
         }
@@ -251,6 +262,7 @@ namespace uhigh.Net.CommandLine
             
             command.AddArgument(CommonOptions.CreateProjectFileArgument());
             command.AddOption(CommonOptions.CreateVerboseOption());
+            command.AddOption(CommonOptions.CreateNoExceptionOption()); // Add here
 
             return command;
         }
@@ -265,6 +277,7 @@ namespace uhigh.Net.CommandLine
             command.AddArgument(CommonOptions.CreateSourceFileArgument());
             command.AddOption(CommonOptions.CreateVerboseOption());
             command.AddOption(CommonOptions.CreateStdLibPathOption());
+            command.AddOption(CommonOptions.CreateNoExceptionOption()); // Add here
 
             return command;
         }
@@ -283,6 +296,7 @@ namespace uhigh.Net.CommandLine
             command.AddOption(listOption);
             command.AddOption(CommonOptions.CreateVerboseOption());
             command.AddOption(CommonOptions.CreateStdLibPathOption());
+            command.AddOption(CommonOptions.CreateNoExceptionOption()); // Add here
 
             return command;
         }
@@ -301,6 +315,7 @@ namespace uhigh.Net.CommandLine
             command.AddOption(stdioOption);
             command.AddOption(CommonOptions.CreateVerboseOption());
             command.AddOption(CommonOptions.CreateStdLibPathOption());
+            command.AddOption(CommonOptions.CreateNoExceptionOption()); // Add here
 
             return command;
         }

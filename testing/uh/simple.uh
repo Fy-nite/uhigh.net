@@ -1,0 +1,10 @@
+namespace simple
+{
+    class Program
+    {
+        public static func Main(args: string[]): void
+        {
+      
+        }
+    }
+}
