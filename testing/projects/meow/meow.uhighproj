@@ -6,7 +6,7 @@
   <OutputType>Exe</OutputType>
   <SourceFiles>
     <File>main.uh</File>
-    <File>utils.cs</File>
+    <!-- <File>utils.cs</File> -->
   </SourceFiles>
   <Dependencies />
   <Properties />
