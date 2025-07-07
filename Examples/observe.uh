@@ -1,0 +1,6 @@
+func main()
+{
+    var x = 1
+    Console.WriteLine("Hello, World!")
+    Console.WriteLine("x = {0}", x)
+}
