@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Threading;
 using uhigh.Net.Parser;
 using uhigh.Net.Lexer;
 
@@ -9,6 +10,14 @@ namespace uhigh.Net.Testing
     /// </summary>
     public class ASTTests
     {
+        [Setup]
+        public void Setup()
+        {
+            // Setup for parallel execution
+            TestRunner.CurrentContext["TestId"] = Guid.NewGuid().ToString();
+            TestRunner.CurrentContext["ThreadId"] = Thread.CurrentThread.ManagedThreadId;
+        }
+
         /// <summary>
         /// Tests that test literal expression types
         /// </summary>
@@ -348,6 +357,13 @@ namespace uhigh.Net.Testing
 
             Assert.IsNotNull(subscription);
             Assert.IsTrue(subscription.Arguments[0] is LambdaExpression);
+        }
+
+        [Teardown]
+        public void Teardown()
+        {
+            // Cleanup after each test
+            TestRunner.CurrentContext["TestEndTime"] = DateTime.Now;
         }
     }
 }

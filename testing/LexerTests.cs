@@ -1,3 +1,4 @@
+using System.Threading;
 using uhigh.Net.Lexer;
 using uhigh.Net.Diagnostics;
 
@@ -8,6 +9,14 @@ namespace uhigh.Net.Testing
     /// </summary>
     public class LexerTests
     {
+        [Setup]
+        public void Setup()
+        {
+            // Setup for parallel execution
+            TestRunner.CurrentContext["TestId"] = Guid.NewGuid().ToString();
+            TestRunner.CurrentContext["ThreadId"] = Thread.CurrentThread.ManagedThreadId;
+        }
+
         /// <summary>
         /// Creates the lexer using the specified source
         /// </summary>
@@ -413,6 +422,13 @@ namespace uhigh.Net.Testing
             Assert.AreEqual("external", tokens[1].Value);
             Assert.AreEqual(TokenType.RightBracket, tokens[2].Type);
             Assert.AreEqual(TokenType.EOF, tokens[3].Type);
+        }
+
+        [Teardown]
+        public void Teardown()
+        {
+            // Cleanup after each test
+            TestRunner.CurrentContext["TestEndTime"] = DateTime.Now;
         }
     }
 }

@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Threading;
 using uhigh.Net.Parser;
 using uhigh.Net.Lexer;
 using uhigh.Net.Diagnostics;
@@ -10,6 +11,14 @@ namespace uhigh.Net.Testing
     /// </summary>
     public class ParserTests
     {
+        [Setup]
+        public void Setup()
+        {
+            // Setup for parallel execution
+            TestRunner.CurrentContext["TestId"] = Guid.NewGuid().ToString();
+            TestRunner.CurrentContext["ThreadId"] = Thread.CurrentThread.ManagedThreadId;
+        }
+
         // Add helper method for parsing source code
         /// <summary>
         /// Parses the source using the specified source

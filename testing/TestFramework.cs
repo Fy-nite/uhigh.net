@@ -1,7 +1,10 @@
 using System.Diagnostics;
 using System.Reflection;
-using uhigh.Net.Parser; // Add this using statement
-using uhigh.Net.Lexer;  // Add this using statement
+using System.Collections.Concurrent;
+using System.Threading;
+using System.Threading.Tasks;
+using uhigh.Net.Parser;
+using uhigh.Net.Lexer;
 
 namespace uhigh.Net.Testing
 {
@@ -269,106 +272,260 @@ namespace uhigh.Net.Testing
     }
 
     /// <summary>
+    /// Test execution configuration
+    /// </summary>
+    public class TestExecutionConfig
+    {
+        /// <summary>
+        /// Gets or sets the maximum degree of parallelism
+        /// </summary>
+        public int MaxDegreeOfParallelism { get; set; } = Environment.ProcessorCount;
+        
+        /// <summary>
+        /// Gets or sets whether to run tests in parallel
+        /// </summary>
+        public bool EnableParallelExecution { get; set; } = true;
+        
+        /// <summary>
+        /// Gets or sets the test timeout in milliseconds
+        /// </summary>
+        public int TestTimeoutMs { get; set; } = 30000; // 30 seconds
+        
+        /// <summary>
+        /// Gets or sets whether to show detailed timing information
+        /// </summary>
+        public bool ShowDetailedTiming { get; set; } = false;
+    }
+
+    /// <summary>
+    /// Thread-safe test context for isolated test execution
+    /// </summary>
+    public class TestContext
+    {
+        private readonly object _lock = new object();
+        private readonly Dictionary<string, object> _data = new Dictionary<string, object>();
+        
+        /// <summary>
+        /// Gets or sets test data in a thread-safe manner
+        /// </summary>
+        public object this[string key]
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    return _data.TryGetValue(key, out var value) ? value : null;
+                }
+            }
+            set
+            {
+                lock (_lock)
+                {
+                    _data[key] = value;
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Gets the current thread ID
+        /// </summary>
+        public int ThreadId => Thread.CurrentThread.ManagedThreadId;
+    }
+
+    /// <summary>
     /// The test runner class
     /// </summary>
     public class TestRunner
     {
+        private static readonly TestExecutionConfig _config = new TestExecutionConfig();
+        private static readonly ConcurrentDictionary<int, TestContext> _contexts = new ConcurrentDictionary<int, TestContext>();
+        
+        /// <summary>
+        /// Gets the test context for the current thread
+        /// </summary>
+        public static TestContext CurrentContext => _contexts.GetOrAdd(Thread.CurrentThread.ManagedThreadId, _ => new TestContext());
+        
+        /// <summary>
+        /// Configures the test execution
+        /// </summary>
+        public static void Configure(Action<TestExecutionConfig> configure)
+        {
+            configure(_config);
+        }
+
         /// <summary>
         /// Runs the all tests
         /// </summary>
         /// <returns>The test suites</returns>
         public static List<TestSuite> RunAllTests()
         {
-            var testSuites = new List<TestSuite>();
+            var testSuites = new ConcurrentBag<TestSuite>();
             var assembly = Assembly.GetExecutingAssembly();
             var testClasses = assembly.GetTypes()
                 .Where(t => t.GetMethods().Any(m => m.GetCustomAttribute<TestAttribute>() != null))
                 .ToList();
 
-            foreach (var testClass in testClasses)
+            if (_config.EnableParallelExecution)
             {
-                var suite = RunTestClass(testClass);
-                testSuites.Add(suite);
+                var parallelOptions = new ParallelOptions
+                {
+                    MaxDegreeOfParallelism = _config.MaxDegreeOfParallelism,
+                    CancellationToken = CancellationToken.None
+                };
+
+                Parallel.ForEach(testClasses, parallelOptions, testClass =>
+                {
+                    var suite = RunTestClass(testClass);
+                    testSuites.Add(suite);
+                });
+            }
+            else
+            {
+                foreach (var testClass in testClasses)
+                {
+                    var suite = RunTestClass(testClass);
+                    testSuites.Add(suite);
+                }
             }
 
-            return testSuites;
+            return testSuites.OrderBy(s => s.Name).ToList();
         }
 
-        /// <summary>
-        /// Runs the test using the specified test class
-        /// </summary>
-        /// <param name="testClass">The test</param>
-        /// <returns>The suite</returns>
         public static TestSuite RunTestClass(Type testClass)
         {
             var suite = new TestSuite { Name = testClass.Name };
-            var instance = Activator.CreateInstance(testClass);
             
             var setupMethod = testClass.GetMethods().FirstOrDefault(m => m.GetCustomAttribute<SetupAttribute>() != null);
             var teardownMethod = testClass.GetMethods().FirstOrDefault(m => m.GetCustomAttribute<TeardownAttribute>() != null);
-            var testMethods = testClass.GetMethods().Where(m => m.GetCustomAttribute<TestAttribute>() != null);
+            var testMethods = testClass.GetMethods().Where(m => m.GetCustomAttribute<TestAttribute>() != null).ToList();
 
-            foreach (var testMethod in testMethods)
+            var results = new ConcurrentBag<TestResult>();
+            var semaphore = new SemaphoreSlim(_config.MaxDegreeOfParallelism);
+
+            if (_config.EnableParallelExecution)
             {
-                var result = RunSingleTest(instance, testMethod, setupMethod, teardownMethod);
-                suite.Results.Add(result);
+                var tasks = testMethods.Select(async testMethod =>
+                {
+                    await semaphore.WaitAsync();
+                    try
+                    {
+                        var result = await RunSingleTestAsync(testClass, testMethod, setupMethod, teardownMethod);
+                        results.Add(result);
+                    }
+                    finally
+                    {
+                        semaphore.Release();
+                    }
+                }).ToArray();
+
+                Task.WaitAll(tasks);
+            }
+            else
+            {
+                foreach (var testMethod in testMethods)
+                {
+                    var result = RunSingleTestAsync(testClass, testMethod, setupMethod, teardownMethod).Result;
+                    results.Add(result);
+                }
             }
 
+            suite.Results = results.OrderBy(r => r.TestName).ToList();
             return suite;
         }
 
         /// <summary>
-        /// Runs the single test using the specified instance
+        /// Runs a single test asynchronously with proper isolation
         /// </summary>
-        /// <param name="instance">The instance</param>
-        /// <param name="testMethod">The test method</param>
-        /// <param name="setupMethod">The setup method</param>
-        /// <param name="teardownMethod">The teardown method</param>
-        /// <returns>The result</returns>
-        private static TestResult RunSingleTest(object? instance, MethodInfo testMethod, MethodInfo? setupMethod, MethodInfo? teardownMethod)
+        private static async Task<TestResult> RunSingleTestAsync(Type testClass, MethodInfo testMethod, MethodInfo setupMethod, MethodInfo teardownMethod)
         {
-            var result = new TestResult { TestName = testMethod.Name };
-            var stopwatch = Stopwatch.StartNew();
+            return await Task.Run(() =>
+            {
+                var result = new TestResult { TestName = testMethod.Name };
+                var stopwatch = Stopwatch.StartNew();
+                var threadId = Thread.CurrentThread.ManagedThreadId;
+                
+                // Create isolated instance for this test
+                object instance = null;
+                var cancellationTokenSource = new CancellationTokenSource(_config.TestTimeoutMs);
 
-            try
-            {
-                setupMethod?.Invoke(instance, null);
-                testMethod.Invoke(instance, null);
-                result.Passed = true;
-            }
-            catch (TargetInvocationException ex) when (ex.InnerException != null)
-            {
-                result.Passed = false;
-                result.Exception = ex.InnerException;
-                result.ErrorMessage = ex.InnerException.Message;
-            }
-            catch (Exception ex)
-            {
-                result.Passed = false;
-                result.Exception = ex;
-                result.ErrorMessage = ex.Message;
-            }
-            finally
-            {
                 try
                 {
-                    teardownMethod?.Invoke(instance, null);
+                    // Create fresh instance for thread safety
+                    instance = Activator.CreateInstance(testClass);
+                    
+                    // Set up test context
+                    var context = new TestContext();
+                    _contexts.TryAdd(threadId, context);
+                    
+                    // Execute with timeout
+                    var testTask = Task.Run(() =>
+                    {
+                        try
+                        {
+                            setupMethod?.Invoke(instance, null);
+                            testMethod.Invoke(instance, null);
+                        }
+                        catch (Exception ex)
+                        {
+                            throw ex;
+                        }
+                    }, cancellationTokenSource.Token);
+
+                    testTask.Wait(cancellationTokenSource.Token);
+                    result.Passed = true;
+                }
+                catch (OperationCanceledException)
+                {
+                    result.Passed = false;
+                    result.ErrorMessage = $"Test timed out after {_config.TestTimeoutMs}ms";
+                    result.Exception = new TimeoutException($"Test timed out after {_config.TestTimeoutMs}ms");
+                }
+                catch (AggregateException ex) when (ex.InnerException != null)
+                {
+                    result.Passed = false;
+                    result.Exception = ex.InnerException;
+                    result.ErrorMessage = ex.InnerException.Message + Environment.NewLine + ex.InnerException.StackTrace;
+                }
+                catch (TargetInvocationException ex) when (ex.InnerException != null)
+                {
+                    result.Passed = false;
+                    result.Exception = ex.InnerException;
+                    result.ErrorMessage = ex.InnerException.Message + Environment.NewLine + ex.InnerException.StackTrace;
                 }
                 catch (Exception ex)
                 {
-                    if (result.Passed)
+                    result.Passed = false;
+                    result.Exception = ex;
+                    result.ErrorMessage = ex.Message + Environment.NewLine + ex.StackTrace;
+                }
+                finally
+                {
+                    try
                     {
-                        result.Passed = false;
-                        result.Exception = ex;
-                        result.ErrorMessage = ex.Message;
+                        // Clean up in finally block
+                        teardownMethod?.Invoke(instance, null);
+                    }
+                    catch (Exception ex)
+                    {
+                        if (result.Passed)
+                        {
+                            result.Passed = false;
+                            result.Exception = ex;
+                            result.ErrorMessage = "Teardown failed: " + ex.Message + Environment.NewLine + ex.StackTrace;
+                        }
+                    }
+                    finally
+                    {
+                        // Clean up test context
+                        _contexts.TryRemove(threadId, out _);
+                        stopwatch.Stop();
+                        result.Duration = stopwatch.Elapsed;
+                        cancellationTokenSource.Dispose();
                     }
                 }
-                
-                stopwatch.Stop();
-                result.Duration = stopwatch.Elapsed;
-            }
-            
-            return result;
+
+                return result;
+            });
         }
 
         /// <summary>
@@ -379,6 +536,15 @@ namespace uhigh.Net.Testing
         {
             Console.WriteLine("μHigh Test Results");
             Console.WriteLine("==================");
+            
+            if (_config.EnableParallelExecution)
+            {
+                Console.WriteLine($"Parallel execution enabled (Max threads: {_config.MaxDegreeOfParallelism})");
+            }
+            else
+            {
+                Console.WriteLine("Sequential execution");
+            }
             Console.WriteLine();
 
             foreach (var suite in testSuites)
@@ -387,22 +553,32 @@ namespace uhigh.Net.Testing
                 Console.ForegroundColor = color;
                 Console.WriteLine($"Test Suite: {suite.Name}");
                 Console.ResetColor();
-                
+
                 Console.WriteLine($"  Passed: {suite.PassedCount}");
                 Console.WriteLine($"  Failed: {suite.FailedCount}");
                 Console.WriteLine($"  Total:  {suite.TotalCount}");
                 Console.WriteLine($"  Duration: {suite.TotalDuration.TotalMilliseconds:F2}ms");
+                
+                if (_config.ShowDetailedTiming && suite.Results.Any())
+                {
+                    var avgTime = suite.Results.Average(r => r.Duration.TotalMilliseconds);
+                    var maxTime = suite.Results.Max(r => r.Duration.TotalMilliseconds);
+                    var minTime = suite.Results.Min(r => r.Duration.TotalMilliseconds);
+                    Console.WriteLine($"  Avg/Min/Max: {avgTime:F2}ms / {minTime:F2}ms / {maxTime:F2}ms");
+                }
                 Console.WriteLine();
 
+                // Show failed tests first
                 foreach (var result in suite.Results.Where(r => !r.Passed))
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"  ✗ {result.TestName}");
+                    Console.WriteLine($"  ✗ {result.TestName} ({result.Duration.TotalMilliseconds:F1}ms)");
                     Console.ResetColor();
                     Console.WriteLine($"    {result.ErrorMessage}");
                     Console.WriteLine();
                 }
 
+                // Show passed tests
                 foreach (var result in suite.Results.Where(r => r.Passed))
                 {
                     Console.ForegroundColor = ConsoleColor.Green;
@@ -424,6 +600,11 @@ namespace uhigh.Net.Testing
             Console.WriteLine($"Total: {totalTests} tests, {totalPassed} passed, {totalFailed} failed");
             Console.ResetColor();
             Console.WriteLine($"Duration: {totalDuration.TotalMilliseconds:F2}ms");
+            
+            if (_config.EnableParallelExecution)
+            {
+                Console.WriteLine($"Parallel efficiency: {(totalDuration.TotalMilliseconds / (testSuites.Count * _config.MaxDegreeOfParallelism)):F2}ms per thread");
+            }
         }
     }
 }

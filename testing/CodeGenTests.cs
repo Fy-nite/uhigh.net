@@ -1,3 +1,4 @@
+using System.Threading;
 using uhigh.Net.CodeGen;
 using uhigh.Net.Parser;
 using uhigh.Net.Lexer;
@@ -10,6 +11,14 @@ namespace uhigh.Net.Testing
     /// </summary>
     public class CodeGenTests
     {
+        [Setup]
+        public void Setup()
+        {
+            // Setup for parallel execution
+            TestRunner.CurrentContext["TestId"] = Guid.NewGuid().ToString();
+            TestRunner.CurrentContext["ThreadId"] = Thread.CurrentThread.ManagedThreadId;
+        }
+
         /// <summary>
         /// Generates the c sharp using the specified source
         /// </summary>
@@ -318,6 +327,11 @@ namespace uhigh.Net.Testing
             Assert.IsTrue(result.Contains("_ => \"Error\""));
         }
 
-        
+        [Teardown]
+        public void Teardown()
+        {
+            // Cleanup after each test
+            TestRunner.CurrentContext["TestEndTime"] = DateTime.Now;
+        }
     }
 }
