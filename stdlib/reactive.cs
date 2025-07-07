@@ -34,7 +34,6 @@ namespace StdLib
                 _temporal = new Temporal<T>(_value as dynamic);
             }
         }
-
         /// <summary>
         /// Gets or sets the value of the value
         /// </summary>
@@ -43,6 +42,7 @@ namespace StdLib
             get => _value;
             set
             {
+            
                 var oldValue = _value;
                 _value = value;
                 
