@@ -1245,6 +1245,12 @@ namespace uhigh.Net.CodeGen
                 case MatchExpression matchExpr:
                     GenerateMatchExpression(matchExpr);
                     break;
+                case IndexExpression indexExpr:
+                    GenerateExpression(indexExpr.Object);
+                    _output.Append("[");
+                    GenerateExpression(indexExpr.Index);
+                    _output.Append("]");
+                    break;
             }
         }
 

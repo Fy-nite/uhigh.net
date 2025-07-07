@@ -1489,7 +1489,8 @@ namespace uhigh.Net.Parser
                 var value = ParseAssignment();
                 
                 // Ensure we have a valid assignment target
-                if (expr is IdentifierExpression || expr is MemberAccessExpression || expr is IndexExpression)
+                if (expr is IdentifierExpression || expr is MemberAccessExpression || expr is IndexExpression
+                    || expr is QualifiedIdentifierExpression) // <-- allow qualified identifiers
                 {
                     return new AssignmentExpression { Target = expr, Operator = op, Value = value };
                 }
