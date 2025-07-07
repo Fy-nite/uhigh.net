@@ -9,7 +9,10 @@ A simple, modern programming language that compiles to C# and runs on .NET. μHi
 ```bash
 git clone https://github.com/fy-nite/uhigh.net
 cd uhigh.net
-dotnet build
+./install.ps1
+===
+or if your on a platform that doesnt have powershell in the standard path
+pwsh -c install.ps1
 ```
 
 ### Hello World
@@ -101,14 +104,14 @@ func greet(person) {
 // Classes and namespaces
 namespace MyApp {
     public class Calculator {
-        public func add(a, b) {
+        public func add(a: int, b:int ): int {
             return a + b
         }
     }
 }
 
 // Control flow
-if (name != "") {
+if name != "" {
     print(greet(name))
 } else {
     print("Hello, Anonymous!")
@@ -128,6 +131,8 @@ Console.WriteLine("Direct .NET access")
 - .NET library integration and NuGet packages
 - Project system with dependency management
 - Expression evaluation and arithmetic operations
+- Lambda functions and advanced OOP
+- Standard library expansion
 
 ### Planned Features
 
@@ -135,8 +140,8 @@ Console.WriteLine("Direct .NET access")
 - Error handling (`try/catch`)
 - String manipulation functions
 - Type checking and explicit declarations
-- Lambda functions and advanced OOP
-- Standard library expansion
+
+
 
 ## Documentation
 
@@ -176,7 +181,7 @@ func main() {
 ```uhigh
 public class Person {
     private field name: string
-    public var Age: int { get; set; }
+    public Age: int
     
     public func constructor(personName: string) {
         this.name = personName
@@ -210,7 +215,7 @@ Check our [GitHub repository](https://github.com/fy-nite/uhigh.net) to get start
 
 ## License
 
-[Your License Here]
+AGPL
 
 ---
 
