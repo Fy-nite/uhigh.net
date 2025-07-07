@@ -303,6 +303,13 @@ namespace uhigh.Net.Testing
             var lexer = CreateLexer("match => _");
             var tokens = lexer.Tokenize();
 
+            Console.Write("TEST MATCH KEYWORDS ------------------------------------------------------|");
+            foreach (var element in tokens)
+            {
+                Console.Write($"{element.Type}|");
+            }
+            Console.WriteLine();
+            
             Assert.AreEqual(4, tokens.Count); // match, =>, _, EOF
             Assert.AreEqual(TokenType.Match, tokens[0].Type);
             Assert.AreEqual(TokenType.Arrow, tokens[1].Type);
