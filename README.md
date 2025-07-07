@@ -6,7 +6,7 @@ A simple, modern programming language that compiles to C# and runs on .NET. μHi
 
 ### Installation
 
-```bash
+```
 git clone https://github.com/fy-nite/uhigh.net
 cd uhigh.net
 ./install.ps1
