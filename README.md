@@ -95,7 +95,7 @@ uhigh test
 ```uhigh
 // Variables and functions
 var name = "World"
-const PI = 3.14159
+const PI = 3.14159f
 
 func greet(person) {
     return "Hello, " + person + "!"
