@@ -457,21 +457,26 @@ namespace uhigh.Net.Testing
                     var context = new TestContext();
                     _contexts.TryAdd(threadId, context);
                     
-                    // Execute with timeout
-                    var testTask = Task.Run(() =>
+                    // Execute setup
+                    try
                     {
-                        try
-                        {
-                            setupMethod?.Invoke(instance, null);
-                            testMethod.Invoke(instance, null);
-                        }
-                        catch (Exception ex)
-                        {
-                            throw ex;
-                        }
-                    }, cancellationTokenSource.Token);
-
-                    testTask.Wait(cancellationTokenSource.Token);
+                        setupMethod?.Invoke(instance, null);
+                    }
+                    catch (TargetInvocationException setupEx) when (setupEx.InnerException != null)
+                    {
+                        throw new Exception($"Setup failed: {setupEx.InnerException.Message}", setupEx.InnerException);
+                    }
+                    
+                    // Execute test method
+                    try
+                    {
+                        testMethod.Invoke(instance, null);
+                    }
+                    catch (TargetInvocationException testEx) when (testEx.InnerException != null)
+                    {
+                        throw testEx.InnerException; // Re-throw the actual exception
+                    }
+                    
                     result.Passed = true;
                 }
                 catch (OperationCanceledException)
@@ -480,23 +485,35 @@ namespace uhigh.Net.Testing
                     result.ErrorMessage = $"Test timed out after {_config.TestTimeoutMs}ms";
                     result.Exception = new TimeoutException($"Test timed out after {_config.TestTimeoutMs}ms");
                 }
-                catch (AggregateException ex) when (ex.InnerException != null)
+                catch (AssertionException assertEx)
                 {
                     result.Passed = false;
-                    result.Exception = ex.InnerException;
-                    result.ErrorMessage = ex.InnerException.Message + Environment.NewLine + ex.InnerException.StackTrace;
-                }
-                catch (TargetInvocationException ex) when (ex.InnerException != null)
-                {
-                    result.Passed = false;
-                    result.Exception = ex.InnerException;
-                    result.ErrorMessage = ex.InnerException.Message + Environment.NewLine + ex.InnerException.StackTrace;
+                    result.Exception = assertEx;
+                    result.ErrorMessage = $"Assertion failed: {assertEx.Message}";
                 }
                 catch (Exception ex)
                 {
                     result.Passed = false;
                     result.Exception = ex;
-                    result.ErrorMessage = ex.Message + Environment.NewLine + ex.StackTrace;
+                    result.ErrorMessage = $"Test failed with {ex.GetType().Name}: {ex.Message}";
+                    
+                    // Add stack trace for debugging
+                    if (!string.IsNullOrEmpty(ex.StackTrace))
+                    {
+                        result.ErrorMessage += Environment.NewLine + "Stack trace:" + Environment.NewLine + ex.StackTrace;
+                    }
+                    
+                    // If it's a nested exception, show the full chain
+                    var innerEx = ex.InnerException;
+                    while (innerEx != null)
+                    {
+                        result.ErrorMessage += Environment.NewLine + $"Inner exception ({innerEx.GetType().Name}): {innerEx.Message}";
+                        if (!string.IsNullOrEmpty(innerEx.StackTrace))
+                        {
+                            result.ErrorMessage += Environment.NewLine + innerEx.StackTrace;
+                        }
+                        innerEx = innerEx.InnerException;
+                    }
                 }
                 finally
                 {
@@ -505,13 +522,32 @@ namespace uhigh.Net.Testing
                         // Clean up in finally block
                         teardownMethod?.Invoke(instance, null);
                     }
-                    catch (Exception ex)
+                    catch (TargetInvocationException teardownEx) when (teardownEx.InnerException != null)
                     {
                         if (result.Passed)
                         {
                             result.Passed = false;
-                            result.Exception = ex;
-                            result.ErrorMessage = "Teardown failed: " + ex.Message + Environment.NewLine + ex.StackTrace;
+                            result.Exception = teardownEx.InnerException;
+                            result.ErrorMessage = "Teardown failed: " + teardownEx.InnerException.Message + Environment.NewLine + teardownEx.InnerException.StackTrace;
+                        }
+                        else
+                        {
+                            // Test already failed, just append teardown error
+                            result.ErrorMessage += Environment.NewLine + "Additionally, teardown failed: " + teardownEx.InnerException.Message;
+                        }
+                    }
+                    catch (Exception teardownEx)
+                    {
+                        if (result.Passed)
+                        {
+                            result.Passed = false;
+                            result.Exception = teardownEx;
+                            result.ErrorMessage = "Teardown failed: " + teardownEx.Message + Environment.NewLine + teardownEx.StackTrace;
+                        }
+                        else
+                        {
+                            // Test already failed, just append teardown error
+                            result.ErrorMessage += Environment.NewLine + "Additionally, teardown failed: " + teardownEx.Message;
                         }
                     }
                     finally

@@ -24,18 +24,29 @@ namespace uhigh.Net.Testing
             });
 
             Console.WriteLine($"Using {Environment.ProcessorCount} threads for parallel execution");
+            Console.WriteLine($"Test timeout: 30 seconds");
             Console.WriteLine();
 
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-            var testSuites = TestRunner.RunAllTests();
-            stopwatch.Stop();
             
-            TestRunner.PrintResults(testSuites);
-            
-            Console.WriteLine($"Total execution time: {stopwatch.Elapsed.TotalMilliseconds:F2}ms");
+            try
+            {
+                var testSuites = TestRunner.RunAllTests();
+                stopwatch.Stop();
+                
+                TestRunner.PrintResults(testSuites);
+                
+                Console.WriteLine($"Total execution time: {stopwatch.Elapsed.TotalMilliseconds:F2}ms");
 
-            var totalFailed = testSuites.Sum(s => s.FailedCount);
-            Environment.Exit(totalFailed == 0 ? 0 : 1);
+                var totalFailed = testSuites.Sum(s => s.FailedCount);
+                Environment.Exit(totalFailed == 0 ? 0 : 1);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Fatal error during test execution: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                Environment.Exit(1);
+            }
         }
     }
 }

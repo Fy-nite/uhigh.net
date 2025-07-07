@@ -735,6 +735,7 @@ namespace uhigh.Net.Testing
             
             // Test string array - now the type should be parsed as a single token
             var stringArrayDecl = (VariableDeclaration)program.Statements[0];
+            Console.WriteLine($"String array type: {stringArrayDecl.Type}");
             Assert.AreEqual("string[]", stringArrayDecl.Type);
             Assert.IsTrue(stringArrayDecl.Initializer is ArrayExpression);
             
