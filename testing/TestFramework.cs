@@ -80,14 +80,16 @@ namespace uhigh.Net.Testing
 
             foreach (var testMethod in testMethods)
             {
+                suite.Counts.Total += 1;
                 var result = RunTest(testClass, testMethod, setupMethod, teardownMethod);
                 suite.TestResults.Add(result);
                 if (result.Status == TestStatus.Passed)
-                    suite.Counts.Passed += 1;
+                    suite.Counts.Passed  += 1;
+                else if (result.Status == TestStatus.Skipped) 
+                    suite.Counts.Skipped += 1;
                 else 
-                    suite.Counts.Failed += 1;
-                suite.Counts.Ran += 1;
-                suite.Counts.Total += 1;
+                    suite.Counts.Failed  += 1;
+                if (result.Status != TestStatus.Skipped) suite.Counts.Ran += 1;
                 suite.TotalTime += result.Duration;
             }
 
@@ -99,6 +101,12 @@ namespace uhigh.Net.Testing
             
             var instance = Activator.CreateInstance(testClass); // Instance of the test class
             var result = new TestResult { TestName = test.Name };
+            //if (new Random().Next(1,3) == 2) {
+            //    result.Status = TestStatus.Skipped;
+            //    stopwatch.Stop();
+            //    result.Duration = stopwatch.Elapsed;
+            //    return result;
+            //}
 
             try {
                 setup?.Invoke(instance, null);
@@ -131,7 +139,7 @@ namespace uhigh.Net.Testing
             Console.WriteLine("==================");
             Console.WriteLine();
 
-            foreach (var suite in testSuites)
+            foreach (var suite in testSuites.OrderBy(r => ((double)r.Counts.Failed/(double)r.Counts.Ran)).ToList())
             {
                 var color = suite.Counts.Failed == 0 ? ConsoleColor.Green : ConsoleColor.Red;
                 Console.ForegroundColor = color;
@@ -140,31 +148,28 @@ namespace uhigh.Net.Testing
                 
                 Console.WriteLine($"  Passed: {suite.Counts.Passed}");
                 Console.WriteLine($"  Failed: {suite.Counts.Failed}");
+                Console.WriteLine($"  Skipped: {suite.Counts.Failed}");
                 Console.WriteLine($"  Total:  {suite.Counts.Total}");
                 Console.WriteLine($"  Duration: {suite.TotalTime.TotalMilliseconds:F2}ms");
                 Console.WriteLine();
 
-                foreach (var result in suite.TestResults.Where(r => r.Status == TestStatus.Failed))
+                foreach (var result in suite.TestResults)
                 {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"  ✗ {result.TestName}");
-                    Console.ResetColor();
-                    Console.WriteLine($"    {result.Message}");
-                    Console.WriteLine();
-                }
-
-                foreach (var result in suite.TestResults.Where(r => r.Status == TestStatus.Passed))
-                {
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine($"  ✓ {result.TestName} ({result.Duration.TotalMilliseconds:F1}ms)");
-                    Console.ResetColor();
-                }
-
-                foreach (var result in suite.TestResults.Where(r => r.Status == TestStatus.Skipped))
-                {
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine($"   {result.TestName} ({result.Duration.TotalMilliseconds:F1}ms)");
-                    Console.ResetColor();
+                    if (result.Status == TestStatus.Failed) {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.Write($"  {result.TestName}");
+                        Console.ResetColor();
+                        Console.WriteLine(new string(' ', 40-result.TestName.Length) + $"{result.Message}");
+                        //Console.WriteLine();
+                    } else if (result.Status == TestStatus.Passed) {
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.WriteLine($"  {result.TestName} ({result.Duration.TotalMilliseconds:F1}ms)");
+                        Console.ResetColor();
+                    } else if (result.Status == TestStatus.Skipped) {
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine($"  {result.TestName} ({result.Duration.TotalMilliseconds:F1}ms)");
+                        Console.ResetColor();
+                    }
                 }
                 Console.WriteLine();
             }
@@ -178,9 +183,16 @@ namespace uhigh.Net.Testing
 
             Console.WriteLine("Summary");
             Console.WriteLine("=======");
-            var summaryColor = totalFailed == 0 ? ConsoleColor.Green : ConsoleColor.Red;
-            Console.ForegroundColor = summaryColor;
-            Console.WriteLine($"Total:   {totalTests}\nRan:     {totalRan}\nSkipped: {totalSkipped}\nPassed:  {totalPassed}\nFailed:  {totalFailed}");
+
+            //Console.ForegroundColor = ConsoleColor.White;
+            Console.WriteLine($"Total:   {totalTests}");
+            Console.WriteLine($"Ran:     {totalRan}");
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine($"Skipped: {totalSkipped}");
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine($"Passed:  {totalPassed}");
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine($"Failed:  {totalFailed}");
             Console.ResetColor();
             Console.WriteLine($"Duration: {totalDuration.TotalMilliseconds:F2}ms");
         }
