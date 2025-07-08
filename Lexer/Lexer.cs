@@ -214,7 +214,7 @@ namespace uhigh.Net.Lexer
             }
 
             // Identifiers
-            if (char.IsLetter(current) || current == '_')
+            if (char.IsLetter(current) || (current == '_' && Peek() > 32))
             {
                 return ReadIdentifier(line, column);
             }
