@@ -211,7 +211,7 @@ namespace uhigh.Net.CodeGen
                     references.Add(reference);
                     // Console.WriteLine($"Added standard library: {Path.GetFileName(dllFile)}");
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     // Console.WriteLine($"Warning: Could not load standard library {Path.GetFileName(dllFile)}: {ex.Message}");
                 }
@@ -250,7 +250,7 @@ namespace uhigh.Net.CodeGen
                     // Compile with better error handling
                     lock (_compilationLock)
                     {
-                        assemblyBytes = CompileToAssemblyBytes(csharpCode, rootNamespace, className, outputType, additionalAssemblies);
+                        assemblyBytes = CompileToAssemblyBytes(csharpCode, rootNamespace, className, outputType, additionalAssemblies)!;
                         if (assemblyBytes == null) return false;
                         
                         // Cache successful compilation
@@ -527,7 +527,7 @@ namespace uhigh.Net.CodeGen
         /// </summary>
         /// <param name="csharpCode">The csharp code</param>
         /// <returns>A task containing the byte array</returns>
-        public async Task<byte[]?> CompileToBytes(string csharpCode)
+        public Task<byte[]?> CompileToBytes(string csharpCode)
         {
             try
             {
@@ -556,12 +556,12 @@ namespace uhigh.Net.CodeGen
                     Environment.Exit(1); // exit on fail
                 }
                 
-                return memoryStream.ToArray();
+                return Task.FromResult<byte[]?>(memoryStream.ToArray());
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Compilation failed: {ex.Message}");
-                return null;
+                return Task.FromResult<byte[]?>(null);
             }
         }
         
@@ -667,7 +667,7 @@ namespace uhigh.Net.CodeGen
         /// </summary>
         /// <param name="buildDir">The build dir</param>
         /// <param name="additionalAssemblies">The additional assemblies</param>
-        private async Task CopyRequiredAssemblies(string buildDir, List<string>? additionalAssemblies = null)
+        private Task CopyRequiredAssemblies(string buildDir, List<string>? additionalAssemblies = null)
         {
             // Copy standard library DLLs to build directory
             if (Directory.Exists(_stdLibPath))
@@ -757,6 +757,7 @@ namespace uhigh.Net.CodeGen
             }
             
             Console.WriteLine("Required assemblies copied to build directory");
+            return Task.CompletedTask;
         }
         
         /// <summary>

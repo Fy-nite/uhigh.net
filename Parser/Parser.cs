@@ -1235,7 +1235,7 @@ namespace uhigh.Net.Parser
                 if (Check(TokenType.If))
                 {
                     var elseIfStmt = ParseStatement(); // This will parse the "if" statement
-                    elseBranch = new List<Statement> { elseIfStmt };
+                    elseBranch = new List<Statement> { elseIfStmt! };
                 }
                 else
                 {
@@ -1497,7 +1497,7 @@ namespace uhigh.Net.Parser
                 else
                 {
                     _diagnostics.ReportParseError($"Invalid assignment target: {expr?.GetType().Name}", Previous());
-                    return new AssignmentExpression { Target = expr, Operator = op, Value = value };
+                    return new AssignmentExpression { Target = expr!, Operator = op, Value = value };
                 }
             }
 
@@ -1977,14 +1977,14 @@ namespace uhigh.Net.Parser
             if (value == null)
             {
                 _diagnostics.ReportParseError("Match expression missing value", Peek());
-                return new LiteralExpression { Value = null, Type = TokenType.String };
+                return new LiteralExpression { Value = null!, Type = TokenType.String };
             }
 
             // Expect opening brace immediately after match keyword and value
             if (!Check(TokenType.LeftBrace))
             {
                 _diagnostics.ReportParseError($"Expected '{{' after match value, found '{Peek().Value}'", Peek());
-                return new LiteralExpression { Value = null, Type = TokenType.String };
+                return new LiteralExpression { Value = null!, Type = TokenType.String };
             }
 
             Consume(TokenType.LeftBrace, "Expected '{' after match value");
@@ -2075,7 +2075,7 @@ namespace uhigh.Net.Parser
         private Expression ParseInterpolatedString()
         {
             var parts = new List<InterpolationPart>();
-            var currentText = "";
+            // var currentText = "";
     
             // This is a simplified version - a full implementation would need
             // more sophisticated tokenization for interpolated strings

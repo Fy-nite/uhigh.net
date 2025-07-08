@@ -1,9 +1,0 @@
-namespace testing
-{
-    public class tests {
-        public static func testing(): void {
-            Console.WriteLine("Hello, World!")
-            Console.WriteLine("This is a test function in the test namespace.")
-            }
-    }
-}

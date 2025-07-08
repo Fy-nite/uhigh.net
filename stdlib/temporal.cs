@@ -77,7 +77,7 @@ namespace StdLib
         // tvalue to system.type
         public static implicit operator Type(Temporal<T> temporal)
         {
-            return temporal.Current.GetType();
+            return temporal.Current!.GetType();
         }
         /// <summary>
         /// Gets the current value

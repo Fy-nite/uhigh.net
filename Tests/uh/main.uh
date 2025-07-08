@@ -1,0 +1,87 @@
+Using uhigh.StdLib.StdLib
+namespace testing
+{
+
+    
+    
+    class Program
+    {
+        [Serializable]
+        static field cat: string = "purr"
+        static field meow: string
+        static field cats: List<string> 
+        static field timestamp: TimestampedEvent<string>
+        static field time: Dictionary<string, string>
+        static field temptime: Temporal<string>
+
+        
+
+        public static func Main(args: string[]): void
+        {
+            var catt = new Program()
+           
+            cats = new List<string>()
+            temptime = new Temporal<string>("cat sound event")
+            temptime.Update("another cat sound event")
+            Console.WriteLine("Temporal event " + temptime.GetFirstChange().Value)
+            Console.WriteLine("Temporal event " + temptime.GetLastChange().Value)
+            timestamp = new TimestampedEvent<string>("cat sound event")
+            Console.WriteLine("Timestamped event started: " + timestamp.Data)
+            time = new Dictionary<string, string>()
+            time.Add("morning", "8 AM")
+            time.Add("afternoon", "12 PM")
+            time.Add("evening", "6 PM")
+
+            cats.Add("purr")
+            cats.Add("meow")
+            cats.Add("hiss")
+
+            // Iterating through the list of cats
+            // and printing each cat sound
+            for var c in cats
+            {
+                Console.WriteLine("Cat sound: " + c);
+            }
+            // Iterating through the time dictionary
+            // and printing each time of day with its corresponding value
+            for var t in time
+            {
+                Console.WriteLine("Time of day: " + t.Key + " is at " + t.Value);
+            }
+
+            // Using pattern matching to determine the cat's sound
+            // and to print a message based on the sound
+            var meow = cat match
+            {
+                "purr" => "meow",
+                "meow" => "purr",
+                _ => "unknown"
+            }
+            match cat 
+            {
+                "purr" => Console.WriteLine("The cat is purring."),
+                "meow" => Console.WriteLine("The cat is meowing."),
+                _ => Console.WriteLine("The cat is silent.")
+            }
+            // Using a while loop to print numbers from 0 to 9
+            // and demonstrating a simple increment operation
+            var x = 0
+            while x < 10
+            {
+                Console.WriteLine("x is: " + x);
+                x += 1;
+            }
+            // Using pattern matching to check the meow sound
+            // and printing a message based on the sound
+            if meow == "meow"
+            {
+                Console.WriteLine("The cat says: " + meow);
+            }
+            else
+            {
+                Console.WriteLine("The cat is silent.");
+            }
+        }
+    }
+
+}

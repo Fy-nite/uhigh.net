@@ -13,32 +13,32 @@ namespace StdLib
         /// Prints the line using the specified value
         /// </summary>
         /// <param name="value">The value</param>
-        public static void PrintLine(object? value)
+        public static void PrintLine(params object?[] value)
         {
-            if (value == null)
+            if (value == null || value.Length == 0)
             {
-                Console.WriteLine("null");
+                Console.WriteLine();
+                return;
             }
-            else
-            {
-                Console.WriteLine(value.ToString());
-            }
+
+            var output = string.Join(" ", value.Select(v => v?.ToString() ?? "null"));
+            Console.WriteLine(output);
         }
 
         /// <summary>
         /// Prints the value
         /// </summary>
         /// <param name="value">The value</param>
-        public static void Print(object? value)
+        public static void Print(params object?[] value)
         {
-            if (value == null)
+            if (value == null || value.Length == 0)
             {
-                Console.Write("null");
+                Console.WriteLine();
+                return;
             }
-            else
-            {
-                Console.Write(value.ToString());
-            }
+
+            var output = string.Join(" ", value.Select(v => v?.ToString() ?? "null"));
+            Console.Write(output);
         }
 
         /// <summary>

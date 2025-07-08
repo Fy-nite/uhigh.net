@@ -148,15 +148,15 @@ namespace uhigh.Net.Parser
             }
 
             // Register type by full name
-            if (!_discoveredTypes.ContainsKey(type.FullName))
+            if (!_discoveredTypes.ContainsKey(type.FullName!))
             {
-                _discoveredTypes[type.FullName] = type;
+                _discoveredTypes[type.FullName!] = type;
             }
 
             // Register shortened namespace.type for common ones
             if (type.Namespace?.StartsWith("System") == true)
             {
-                var shortName = type.FullName.Replace("System.", "");
+                var shortName = type.FullName!.Replace("System.", "");
                 if (!_discoveredTypes.ContainsKey(shortName))
                 {
                     _discoveredTypes[shortName] = type;
@@ -258,7 +258,7 @@ namespace uhigh.Net.Parser
                 return true;
             }
 
-            if (_discoveredTypes.TryGetValue(typeName, out type))
+            if (_discoveredTypes.TryGetValue(typeName, out type!))
             {
                 return true;
             }
@@ -304,19 +304,20 @@ namespace uhigh.Net.Parser
                     return true;
             }
 
+            // partial matching is broken for now.
        
-            // Try partial matching for common types if nothing else worked
-            // This is useful for cases like "list" or "dictionary"
-            var partialMatch = _discoveredTypes.FirstOrDefault(kvp =>
-                kvp.Key.EndsWith(typeName, StringComparison.OrdinalIgnoreCase));
+            // // Try partial matching for common types if nothing else worked
+            // // This is useful for cases like "list" or "dictionary"
+            // var partialMatch = _discoveredTypes.FirstOrDefault(kvp =>
+            //     kvp.Key.EndsWith(typeName, StringComparison.OrdinalIgnoreCase));
 
-            if (!partialMatch.Equals(default(KeyValuePair<string, Type>)))
-            {
-                type = partialMatch.Value;
-                return true;
-            }
+            // if (!partialMatch.Equals(default(KeyValuePair<string, Type>)))
+            // {
+            //     type = partialMatch.Value;
+            //     return true;
+            // }
 
-            type = null;
+            type = null!;
             return false;
         }
 
@@ -343,7 +344,7 @@ namespace uhigh.Net.Parser
         /// <returns>The bool</returns>
         public bool TryResolveGenericType(string typeName, out Type type)
         {
-            type = null;
+            type = null!;
 
             // Check if it's a generic type syntax like "List<string>" or "Dictionary<string, int>"
             if (!typeName.Contains('<') || !typeName.Contains('>'))
@@ -496,7 +497,7 @@ namespace uhigh.Net.Parser
                 "queue" => "Queue",
                 "stack" => "Stack",
                 "array" => "Array",
-                _ => null
+                _ => null!
             };
         }
 
@@ -520,7 +521,7 @@ namespace uhigh.Net.Parser
         /// <returns>The bool</returns>
         public bool TryGetGenericTypeDefinition(string baseTypeName, out Type genericTypeDef)
         {
-            return _genericTypeDefinitions.TryGetValue(baseTypeName, out genericTypeDef);
+            return _genericTypeDefinitions.TryGetValue(baseTypeName, out genericTypeDef!);
         }
 
         // Add method to get all generic type definitions
@@ -542,7 +543,7 @@ namespace uhigh.Net.Parser
         /// <returns>The bool</returns>
         public bool TryResolveMethod(string methodName, List<Expression> arguments, out MethodInfo method)
         {
-            method = null;
+            method = null!;
 
             if (!_discoveredMethods.TryGetValue(methodName, out var candidates))
             {

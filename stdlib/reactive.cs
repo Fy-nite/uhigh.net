@@ -126,7 +126,7 @@ namespace StdLib
         {
             if (_temporal == null)
                 throw new InvalidOperationException("Temporal tracking is not enabled.");
-            return _temporal.GetSecondsAgo(seconds);
+            return _temporal.GetSecondsAgo(seconds)!;
         }
         /// <summary>
         /// Gets the minutes ago using the specified minutes
@@ -137,7 +137,7 @@ namespace StdLib
         {
             if (_temporal == null)
                 throw new InvalidOperationException("Temporal tracking is not enabled.");
-            return _temporal.GetMinutesAgo(minutes);
+            return _temporal.GetMinutesAgo(minutes)!;
         }
     }
 

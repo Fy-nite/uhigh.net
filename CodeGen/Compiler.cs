@@ -831,7 +831,7 @@ namespace uhigh.Net
                     {
                         foreach (var package in project.Dependencies)
                         {
-                            var assemblies = await nugetManager.GetPackageAssembliesAsync(package, project.Target);
+                            var assemblies = nugetManager.GetPackageAssemblies(package, project.Target);
                             nugetAssemblies.AddRange(assemblies);
                             
                             diagnostics.ReportInfo($"Added {assemblies.Count} assemblies from package {package.Name} v{package.Version}");

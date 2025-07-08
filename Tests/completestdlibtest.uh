@@ -1,0 +1,26 @@
+using StdLib
+func main() {
+    // Basic temporal tracking
+
+
+    
+    // Advanced collections
+    var numbers = range(100)
+    
+    // Reactive programming
+    var counter = new Observable<int>(0,true)
+    counter.Subscribe((old, neww) => {
+        IO.Print("Counter changed from", old, "to", neww)
+    })
+    
+    counter.value = 42  // Triggers subscriber
+    var oldCounter = counter.getMinutesAgo(1)
+    
+    // Event streams
+    var eventStream = EventStream<string>()
+    eventStream.subscribe(msg => Console.WriteLine("Event: " + msg))
+    eventStream.emit("Something happened!")
+    
+    var recentEvents = eventStream.getEventsInLastSeconds(60)
+    Console.WriteLine("Events in last minute: " + recentEvents.length)
+}

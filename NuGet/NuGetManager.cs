@@ -243,7 +243,7 @@ namespace uhigh.Net.NuGet
             }
         }
 
-        public async Task<List<string>> GetPackageAssembliesAsync(PackageReference package, string targetFramework = "net8.0")
+        public List<string> GetPackageAssemblies(PackageReference package, string targetFramework = "net8.0")
         {
             var assemblies = new List<string>();
 

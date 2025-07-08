@@ -67,13 +67,13 @@ namespace StdLib
                         total++;
                         var input = Activator.CreateInstance(attr.InputType);
                         var instance = method.IsStatic ? null : Activator.CreateInstance(cls);
-                        var expectExceptionAttr = (ExpectExceptionAttribute)method.GetCustomAttributes(typeof(ExpectExceptionAttribute), false).FirstOrDefault();
+                        var expectExceptionAttr = (ExpectExceptionAttribute)method.GetCustomAttributes(typeof(ExpectExceptionAttribute), false).FirstOrDefault()!;
                         bool testPassed = false;
-                        Exception thrown = null;
+                        Exception thrown = null!;
                         var sw = Stopwatch.StartNew();
                         try
                         {
-                            method.Invoke(instance, new object[] { input });
+                            method.Invoke(instance, new object[] { input! });
                             sw.Stop();
                             if (expectExceptionAttr != null)
                             {
@@ -86,7 +86,7 @@ namespace StdLib
                                 bool allFieldsPassed = true;
                                 foreach (var field in expectFields)
                                 {
-                                    var expectAttr = (ExpectAttribute)field.GetCustomAttributes(typeof(ExpectAttribute), false).FirstOrDefault();
+                                    var expectAttr = (ExpectAttribute)field.GetCustomAttributes(typeof(ExpectAttribute), false).FirstOrDefault()!;
                                     if (expectAttr != null)
                                     {
                                         var actualValue = field.GetValue(instance);
@@ -110,7 +110,7 @@ namespace StdLib
                         catch (TargetInvocationException ex)
                         {
                             sw.Stop();
-                            thrown = ex.InnerException;
+                            thrown = ex.InnerException!;
                             if (expectExceptionAttr != null && thrown != null && expectExceptionAttr.ExceptionType.IsInstanceOfType(thrown))
                             {
                                 PrintPass($"{cls.Name}.{method.Name}: Threw expected exception {thrown.GetType().Name}");
@@ -168,8 +168,9 @@ namespace StdLib
 
         static bool ConsoleIsColor()
         {
-            try { return Console.ForegroundColor != null; }
-            catch { return false; }
+            // try { return Console.ForegroundColor! != null!; }
+            // catch { return false; }
+            return true; // Assume color support for simplicity
         }
     }
 }

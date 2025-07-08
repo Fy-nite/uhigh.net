@@ -114,7 +114,7 @@ namespace StdLib
         {
             return source.GroupBy(x => x)
                         .OrderByDescending(g => g.Count())
-                        .FirstOrDefault().Key;
+                        .FirstOrDefault()!.Key;
         }
 
         /// <summary>

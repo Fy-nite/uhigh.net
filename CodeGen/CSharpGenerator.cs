@@ -45,7 +45,7 @@ namespace uhigh.Net.CodeGen
         /// <summary>
         /// The type resolver
         /// </summary>
-        private ReflectionTypeResolver _typeResolver; // Add this field
+        private ReflectionTypeResolver? _typeResolver; 
 
         /// <summary>
         /// Generates the program
@@ -1834,7 +1834,7 @@ namespace uhigh.Net.CodeGen
             // Array types
             if (type.IsArray)
             {
-                return GetCSharpTypeName(type.GetElementType()) + "[]";
+                return GetCSharpTypeName(type.GetElementType()!) + "[]";
             }
 
             // Use full name for other types
