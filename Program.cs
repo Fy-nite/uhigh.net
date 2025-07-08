@@ -709,7 +709,7 @@ public class EntryPoint
             }
             else
             {
-                success = await compiler.CompileProject(options.ProjectFile);
+                success = await compiler.CompileProjectAndRun(options.ProjectFile);
             }
             
             return success ? 0 : 1;

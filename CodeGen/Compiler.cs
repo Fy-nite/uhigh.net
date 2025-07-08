@@ -1746,5 +1746,91 @@ namespace uhigh.Net
                 Console.WriteLine(projectContent);
             }
         }
+
+        internal async Task<bool> CompileProjectAndRun(string projectFile)
+        {
+            var diagnostics = new DiagnosticsReporter(_verboseMode, projectFile);
+
+            try
+            {
+                // Compile the project to an executable in a temp directory
+                var tempDir = Path.Combine(Path.GetTempPath(), $"uhigh_build_{Guid.NewGuid():N}");
+                Directory.CreateDirectory(tempDir);
+
+                var project = await ProjectFile.LoadAsync(projectFile, diagnostics);
+                if (project == null)
+                {
+                    diagnostics.PrintSummary();
+                    return false;
+                }
+
+                var exeName = project.OutputType.Equals("Library", StringComparison.OrdinalIgnoreCase)
+                    ? $"{project.Name}.dll"
+                    : $"{project.Name}.exe";
+                var outputPath = Path.Combine(tempDir, exeName);
+
+                var success = await CompileProject(projectFile, outputPath);
+                if (!success)
+                {
+                    diagnostics.PrintSummary();
+                    return false;
+                }
+
+                // Run the executable (dotnet for dll, direct for exe)
+                if (project.OutputType.Equals("Library", StringComparison.OrdinalIgnoreCase))
+                {
+                    var process = new Process
+                    {
+                        StartInfo = new ProcessStartInfo
+                        {
+                            FileName = "dotnet",
+                            Arguments = $"\"{outputPath}\"",
+                            UseShellExecute = false,
+                            RedirectStandardOutput = true,
+                            RedirectStandardError = true
+                        }
+                    };
+                    process.Start();
+                    string stdOut = await process.StandardOutput.ReadToEndAsync();
+                    string stdErr = await process.StandardError.ReadToEndAsync();
+                    await process.WaitForExitAsync();
+                    Console.Write(stdOut);
+                    if (!string.IsNullOrWhiteSpace(stdErr))
+                        Console.Error.Write(stdErr);
+                    return process.ExitCode == 0;
+                }
+                else
+                {
+                    var process = new Process
+                    {
+                        StartInfo = new ProcessStartInfo
+                        {
+                            FileName = outputPath,
+                            UseShellExecute = false,
+                            RedirectStandardOutput = true,
+                            RedirectStandardError = true
+                        }
+                    };
+                    process.Start();
+                    string stdOut = await process.StandardOutput.ReadToEndAsync();
+                    string stdErr = await process.StandardError.ReadToEndAsync();
+                    await process.WaitForExitAsync();
+                    Console.Write(stdOut);
+                    if (!string.IsNullOrWhiteSpace(stdErr))
+                        Console.Error.Write(stdErr);
+                    return process.ExitCode == 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                diagnostics.ReportFatal($"Failed to compile and run project: {ex.Message}", exception: ex);
+                diagnostics.PrintSummary();
+                return false;
+            }
+            finally
+            {
+             
+            }
+        }
     }
 }

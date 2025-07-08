@@ -9,11 +9,11 @@
             "program": "${workspaceFolder}/bin/Debug/net9.0/uhigh.dll", // adjust for your output path and target framework
             "args": [
                 // Add any command-line arguments you want to test here, e.g.:
-                "testing/uh/meow.uh"
+                "Examples/observe.uh",
             ],
             "cwd": "${workspaceFolder}",
             "console": "integratedTerminal",
-            "stopAtEntry": false
+            "stopAtEntry": true
         }
     ]
 }

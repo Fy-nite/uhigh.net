@@ -16,7 +16,7 @@ namespace uhigh.Net.Testing
 
             var testSuites = TestRunner.RunAllTests();
             TestRunner.PrintResults(testSuites);
-
+            StdLib.InlineTestRunner.RunAllTests();
             var totalFailed = testSuites.Sum(s => s.FailedCount);
             Environment.Exit(totalFailed == 0 ? 0 : 1);
         }
