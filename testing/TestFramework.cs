@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Reflection;
+using System.Threading;
 
 namespace uhigh.Net.Testing
 {
@@ -19,6 +20,7 @@ namespace uhigh.Net.Testing
         public List<TestResult> TestResults = new();
         public TimeSpan TotalTime;
         public TestSuiteCounts Counts = new();
+        public List<Thread> threads = new();
     }
 
     public class TestSuiteCounts {
@@ -50,12 +52,22 @@ namespace uhigh.Net.Testing
         public static void Contains<T>(IEnumerable<T> collection, T item, string? message = null)       { if (!collection.Contains(item))   Fail(message ?? $"Expected collection to contain '{item}'");                        }
         public static void DoesNotContain<T>(IEnumerable<T> collection, T item, string? message = null) { if (collection.Contains(item))    Fail(message ?? $"Expected collection to not contain '{item}'");                    }
         public static void Throws<TException>(Action action, string? message = null) where TException : Exception { try { action();         Fail(message ?? $"Expected {typeof(TException).Name} but no exception was thrown"); }
-            catch (TException) {} catch (Exception ex)                                                {                                     Fail(message ?? $"Expected {typeof(TException).Name} but got {ex.GetType().Name}"); }
+            catch (TException) {} catch (Exception ex)                                                 {                                    Fail(message ?? $"Expected {typeof(TException).Name} but got {ex.GetType().Name}"); }
         }
+    }
+
+    public static class TestRunnerConfig {
+        public static int  multithreaded_max_tests = Environment.ProcessorCount;
+        public static bool multithreaded           = true;
     }
 
     public class TestRunner {
         public static List<TestSuiteResult> RunAllTests() {
+            Console.Write("Running Tests ");
+            if (TestRunnerConfig.multithreaded)
+                Console.WriteLine($"With {TestRunnerConfig.multithreaded_max_tests} threads");
+            else
+                Console.WriteLine("In a Single Thread");
             var testSuites = new List<TestSuiteResult>();
             var assembly = Assembly.GetExecutingAssembly();
             var testClasses = assembly.GetTypes()
@@ -67,8 +79,66 @@ namespace uhigh.Net.Testing
                 var suite = RunTestSuite(testClass);
                 testSuites.Add(suite);
             }
+            var waiting = true;
+            while (waiting) {
+                waiting = false;
+                foreach (var suite in testSuites) {
+                    foreach (var thread in suite.threads) {
+                        if (thread.IsAlive) {
+                            waiting = true;
+                            continue;
+                        }
+                    }
+                }
+            }
 
             return testSuites;
+        }
+        private static int running_tests = 0;
+        private static Lock running_tests_lock = new();
+        
+        // Wait until there are less than max tests running
+        private static void StartTest() {
+            while (running_tests > TestRunnerConfig.multithreaded_max_tests) { Thread.Sleep(10); }
+            running_tests++;
+        }
+        // Decrement running_tests to indicate that another test is free to run
+        private static void EndTest() {
+            running_tests--;
+        }
+        
+        public class TestRunnerData {
+            Type testClass;
+            MethodInfo testMethod;
+            MethodInfo? setupMethod;
+            MethodInfo? teardownMethod;
+            TestSuiteResult suite;
+            public TestRunnerData(Type testClass, MethodInfo test, MethodInfo? setup, MethodInfo? teardown, TestSuiteResult suite) {
+                this.testClass = testClass;
+                this.setupMethod = setup;
+                this.testMethod = test;
+                this.teardownMethod = teardown;
+                this.suite = suite;
+            }
+            public void Run() {
+                var result = RunTest(testClass, testMethod, setupMethod, teardownMethod);
+                lock (suite) {
+                    suite.TestResults.Add(result);
+                    
+                    if (result.Status == TestStatus.Passed)
+                        suite.Counts.Passed  += 1;
+                    else if (result.Status == TestStatus.Skipped) 
+                        suite.Counts.Skipped += 1;
+                    else 
+                        suite.Counts.Failed  += 1;
+                    if (result.Status != TestStatus.Skipped) suite.Counts.Ran += 1;
+                
+                    suite.Counts.Total += 1;
+                    suite.TotalTime += result.Duration;
+                }
+                if (TestRunnerConfig.multithreaded)
+                    EndTest();
+            }
         }
 
         public static TestSuiteResult RunTestSuite(Type testClass) {
@@ -80,17 +150,15 @@ namespace uhigh.Net.Testing
 
             foreach (var testMethod in testMethods)
             {
-                suite.Counts.Total += 1;
-                var result = RunTest(testClass, testMethod, setupMethod, teardownMethod);
-                suite.TestResults.Add(result);
-                if (result.Status == TestStatus.Passed)
-                    suite.Counts.Passed  += 1;
-                else if (result.Status == TestStatus.Skipped) 
-                    suite.Counts.Skipped += 1;
-                else 
-                    suite.Counts.Failed  += 1;
-                if (result.Status != TestStatus.Skipped) suite.Counts.Ran += 1;
-                suite.TotalTime += result.Duration;
+                TestRunnerData data = new TestRunnerData(testClass, testMethod, setupMethod, teardownMethod, suite);
+                if (TestRunnerConfig.multithreaded)
+                    StartTest();
+                if (TestRunnerConfig.multithreaded) {
+                    Thread taskThread = new Thread(new ThreadStart(data.Run));
+                    taskThread.Start();
+                    suite.threads.Add(taskThread);
+                } else
+                    data.Run();
             }
 
             return suite;
