@@ -1004,7 +1004,7 @@ public class EntryPoint
             var testSuites = uhigh.Net.Testing.TestRunner.RunAllTests();
             uhigh.Net.Testing.TestRunner.PrintResults(testSuites);
             
-            var totalFailed = testSuites.Sum(s => s.FailedCount);
+            var totalFailed = testSuites.Sum(s => s.Counts.Failed);
             return totalFailed == 0 ? 0 : 1;
         }
         catch (Exception ex)
