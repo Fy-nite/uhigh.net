@@ -62,7 +62,7 @@ namespace uhigh.Net.Testing
 
     public static class TestRunnerConfig {
         public static int  multithreaded_max_tests = Environment.ProcessorCount-1;
-        public static bool multithreaded           = false;
+        public static bool multithreaded           = true;
     }
 
     public class TestRunner {
