@@ -1,3 +1,7 @@
+// TODO: convert threading to list of tests and then have 32 threads that when free pop a test off the test stack
+
+
+
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
@@ -52,75 +56,37 @@ namespace uhigh.Net.Testing
         public static void Contains<T>(IEnumerable<T> collection, T item, string? message = null)       { if (!collection.Contains(item))   Fail(message ?? $"Expected collection to contain '{item}'");                        }
         public static void DoesNotContain<T>(IEnumerable<T> collection, T item, string? message = null) { if (collection.Contains(item))    Fail(message ?? $"Expected collection to not contain '{item}'");                    }
         public static void Throws<TException>(Action action, string? message = null) where TException : Exception { try { action();         Fail(message ?? $"Expected {typeof(TException).Name} but no exception was thrown"); }
-            catch (TException) {} catch (Exception ex)                                                 {                                    Fail(message ?? $"Expected {typeof(TException).Name} but got {ex.GetType().Name}"); }
+            catch (TException) {} catch (Exception ex)                                                  {                                   Fail(message ?? $"Expected {typeof(TException).Name} but got {ex.GetType().Name}"); }
         }
     }
 
     public static class TestRunnerConfig {
-        public static int  multithreaded_max_tests = Environment.ProcessorCount;
+        public static int  multithreaded_max_tests = Environment.ProcessorCount-1;
         public static bool multithreaded           = true;
     }
 
     public class TestRunner {
-        public static List<TestSuiteResult> RunAllTests() {
-            Console.Write("Running Tests ");
-            if (TestRunnerConfig.multithreaded)
-                Console.WriteLine($"With {TestRunnerConfig.multithreaded_max_tests} threads");
-            else
-                Console.WriteLine("In a Single Thread");
-            var testSuites = new List<TestSuiteResult>();
-            var assembly = Assembly.GetExecutingAssembly();
-            var testClasses = assembly.GetTypes()
-                .Where(t => t.GetMethods().Any(m => m.GetCustomAttribute<TestAttribute>() != null))
-                .ToList();
+        public static List<TestRunnerData> to_run_tests = new();
 
-            foreach (var testClass in testClasses)
-            {
-                var suite = RunTestSuite(testClass);
-                testSuites.Add(suite);
-            }
-            var waiting = true;
-            while (waiting) {
-                waiting = false;
-                foreach (var suite in testSuites) {
-                    foreach (var thread in suite.threads) {
-                        if (thread.IsAlive) {
-                            waiting = true;
-                            continue;
-                        }
-                    }
-                }
-            }
-
-            return testSuites;
-        }
-        private static int running_tests = 0;
-        private static Lock running_tests_lock = new();
-        
-        // Wait until there are less than max tests running
-        private static void StartTest() {
-            while (running_tests > TestRunnerConfig.multithreaded_max_tests) { Thread.Sleep(10); }
-            running_tests++;
-        }
-        // Decrement running_tests to indicate that another test is free to run
-        private static void EndTest() {
-            running_tests--;
-        }
-        
         public class TestRunnerData {
             Type testClass;
-            MethodInfo testMethod;
+            MethodInfo? testMethod;
             MethodInfo? setupMethod;
             MethodInfo? teardownMethod;
-            TestSuiteResult suite;
-            public TestRunnerData(Type testClass, MethodInfo test, MethodInfo? setup, MethodInfo? teardown, TestSuiteResult suite) {
+            TestSuiteResult? suite;
+            public bool is_exit = false;
+            public TestRunnerData(Type testClass, MethodInfo? test, MethodInfo? setup, MethodInfo? teardown, TestSuiteResult? suite, bool is_exit = false) {
                 this.testClass = testClass;
                 this.setupMethod = setup;
                 this.testMethod = test;
                 this.teardownMethod = teardown;
                 this.suite = suite;
+                this.is_exit = is_exit;
             }
             public void Run() {
+                if (testMethod == null || suite == null) {
+                    throw new Exception("Uhhhh");
+                }
                 var result = RunTest(testClass, testMethod, setupMethod, teardownMethod);
                 lock (suite) {
                     suite.TestResults.Add(result);
@@ -136,32 +102,7 @@ namespace uhigh.Net.Testing
                     suite.Counts.Total += 1;
                     suite.TotalTime += result.Duration;
                 }
-                if (TestRunnerConfig.multithreaded)
-                    EndTest();
             }
-        }
-
-        public static TestSuiteResult RunTestSuite(Type testClass) {
-            var suite = new TestSuiteResult { Name = testClass.Name };
-            
-            var setupMethod = testClass.GetMethods().FirstOrDefault(m => m.GetCustomAttribute<SetupAttribute>() != null);
-            var teardownMethod = testClass.GetMethods().FirstOrDefault(m => m.GetCustomAttribute<TeardownAttribute>() != null);
-            var testMethods = testClass.GetMethods().Where(m => m.GetCustomAttribute<TestAttribute>() != null);
-
-            foreach (var testMethod in testMethods)
-            {
-                TestRunnerData data = new TestRunnerData(testClass, testMethod, setupMethod, teardownMethod, suite);
-                if (TestRunnerConfig.multithreaded)
-                    StartTest();
-                if (TestRunnerConfig.multithreaded) {
-                    Thread taskThread = new Thread(new ThreadStart(data.Run));
-                    taskThread.Start();
-                    suite.threads.Add(taskThread);
-                } else
-                    data.Run();
-            }
-
-            return suite;
         }
 
         public static TestResult RunTest(Type testClass, MethodInfo test, MethodInfo? setup, MethodInfo? teardown) {
@@ -169,12 +110,6 @@ namespace uhigh.Net.Testing
             
             var instance = Activator.CreateInstance(testClass); // Instance of the test class
             var result = new TestResult { TestName = test.Name };
-            //if (new Random().Next(1,3) == 2) {
-            //    result.Status = TestStatus.Skipped;
-            //    stopwatch.Stop();
-            //    result.Duration = stopwatch.Elapsed;
-            //    return result;
-            //}
 
             try {
                 setup?.Invoke(instance, null);
@@ -201,6 +136,89 @@ namespace uhigh.Net.Testing
             }
             return result;
         }
+
+        private static Lock run_test_lock = new();
+        // Function to get tests from to_run_tests and run them, exiting on special test
+        public static void TesterThread() {
+            while (true) {
+                bool is_test_to_run = false;
+                while (!is_test_to_run) {
+                    run_test_lock.Enter();
+                    if (to_run_tests.Count == 0) {
+                        run_test_lock.Exit();
+                    } else {
+                        is_test_to_run = true;
+                    }
+                }
+                TestRunnerData data = to_run_tests.First();
+                if (data.is_exit) {
+                    run_test_lock.Exit();
+                    return;
+                }
+                to_run_tests.RemoveAt(0);
+                run_test_lock.Exit(); // Exit the lock because we are done with the to_run_tests list
+                data.Run();
+            }
+        }
+
+        public static List<TestSuiteResult> RunAllTests() {
+            Console.Write("Running Tests ");
+            List<Thread> task_threads = new();
+            if (TestRunnerConfig.multithreaded) {
+                Console.WriteLine($"With {TestRunnerConfig.multithreaded_max_tests} threads");
+                for (int i=0;i<TestRunnerConfig.multithreaded_max_tests;i++) {
+                    Thread thread = new Thread(new ThreadStart(TesterThread));
+                    thread.Start();
+                    task_threads.Add(thread);
+                }
+            } else
+                Console.WriteLine("In a Single Thread");
+            var testSuites = new List<TestSuiteResult>();
+            var assembly = Assembly.GetExecutingAssembly();
+            var testClasses = assembly.GetTypes()
+                .Where(t => t.GetMethods().Any(m => m.GetCustomAttribute<TestAttribute>() != null))
+                .ToList();
+            var stopwatch = Stopwatch.StartNew();
+            foreach (var testClass in testClasses)
+            {
+                var suite = RunTestSuite(testClass);
+                testSuites.Add(suite);
+            }
+            to_run_tests.Add(new TestRunnerData(typeof(TestRunner), null, null, null, null, true));
+            // Wait for threads to exit
+            TesterThread();
+            var waiting = TestRunnerConfig.multithreaded;
+            while (waiting) {
+                waiting = false;
+                foreach (var thread in task_threads) {
+                    if (thread.IsAlive) {
+                        waiting = true;
+                        continue;
+                    }
+                }
+            }
+            stopwatch.Stop();
+            Console.WriteLine($"Duration: {stopwatch.ElapsedMilliseconds:F2}ms");
+            return testSuites;
+        }
+        
+        
+        public static TestSuiteResult RunTestSuite(Type testClass) {
+            var suite = new TestSuiteResult { Name = testClass.Name };
+            
+            var setupMethod = testClass.GetMethods().FirstOrDefault(m => m.GetCustomAttribute<SetupAttribute>() != null);
+            var teardownMethod = testClass.GetMethods().FirstOrDefault(m => m.GetCustomAttribute<TeardownAttribute>() != null);
+            var testMethods = testClass.GetMethods().Where(m => m.GetCustomAttribute<TestAttribute>() != null);
+
+            foreach (var testMethod in testMethods)
+            {
+                TestRunnerData data = new TestRunnerData(testClass, testMethod, setupMethod, teardownMethod, suite);
+                to_run_tests.Add(data); // Queue test
+            }
+
+            return suite;
+        }
+
         public static void PrintResults(List<TestSuiteResult> testSuites)
         {
             Console.WriteLine("μHigh Test Results");
@@ -216,7 +234,7 @@ namespace uhigh.Net.Testing
                 
                 Console.WriteLine($"  Passed: {suite.Counts.Passed}");
                 Console.WriteLine($"  Failed: {suite.Counts.Failed}");
-                Console.WriteLine($"  Skipped: {suite.Counts.Failed}");
+                Console.WriteLine($"  Skipped: {suite.Counts.Skipped}");
                 Console.WriteLine($"  Total:  {suite.Counts.Total}");
                 Console.WriteLine($"  Duration: {suite.TotalTime.TotalMilliseconds:F2}ms");
                 Console.WriteLine();
