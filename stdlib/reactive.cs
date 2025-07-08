@@ -7,7 +7,7 @@ namespace StdLib
     /// <summary>
     /// Observable value that can be watched for changes
     /// </summary>
-    public class Observable<T> where T : class
+    public class Observable<T> 
     {
         /// <summary>
         /// The value
@@ -35,6 +35,29 @@ namespace StdLib
                 _temporal = new Temporal<T>(_value as dynamic);
             }
         }
+        public Observable(bool trackHistory = false)
+        {
+            _value = default!;
+            if (trackHistory && typeof(T).IsClass)
+            {
+                _temporal = new Temporal<T>(_value as dynamic);
+            }
+        }
+        //.// Implicit conversion operators for easy usage
+        /// <summary>
+        /// Implicit conversion from Observable to T
+        /// </summary>
+        /// <param name="observable">The observable</param>
+        /// <returns>The value of the observable</returns>
+        /// <summary>
+        public static implicit operator T(Observable<T> observable)
+        {
+            return observable.Value;
+        }
+        public static implicit operator Observable<T>(T value)
+        {
+            return new Observable<T>(value);
+        }
 
         /// <summary>
         /// Gets or sets the value of the value
@@ -46,10 +69,10 @@ namespace StdLib
             {
                 var oldValue = _value;
                 _value = value;
-                
+
                 // Update temporal tracking
                 _temporal?.Update(_value as dynamic, "value changed");
-                
+
                 // Notify observers
                 foreach (var observer in _observers)
                 {
@@ -99,13 +122,23 @@ namespace StdLib
         /// </summary>
         /// <param name="seconds">The seconds</param>
         /// <returns>The</returns>
-        public T? GetSecondsAgo(double seconds) => _temporal?.GetSecondsAgo(seconds);
+        public T GetSecondsAgo(double seconds)
+        {
+            if (_temporal == null)
+                throw new InvalidOperationException("Temporal tracking is not enabled.");
+            return _temporal.GetSecondsAgo(seconds);
+        }
         /// <summary>
         /// Gets the minutes ago using the specified minutes
         /// </summary>
         /// <param name="minutes">The minutes</param>
         /// <returns>The</returns>
-        public T? GetMinutesAgo(double minutes) => _temporal?.GetMinutesAgo(minutes);
+        public T GetMinutesAgo(double minutes)
+        {
+            if (_temporal == null)
+                throw new InvalidOperationException("Temporal tracking is not enabled.");
+            return _temporal.GetMinutesAgo(minutes);
+        }
     }
 
     /// <summary>

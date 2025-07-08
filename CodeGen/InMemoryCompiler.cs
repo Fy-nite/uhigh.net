@@ -536,7 +536,7 @@ namespace uhigh.Net.CodeGen
                 var references = GetAssemblyReferences(_stdLibPath);
                 
                 var compilation = CSharpCompilation.Create(
-                    "GeneratedAssembly",
+                    "dotHighAssembly",
                     new[] { syntaxTree },
                     references,
                     new CSharpCompilationOptions(OutputKind.ConsoleApplication));
@@ -553,7 +553,7 @@ namespace uhigh.Net.CodeGen
                             Console.WriteLine($"Compilation Error: {diagnostic.GetMessage()}");
                         }
                     }
-                    Environment.Exit(1); // exit on fai
+                    Environment.Exit(1); // exit on fail
                 }
                 
                 return memoryStream.ToArray();

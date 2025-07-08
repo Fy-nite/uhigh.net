@@ -2535,7 +2535,7 @@ namespace uhigh.Net.Parser
                 BaseClass = baseClass,
                 Members = members,
                 Modifiers = new List<string>(),
-                Attributes = new List<AttributeDeclaration>() // Will be set by calling code
+                Attributes = new List<AttributeDeclaration>()
             };
         }
 

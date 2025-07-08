@@ -273,7 +273,40 @@ namespace uhigh.Net.Parser
                 return true;
             }
 
-            // Try partial matching for common types
+
+            // base generic types like System.Int32, System.String, etc.
+            switch (typeName.ToLowerInvariant())
+            {
+                case "int":
+                case "int32":
+                    type = typeof(int);
+                    return true;
+                case "string":
+                case "str":
+                    type = typeof(string);
+                    return true;
+                case "bool":
+                case "boolean":
+                    type = typeof(bool);
+                    return true;
+                case "double":
+                case "float":
+                    type = typeof(double);
+                    return true;
+                case "decimal":
+                    type = typeof(decimal);
+                    return true;
+                case "object":
+                    type = typeof(object);
+                    return true;
+                case "void":
+                    type = typeof(void);
+                    return true;
+            }
+
+       
+            // Try partial matching for common types if nothing else worked
+            // This is useful for cases like "list" or "dictionary"
             var partialMatch = _discoveredTypes.FirstOrDefault(kvp =>
                 kvp.Key.EndsWith(typeName, StringComparison.OrdinalIgnoreCase));
 
