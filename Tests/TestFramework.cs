@@ -81,11 +81,11 @@ namespace uhigh.Net.Testing
                 this.testMethod = test;
                 this.teardownMethod = teardown;
                 this.suite = suite;
-                this.is_exit = is_exit;
+                if (is_exit) this.is_exit = true; else this.is_exit = false;
             }
             public void Run() {
                 if (testMethod == null || suite == null) {
-                    throw new Exception("Uhhhh");
+                    throw new Exception("Uhhhhnsedfvlijsndflkjvdsfakjnsdflkvjsndlfkjvnsdkfnvskldjfnvsdkjfnvlkjdfnvlskjfvnlskdjfnlskjdnfvlkjsdnfvlkjsdnfvlksdjfnvlksdjfvnlsdkjfnvlskdjfnvksldjfnvlskdjfnvlsdkfvnsldkjfvnsldkjfnvlskdjfnvlkjdsfnfvlkjsdnfvlkjsdnfvlkjsdnfvlksdfnvlsdkjfnvlskdjfnvlsdkfjnvsldfkjnvlsdkfjnvsdlkfjvfn");
                 }
                 var result = RunTest(testClass, testMethod, setupMethod, teardownMethod);
                 lock (suite) {
@@ -151,7 +151,7 @@ namespace uhigh.Net.Testing
                     }
                 }
                 TestRunnerData data = to_run_tests.First();
-                if (data.is_exit) {
+                if (data.is_exit == true) {
                     run_test_lock.Exit();
                     return;
                 }
@@ -212,8 +212,10 @@ namespace uhigh.Net.Testing
 
             foreach (var testMethod in testMethods)
             {
-                TestRunnerData data = new TestRunnerData(testClass, testMethod, setupMethod, teardownMethod, suite);
-                to_run_tests.Add(data); // Queue test
+                lock (run_test_lock) {
+                    TestRunnerData data = new TestRunnerData(testClass, testMethod, setupMethod, teardownMethod, suite);
+                    to_run_tests.Add(data); // Queue test
+                }
             }
 
             return suite;
