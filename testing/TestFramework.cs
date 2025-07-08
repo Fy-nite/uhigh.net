@@ -62,7 +62,7 @@ namespace uhigh.Net.Testing
 
     public static class TestRunnerConfig {
         public static int  multithreaded_max_tests = Environment.ProcessorCount-1;
-        public static bool multithreaded           = true;
+        public static bool multithreaded           = false;
     }
 
     public class TestRunner {
@@ -143,7 +143,7 @@ namespace uhigh.Net.Testing
             while (true) {
                 bool is_test_to_run = false;
                 while (!is_test_to_run) {
-                    run_test_lock.Enter();
+                    run_test_lock.EnterScope();
                     if (to_run_tests.Count == 0) {
                         run_test_lock.Exit();
                     } else {
