@@ -1,6 +1,18 @@
-func main()
+using System
+using StdLib
+namespace test
 {
-    var x = 1
-    Console.WriteLine("Hello, World!")
-    Console.WriteLine("x = {0}", x)
+    public class Program
+    {
+        public static field x: Observable<int> = new Observable<int>(0, true)
+        public static func Main(args: string[]): void
+        {
+            x.Subscribe((value) => {
+                Console.WriteLine("Value changed to: " + value);
+            });
+            x.Value = 10;
+            x.Value = 20;
+            x.Value = 30;
+        }
+    }
 }

@@ -321,149 +321,345 @@ namespace uhigh.Net
         {
             var indent = new string(' ', depth * 2);
             var nodeType = node.GetType().Name;
-            
-            Console.Write($"{indent}{nodeType}");
-            
-            // Print node-specific details
+
+            void PrintBlockStart(string header)
+            {
+                Console.WriteLine($"{indent}{header} {{");
+            }
+            void PrintBlockEnd()
+            {
+                Console.WriteLine($"{indent}}}");
+            }
+
             switch (node)
             {
                 case Program program:
-                    Console.WriteLine($" (Statements: {program.Statements.Count})");
+                    PrintBlockStart("Program");
                     foreach (var stmt in program.Statements)
-                    {
                         PrintASTNode(stmt, depth + 1);
-                    }
+                    PrintBlockEnd();
                     break;
-                    
+
                 case NamespaceDeclaration ns:
-                    Console.WriteLine($" \"{ns.Name}\" (Members: {ns.Members.Count})");
+                    PrintBlockStart($"namespace {ns.Name}");
                     foreach (var member in ns.Members)
-                    {
                         PrintASTNode(member, depth + 1);
-                    }
+                    PrintBlockEnd();
                     break;
-                    
-                case FunctionDeclaration func:
-                    Console.WriteLine($" \"{func.Name}\" (Parameters: {func.Parameters.Count}, ReturnType: {func.ReturnType ?? "void"})");
-                    foreach (var param in func.Parameters)
-                    {
-                        PrintASTNode(param, depth + 1);
-                    }
-                    foreach (var stmt in func.Body)
-                    {
-                        PrintASTNode(stmt, depth + 1);
-                    }
-                    break;
-                    
+
                 case ClassDeclaration cls:
-                    Console.WriteLine($" \"{cls.Name}\" (Members: {cls.Members.Count}, BaseClass: {cls.BaseClass ?? "none"})");
+                    PrintBlockStart($"class {cls.Name}{(cls.BaseClass != null ? $" : {cls.BaseClass}" : "")}");
                     foreach (var member in cls.Members)
-                    {
                         PrintASTNode(member, depth + 1);
-                    }
+                    PrintBlockEnd();
                     break;
-                    
-                case MethodDeclaration method:
-                    Console.WriteLine($" \"{method.Name}\" (Parameters: {method.Parameters.Count}, ReturnType: {method.ReturnType ?? "void"})");
-                    foreach (var param in method.Parameters)
-                    {
-                        PrintASTNode(param, depth + 1);
-                    }
-                    foreach (var stmt in method.Body)
-                    {
+
+                case StructDeclaration s:
+                    PrintBlockStart($"struct {s.Name}");
+                    foreach (var field in s.Fields)
+                        PrintASTNode(field, depth + 1);
+                    PrintBlockEnd();
+                    break;
+
+                case ModuleDeclaration m:
+                    PrintBlockStart($"module {m.Name}");
+                    foreach (var member in m.Members)
+                        PrintASTNode(member, depth + 1);
+                    PrintBlockEnd();
+                    break;
+
+                case FunctionDeclaration func:
+                    PrintBlockStart($"func {func.Name}({string.Join(", ", func.Parameters.Select(p => $"{p.Type ?? "var"} {p.Name}"))}){(func.ReturnType != null ? $": {func.ReturnType}" : "")}");
+                    foreach (var stmt in func.Body)
                         PrintASTNode(stmt, depth + 1);
-                    }
+                    PrintBlockEnd();
                     break;
-                    
+
+                case MethodDeclaration method:
+                    PrintBlockStart($"{(method.IsStatic ? "static " : "")}method {method.Name}({string.Join(", ", method.Parameters.Select(p => $"{p.Type ?? "var"} {p.Name}"))}){(method.ReturnType != null ? $": {method.ReturnType}" : "")}");
+                    foreach (var stmt in method.Body)
+                        PrintASTNode(stmt, depth + 1);
+                    PrintBlockEnd();
+                    break;
+
+                case PropertyDeclaration prop:
+                    PrintBlockStart($"property {prop.Name}{(prop.Type != null ? $": {prop.Type}" : "")}");
+                    foreach (var accessor in prop.Accessors)
+                        PrintASTNode(accessor, depth + 1);
+                    PrintBlockEnd();
+                    break;
+
+                case PropertyAccessor accessor:
+                    PrintBlockStart($"{accessor.Type} accessor");
+                    if (accessor.Body != null)
+                        PrintASTNode(accessor.Body, depth + 1);
+                    foreach (var stmt in accessor.Statements)
+                        PrintASTNode(stmt, depth + 1);
+                    PrintBlockEnd();
+                    break;
+
+                case FieldDeclaration field:
+                    Console.WriteLine($"{indent}field {(field.IsStatic ? "static " : "")}{field.Name}{(field.Type != null ? $": {field.Type}" : "")}{(field.Initializer != null ? " = ..." : "")};");
+                    break;
+
                 case VariableDeclaration var:
-                    Console.WriteLine($" \"{var.Name}\" (Type: {var.Type ?? "inferred"}, Constant: {var.IsConstant})");
+                    Console.WriteLine($"{indent}{(var.IsConstant ? "const " : "var ")}{var.Name}{(var.Type != null ? $": {var.Type}" : "")}{(var.Initializer != null ? " = ..." : "")};");
                     if (var.Initializer != null)
-                    {
                         PrintASTNode(var.Initializer, depth + 1);
-                    }
                     break;
-                    
-                case Parameter param:
-                    Console.WriteLine($" \"{param.Name}\" (Type: {param.Type ?? "any"})");
+
+                case LetDeclaration let:
+                    Console.WriteLine($"{indent}let {(let.IsMutable ? "mut " : "")}{let.Name}{(let.Type != null ? $": {let.Type}" : "")}{(let.Initializer != null ? " = ..." : "")};");
+                    if (let.Initializer != null)
+                        PrintASTNode(let.Initializer, depth + 1);
                     break;
-                    
-                case LiteralExpression literal:
-                    Console.WriteLine($" Value: {literal.Value} (Type: {literal.Type})");
+
+                case EnumDeclaration en:
+                    PrintBlockStart($"enum {en.Name}{(en.BaseType != null ? $": {en.BaseType}" : "")}");
+                    foreach (var member in en.Members)
+                        PrintASTNode(member, depth + 1);
+                    PrintBlockEnd();
                     break;
-                    
-                case IdentifierExpression identifier:
-                    Console.WriteLine($" \"{identifier.Name}\"");
+
+                case EnumMember em:
+                    Console.WriteLine($"{indent}{em.Name}{(em.Value != null ? " = ..." : "")},");
+                    if (em.Value != null)
+                        PrintASTNode(em.Value, depth + 1);
                     break;
-                    
-                case BinaryExpression binary:
-                    Console.WriteLine($" Operator: {binary.Operator}");
-                    Console.WriteLine($"{indent}  Left:");
-                    PrintASTNode(binary.Left, depth + 2);
-                    Console.WriteLine($"{indent}  Right:");
-                    PrintASTNode(binary.Right, depth + 2);
+
+                case InterfaceDeclaration iface:
+                    PrintBlockStart($"interface {iface.Name}");
+                    foreach (var member in iface.Members)
+                        PrintASTNode(member, depth + 1);
+                    PrintBlockEnd();
                     break;
-                    
-                case CallExpression call:
-                    Console.WriteLine($" (Arguments: {call.Arguments.Count})");
-                    Console.WriteLine($"{indent}  Function:");
-                    PrintASTNode(call.Function, depth + 2);
-                    if (call.Arguments.Count > 0)
-                    {
-                        Console.WriteLine($"{indent}  Arguments:");
-                        foreach (var arg in call.Arguments)
-                        {
-                            PrintASTNode(arg, depth + 2);
-                        }
-                    }
+
+                case TypeAliasDeclaration typeAlias:
+                    Console.WriteLine($"{indent}type {typeAlias.Name} = {typeAlias.Type.Name};");
                     break;
-                    
-                case IfStatement ifStmt:
-                    Console.WriteLine($" (ThenBranch: {ifStmt.ThenBranch.Count}, ElseBranch: {ifStmt.ElseBranch?.Count ?? 0})");
-                    Console.WriteLine($"{indent}  Condition:");
-                    PrintASTNode(ifStmt.Condition, depth + 2);
-                    Console.WriteLine($"{indent}  ThenBranch:");
-                    foreach (var stmt in ifStmt.ThenBranch)
-                    {
-                        PrintASTNode(stmt, depth + 2);
-                    }
-                    if (ifStmt.ElseBranch != null)
-                    {
-                        Console.WriteLine($"{indent}  ElseBranch:");
-                        foreach (var stmt in ifStmt.ElseBranch)
-                        {
-                            PrintASTNode(stmt, depth + 2);
-                        }
-                    }
+
+                case ImportStatement import:
+                    Console.WriteLine($"{indent}import {import.ClassName}{(import.Alias != null ? $" as {import.Alias}" : "")};");
                     break;
-                    
-                case WhileStatement whileStmt:
-                    Console.WriteLine($" (Body: {whileStmt.Body.Count})");
-                    Console.WriteLine($"{indent}  Condition:");
-                    PrintASTNode(whileStmt.Condition, depth + 2);
-                    Console.WriteLine($"{indent}  Body:");
-                    foreach (var stmt in whileStmt.Body)
-                    {
-                        PrintASTNode(stmt, depth + 2);
-                    }
+
+                case IncludeStatement include:
+                    Console.WriteLine($"{indent}include \"{include.FileName}\";");
                     break;
-                    
-                case ReturnStatement returnStmt:
-                    Console.WriteLine();
-                    if (returnStmt.Value != null)
-                    {
-                        Console.WriteLine($"{indent}  Value:");
-                        PrintASTNode(returnStmt.Value, depth + 2);
-                    }
-                    break;
-                    
+
                 case ExpressionStatement exprStmt:
+                    PrintASTNode(exprStmt.Expression, depth);
+                    break;
+
+                case AssignmentExpression assign:
+                    Console.Write($"{indent}");
+                    PrintASTNode(assign.Target, 0);
+                    Console.Write($" {assign.Operator} ");
+                    PrintASTNode(assign.Value, 0);
+                    Console.WriteLine(";");
+                    break;
+
+                case IfStatement ifStmt:
+                    PrintBlockStart("if (" + GetExprPreview(ifStmt.Condition) + ")");
+                    foreach (var stmt in ifStmt.ThenBranch)
+                        PrintASTNode(stmt, depth + 1);
+                    if (ifStmt.ElseBranch != null && ifStmt.ElseBranch.Any())
+                    {
+                        Console.WriteLine($"{indent}else");
+                        PrintBlockStart("{");
+                        foreach (var stmt in ifStmt.ElseBranch)
+                            PrintASTNode(stmt, depth + 2);
+                        PrintBlockEnd();
+                    }
+                    PrintBlockEnd();
+                    break;
+
+                case WhileStatement whileStmt:
+                    PrintBlockStart("while (" + GetExprPreview(whileStmt.Condition) + ")");
+                    foreach (var stmt in whileStmt.Body)
+                        PrintASTNode(stmt, depth + 1);
+                    PrintBlockEnd();
+                    break;
+
+                case ForStatement forStmt:
+                    if (forStmt.IsForInLoop)
+                        PrintBlockStart($"for ({forStmt.IteratorVariable} in {GetExprPreview(forStmt.IterableExpression)})");
+                    else
+                        PrintBlockStart("for (...)");
+                    foreach (var stmt in forStmt.Body)
+                        PrintASTNode(stmt, depth + 1);
+                    PrintBlockEnd();
+                    break;
+
+                case ReturnStatement ret:
+                    Console.Write($"{indent}return");
+                    if (ret.Value != null)
+                    {
+                        Console.Write(" ");
+                        PrintASTNode(ret.Value, 0);
+                    }
+                    Console.WriteLine(";");
+                    break;
+
+                case BreakStatement:
+                    Console.WriteLine($"{indent}break;");
+                    break;
+
+                case ContinueStatement:
+                    Console.WriteLine($"{indent}continue;");
+                    break;
+
+                case SharpBlock sharp:
+                    Console.WriteLine($"{indent}# {{ ... }}");
+                    break;
+
+                case MatchStatement matchStmt:
+                    PrintBlockStart("match (" + GetExprPreview(matchStmt.Value) + ")");
+                    foreach (var arm in matchStmt.Arms)
+                        PrintASTNode(arm, depth + 1);
+                    PrintBlockEnd();
+                    break;
+
+                case MatchArm arm:
+                    Console.Write($"{indent}case ");
+                    if (arm.IsDefault)
+                        Console.Write("_");
+                    else
+                        Console.Write(string.Join(", ", arm.Patterns.Select(GetExprPreview)));
+                    Console.Write(" => ");
+                    PrintASTNode(arm.Result, 0);
                     Console.WriteLine();
-                    PrintASTNode(exprStmt.Expression, depth + 1);
                     break;
-                    
+
+                case SwitchStatement sw:
+                    PrintBlockStart("switch (" + GetExprPreview(sw.Value) + ")");
+                    foreach (var sc in sw.Cases)
+                        PrintASTNode(sc, depth + 1);
+                    PrintBlockEnd();
+                    break;
+
+                case SwitchCase sc:
+                    Console.Write($"{indent}case ");
+                    if (sc.IsDefault)
+                        Console.Write("default");
+                    else if (sc.Pattern != null)
+                        PrintASTNode(sc.Pattern, 0);
+                    Console.WriteLine(":");
+                    foreach (var stmt in sc.Statements)
+                        PrintASTNode(stmt, depth + 1);
+                    break;
+
+                case BlockExpression block:
+                    PrintBlockStart("block");
+                    foreach (var stmt in block.Statements)
+                        PrintASTNode(stmt, depth + 1);
+                    PrintBlockEnd();
+                    break;
+
+                case LambdaExpression lambda:
+                    Console.Write($"{indent}lambda ({string.Join(", ", lambda.Parameters.Select(p => p.Name))}) ");
+                    if (lambda.IsExpressionLambda && lambda.Body != null)
+                    {
+                        Console.Write("=> ");
+                        PrintASTNode(lambda.Body, 0);
+                        Console.WriteLine();
+                    }
+                    else if (lambda.IsBlockLambda)
+                    {
+                        PrintBlockStart("{");
+                        foreach (var stmt in lambda.Statements)
+                            PrintASTNode(stmt, depth + 1);
+                        PrintBlockEnd();
+                    }
+                    break;
+
+                case CallExpression call:
+                    Console.Write($"{indent}");
+                    PrintASTNode(call.Function, 0);
+                    Console.Write("(");
+                    for (int i = 0; i < call.Arguments.Count; i++)
+                    {
+                        if (i > 0) Console.Write(", ");
+                        PrintASTNode(call.Arguments[i], 0);
+                    }
+                    Console.WriteLine(")");
+                    break;
+
+                case ConstructorCallExpression ctor:
+                    Console.Write($"{indent}new {ctor.ClassName}(");
+                    for (int i = 0; i < ctor.Arguments.Count; i++)
+                    {
+                        if (i > 0) Console.Write(", ");
+                        PrintASTNode(ctor.Arguments[i], 0);
+                    }
+                    Console.WriteLine(")");
+                    break;
+
+                case ArrayExpression arr:
+                    Console.Write($"{indent}[");
+                    for (int i = 0; i < arr.Elements.Count; i++)
+                    {
+                        if (i > 0) Console.Write(", ");
+                        PrintASTNode(arr.Elements[i], 0);
+                    }
+                    Console.WriteLine("]");
+                    break;
+
+                case IndexExpression idx:
+                    Console.Write($"{indent}");
+                    PrintASTNode(idx.Object, 0);
+                    Console.Write("[");
+                    PrintASTNode(idx.Index, 0);
+                    Console.WriteLine("]");
+                    break;
+
+                case MemberAccessExpression member:
+                    PrintASTNode(member.Object, 0);
+                    Console.Write($".{member.MemberName}");
+                    break;
+
+                case QualifiedIdentifierExpression qid:
+                    Console.Write($"{indent}{qid.Name}");
+                    break;
+
+                case IdentifierExpression id:
+                    Console.Write($"{indent}{id.Name}");
+                    break;
+
+                case LiteralExpression lit:
+                    Console.Write($"{indent}{(lit.Value is string ? $"\"{lit.Value}\"" : lit.Value)}");
+                    break;
+
+                case Parameter param:
+                    Console.WriteLine($"{indent}param {param.Name}{(param.Type != null ? $": {param.Type}" : "")}");
+                    break;
+
+                case TypeAnnotation typeAnn:
+                    Console.WriteLine($"{indent}type {typeAnn.Name}{(typeAnn.TypeArguments.Count > 0 ? $"<{string.Join(", ", typeAnn.TypeArguments.Select(t => t.Name))}>" : "")}");
+                    break;
+
+                case AttributeDeclaration attr:
+                    Console.WriteLine($"{indent}[{attr.Name}{(attr.Arguments.Count > 0 ? $"({string.Join(", ", attr.Arguments.Select(GetExprPreview))})" : "")}]");
+                    break;
+
                 default:
-                    Console.WriteLine($" (Type: {node.GetType().Name})");
+                    Console.WriteLine($"{indent}// {nodeType}");
                     break;
+            }
+
+            // Helper for expression preview (single-line)
+            string GetExprPreview(ASTNode? expr)
+            {
+                if (expr == null) return "";
+                return expr switch
+                {
+                    IdentifierExpression id => id.Name,
+                    LiteralExpression lit => lit.Value?.ToString() ?? "null",
+                    QualifiedIdentifierExpression qid => qid.Name,
+                    CallExpression call => $"{GetExprPreview(call.Function)}(...)",
+                    MemberAccessExpression mem => $"{GetExprPreview(mem.Object)}.{mem.MemberName}",
+                    BinaryExpression bin => $"{GetExprPreview(bin.Left)} {bin.Operator} {GetExprPreview(bin.Right)}",
+                    _ => expr.GetType().Name
+                };
             }
         }
 

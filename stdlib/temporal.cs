@@ -40,7 +40,7 @@ namespace StdLib
     /// <summary>
     /// Temporal container that tracks changes to an object over time
     /// </summary>
-    public class Temporal<T> where T : class
+    public class Temporal<T>
     {
         /// <summary>
         /// The snapshots
@@ -66,7 +66,19 @@ namespace StdLib
             _maxHistory = maxHistory;
             _snapshots.Enqueue(new Snapshot<T>(DeepClone(initialValue), "initial"));
         }
-
+        public static implicit operator T(Temporal<T> temporal)
+        {
+            return temporal.Current;
+        }
+        public static implicit operator Temporal<T>(T value)
+        {
+            return new Temporal<T>(value);
+        }
+        // tvalue to system.type
+        public static implicit operator Type(Temporal<T> temporal)
+        {
+            return temporal.Current.GetType();
+        }
         /// <summary>
         /// Gets the current value
         /// </summary>
@@ -128,7 +140,7 @@ namespace StdLib
         /// <summary>
         /// Get the value at a specific timestamp
         /// </summary>
-        public T? GetValueAt(DateTime timestamp)
+        public T GetValueAt(DateTime timestamp)
         {
             Snapshot<T>? bestMatch = null;
 
@@ -143,14 +155,14 @@ namespace StdLib
                 }
             }
 
-            return bestMatch?.Value;
+            return bestMatch != null ? bestMatch.Value : default!;
         }
         /// <summary>
         /// Get the Last value before the lastest available snapshot
         /// </summary>
-        public T? GetLastValueBeforeLatest()
+        public T GetLastValueBeforeLatest()
         {
-            if (_snapshots.IsEmpty) return null;
+            if (_snapshots.IsEmpty) return default!;
 
             Snapshot<T>? lastSnapshot = null;
 
@@ -162,7 +174,7 @@ namespace StdLib
                 }
             }
 
-            return lastSnapshot?.Value;
+            return lastSnapshot != null ? lastSnapshot.Value : default!;
         }
 
         /// <summary>

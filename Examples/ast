@@ -1,0 +1,23 @@
+Abstract Syntax Tree (AST):
+===========================
+
+Program {
+  import System;
+  import StdLib;
+  namespace test {
+    class Program {
+      field x: Observable<int> = ...;
+      method Main(string[] args): void {
+        x.Subscribe(lambda (value) { {
+  Console.WriteLine(// BinaryExpression
+)
+}
+)
+        x.Value Assign 10;
+        x.Value Assign 20;
+        x.Value Assign 30;
+      }
+    }
+  }
+}
+    Finished μHigh compilation successfully
