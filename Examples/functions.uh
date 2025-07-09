@@ -1,0 +1,28 @@
+using System
+using StdLib
+
+namespace test
+{
+    [TestingOnly]
+    public class meow {
+        
+        [Expect(10)] 
+        public static field ten: int = 0
+    }
+
+    public class Program
+    {
+
+        [TestWith(typeof(meow))]
+        public static func tester(cat: test.meow)
+        {
+            cat.ten = 11;
+        }
+        
+         
+        public static func Main(args: string[]): void
+        {
+            InlineTestRunner.RunAllTests();
+        }
+    }
+}

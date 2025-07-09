@@ -237,7 +237,7 @@ namespace StdLib
         /// <summary>
         /// Weighted random choice
         /// </summary>
-        public static T WeightedChoice<T>(Dictionary<T, double> weights)
+        public static T WeightedChoice<T>(Dictionary<T, double> weights) where T : notnull
         {
             var totalWeight = weights.Values.Sum();
             var randomValue = _random.NextDouble() * totalWeight;

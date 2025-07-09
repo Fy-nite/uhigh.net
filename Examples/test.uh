@@ -1,0 +1,21 @@
+namespace test {
+    class meow {
+        func purr(): void {
+            print("purr purr")
+        }
+    }
+    
+    class cat {
+        func feed(m: meow): void {
+            m.purr()
+        }
+    }
+    
+    public class Program {
+        public static func Main(args: string[]): void {
+            var kitty = new meow()
+            var fluffy = new cat()
+            fluffy.feed(kitty)
+        }
+    }
+}

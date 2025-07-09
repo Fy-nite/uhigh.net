@@ -1,2 +1,0 @@
-System.Private.CoreLib version: 9.0.0.0
-Path: C:\Users\GAMER\scoop\apps\dotnet-sdk\current\shared\Microsoft.NETCore.App\9.0.6\System.Private.CoreLib.dll

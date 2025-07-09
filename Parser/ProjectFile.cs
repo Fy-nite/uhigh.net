@@ -30,21 +30,21 @@ namespace uhigh.Net
         /// <param name="projectPath">The project path</param>
         /// <param name="diagnostics">The diagnostics</param>
         /// <returns>A task containing the uhigh project</returns>
-        public static async Task<uhighProject?> LoadAsync(string projectPath, DiagnosticsReporter? diagnostics = null)
+        public static Task<uhighProject?> LoadAsync(string projectPath, DiagnosticsReporter? diagnostics = null)
         {
             try
             {
                 if (!File.Exists(projectPath))
                 {
                     diagnostics?.ReportError($"Project file not found: {projectPath}");
-                    return null;
+                    return Task.FromResult<uhighProject?>(null);
                 }
 
                 // Check if this is actually a project file by extension
                 if (!projectPath.EndsWith(".uhighproj", StringComparison.OrdinalIgnoreCase))
                 {
                     diagnostics?.ReportError($"Invalid project file extension. Expected .uhighproj, got: {Path.GetExtension(projectPath)}");
-                    return null;
+                    return Task.FromResult<uhighProject?>(null);
                 }
 
                 using var stream = new FileStream(projectPath, FileMode.Open, FileAccess.Read);
@@ -53,7 +53,7 @@ namespace uhigh.Net
                 if (project == null)
                 {
                     diagnostics?.ReportError($"Failed to parse project file: {projectPath}");
-                    return null;
+                    return Task.FromResult<uhighProject?>(null);
                 }
 
                 // Resolve relative paths relative to the project directory
@@ -80,12 +80,12 @@ namespace uhigh.Net
 
                 diagnostics?.ReportInfo($"Loaded project: {project.Name} v{project.Version} with {project.SourceFiles.Count} source files");
                 
-                return project;
+                return Task.FromResult<uhighProject?>(project);
             }
             catch (Exception ex)
             {
                 diagnostics?.ReportError($"Failed to load project file {projectPath}: {ex.Message}");
-                return null;
+                return Task.FromResult<uhighProject?>(null);
             }
         }
 

@@ -148,7 +148,7 @@ namespace StdLib
                 var localIndex = globalIndex - _startOffset;
                 while (_localItems.Count <= localIndex)
                 {
-                    _localItems.Add(default(T));
+                    _localItems.Add(default(T)!);
                 }
                 _localItems[localIndex] = _sourceArray[globalIndex];
             }
@@ -207,7 +207,7 @@ namespace StdLib
             var requiredSize = _startOffset + _localItems.Count;
             while (targetArray.Count < requiredSize)
             {
-                targetArray.Add(default(T));
+                targetArray.Add(default(T)!);
             }
 
             // Copy items back to their global positions

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <Name>simple-project</Name>
+  <Version>1.0.0</Version>
+  <Target>net9.0</Target>
+  <OutputType>Exe</OutputType>
+  <RootNamespace>simple-project</RootNamespace>
+  <ClassName>Program</ClassName>
+  <Nullable>true</Nullable>
+  <SourceFiles>
+    <File>main.uh</File>
+  </SourceFiles>
+  <Dependencies>
+  </Dependencies>
+  <Properties>
+  </Properties>
+</Project>

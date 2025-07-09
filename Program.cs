@@ -513,7 +513,7 @@ public class EntryPoint
             skipFileOption
         };
 
-        command.SetHandler(async (verbose, stdLibPath, listTests, skipFile) =>
+        command.SetHandler((verbose, stdLibPath, listTests, skipFile) =>
         {
             var options = new TestOptions
             {
@@ -522,7 +522,7 @@ public class EntryPoint
                 ListTests = listTests,
                 SkipFile = skipFile
             };
-            Environment.ExitCode = await HandleTestCommand(options);
+            Environment.ExitCode = HandleTestCommand(options);
         }, verboseOption, stdLibOption, listTestsOption, skipFileOption);
 
         return command;
@@ -792,7 +792,7 @@ public class EntryPoint
                 return 1;
             }
 
-            var success = await compiler.AddPackageToProject(options.ProjectFile, options.PackageName, options.Version);
+            var success = await compiler.AddPackageToProject(options.ProjectFile, options.PackageName, options.Version!);
             return success ? 0 : 1;
         }
         catch (Exception ex)
@@ -994,7 +994,7 @@ public class EntryPoint
     /// </summary>
     /// <param name="options">The options</param>
     /// <returns>A task containing the int</returns>
-    private static async Task<int> HandleTestCommand(TestOptions options)
+    private static int HandleTestCommand(TestOptions options)
     {
         try
         {
@@ -1054,7 +1054,7 @@ public class EntryPoint
     /// </summary>
     /// <param name="errors">The errors</param>
     /// <returns>A task containing the int</returns>
-    private static async Task<int> HandleParseError(IEnumerable<ParseError> errors)
+    private static int HandleParseError(IEnumerable<ParseError> errors)
     {
         var errorsList = errors.ToList();
 

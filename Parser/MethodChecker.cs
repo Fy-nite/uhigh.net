@@ -436,9 +436,6 @@ private bool IsTypeCompatible(string? paramType, string argType)
         /// <param name="location">The location</param>
         public void RegisterClass(ClassDeclaration classDecl, SourceLocation? location = null)
         {
-            // Note: ClassDeclaration doesn't have Attributes property in the current AST
-            // If you add it, you can validate class attributes here
-            
             var classInfo = new ClassInfo
             {
                 Name = classDecl.Name,
@@ -465,6 +462,7 @@ private bool IsTypeCompatible(string? paramType, string argType)
                 }
             }
 
+            // Always add the class, even if it has no members
             _classes[classDecl.Name] = classInfo;
             _diagnostics.ReportInfo($"Registered class: {classDecl.Name} with {classInfo.Fields.Count} fields, {classInfo.Methods.Count} methods, and {classInfo.Constructors.Count} constructors");
         }
@@ -794,6 +792,30 @@ public bool ValidateCall(string functionName, List<Expression> arguments, Token 
         }
         
         /// <summary>
+        /// Gets all user-defined class names
+        /// </summary>
+        /// <returns>A list of string</returns>
+        public List<string> GetUserDefinedClassNames()
+        {
+            return _classes.Keys.ToList();
+        }
+
+        /// <summary>
+        /// Checks if a type name is a user-defined class
+        /// </summary>
+        /// <param name="typeName">The type name</param>
+        /// <returns>The bool</returns>
+        public bool IsUserDefinedType(string typeName)
+        {
+            // Check exact match first
+            if (_classes.ContainsKey(typeName))
+                return true;
+            
+            // Check if any registered class ends with this type name (for namespace.class scenario)
+            return _classes.Keys.Any(key => key.EndsWith($".{typeName}") || key == typeName);
+        }
+        
+        /// <summary>
         /// Infers the argument type using the specified argument
         /// </summary>
         /// <param name="argument">The argument</param>
@@ -893,6 +915,12 @@ public bool ValidateCall(string functionName, List<Expression> arguments, Token 
         /// <returns>The bool</returns>
         internal bool ValidateType(string typeName, Token token)
         {
+            // Check user-defined classes first (both exact and qualified matches)
+            if (IsUserDefinedType(typeName))
+            {
+                return true;
+            }
+
             if (_typeResolver.TryResolveType(typeName, out var type))
             {
                 return true;
@@ -903,8 +931,10 @@ public bool ValidateCall(string functionName, List<Expression> arguments, Token 
                 token.Line, token.Column, "UH202"
             );
 
-            // Suggest similar types
+            // Suggest similar types (include user-defined classes - both simple and qualified names)
+            var userDefinedTypes = _classes.Keys.Concat(_classes.Keys.Select(k => k.Contains('.') ? k.Split('.').Last() : k)).Distinct();
             var suggestions = _typeResolver.GetAllTypeNames()
+                .Concat(userDefinedTypes)
                 .Where(name => LevenshteinDistance(typeName, name) <= 2)
                 .Take(3)
                 .ToList();
