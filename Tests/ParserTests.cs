@@ -109,6 +109,46 @@ namespace uhigh.Net.Testing
         }
 
         /// <summary>
+        /// Tests namespace with user-defined types as parameters
+        /// </summary>
+        [Test]
+        public void TestNamespaceWithUserDefinedTypeParameters()
+        {
+            var program = ParseSource(@"
+                namespace test {
+                    class meow {
+                        func purr(): void {}
+                    }
+                    
+                    class cat {
+                        func feed(m: meow): void {
+                            m.purr()
+                        }
+                    }
+                }");
+
+            Assert.AreEqual(1, program.Statements.Count);
+            Assert.IsTrue(program.Statements[0] is NamespaceDeclaration);
+            
+            var nsDecl = (NamespaceDeclaration)program.Statements[0];
+            Assert.AreEqual("test", nsDecl.Name);
+            Assert.AreEqual(2, nsDecl.Members.Count);
+            
+            // Verify both classes are present
+            var classes = nsDecl.Members.OfType<ClassDeclaration>().ToList();
+            Assert.AreEqual(2, classes.Count);
+            Assert.IsTrue(classes.Any(c => c.Name == "meow"));
+            Assert.IsTrue(classes.Any(c => c.Name == "cat"));
+            
+            // Verify the cat class has the feed method with meow parameter
+            var catClass = classes.First(c => c.Name == "cat");
+            var feedMethod = catClass.Members.OfType<MethodDeclaration>().FirstOrDefault(m => m.Name == "feed");
+            Assert.IsNotNull(feedMethod);
+            Assert.AreEqual(1, feedMethod.Parameters.Count);
+            Assert.AreEqual("meow", feedMethod.Parameters[0].Type);
+        }
+
+        /// <summary>
         /// Tests that test if statement
         /// </summary>
         [Test]
