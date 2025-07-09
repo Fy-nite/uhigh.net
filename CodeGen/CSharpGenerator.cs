@@ -45,7 +45,7 @@ namespace uhigh.Net.CodeGen
         /// <summary>
         /// The type resolver
         /// </summary>
-        private ReflectionTypeResolver? _typeResolver; 
+        private ReflectionTypeResolver _typeResolver; // Add this field
 
         /// <summary>
         /// Generates the program
@@ -709,6 +709,9 @@ namespace uhigh.Net.CodeGen
                 return;
             }
 
+            // Emit attributes for methods
+            GenerateAttributes(methodDecl.Attributes);
+
             Indent();
             
             // Generate modifiers
@@ -836,6 +839,9 @@ namespace uhigh.Net.CodeGen
         /// <param name="fieldDecl">The field decl</param>
         private void GenerateFieldDeclaration(FieldDeclaration fieldDecl)
         {
+            // Emit attributes for fields
+            GenerateAttributes(fieldDecl.Attributes);
+
             Indent();
             
             // Generate modifiers
@@ -921,6 +927,9 @@ namespace uhigh.Net.CodeGen
                 _diagnostics.ReportWarning($"Qualified function name '{funcDecl.Name}' should use [dotnetfunc] attribute for .NET methods");
                 return; // Skip generating this as well
             }
+
+            // Emit attributes for functions
+            GenerateAttributes(funcDecl.Attributes);
 
             Indent();
             
@@ -1834,7 +1843,7 @@ namespace uhigh.Net.CodeGen
             // Array types
             if (type.IsArray)
             {
-                return GetCSharpTypeName(type.GetElementType()!) + "[]";
+                return GetCSharpTypeName(type.GetElementType()) + "[]";
             }
 
             // Use full name for other types

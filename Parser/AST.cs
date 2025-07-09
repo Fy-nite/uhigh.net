@@ -597,7 +597,7 @@ namespace uhigh.Net.Parser
         /// </summary>
         public bool HasCustomAccessors => Accessors.Any(a => a.Body != null || a.Statements.Count > 0);
     }
-    
+
     /// <summary>
     /// The field declaration class
     /// </summary>
@@ -628,6 +628,7 @@ namespace uhigh.Net.Parser
         /// Gets or sets the value of the modifiers
         /// </summary>
         public List<string> Modifiers { get; set; } = new();
+        public List<uhigh.Net.Parser.AttributeDeclaration> Attributes { get; set; } = new(); // New: attributes for fields
     }
     
     /// <summary>

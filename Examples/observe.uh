@@ -5,6 +5,12 @@ namespace test
     public class Program
     {
         public static field x: Observable<int> = new Observable<int>(0, true)
+        
+        public static func Meow(): void
+        {
+            Console.WriteLine("meow");
+        }
+
         public static func Main(args: string[]): void
         {
             x.Subscribe((value) => {
@@ -13,6 +19,7 @@ namespace test
             x.Value = 10;
             x.Value = 20;
             x.Value = 30;
+            Meow();
         }
     }
 }

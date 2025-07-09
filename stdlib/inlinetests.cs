@@ -55,17 +55,21 @@ namespace StdLib
             int total = 0, passed = 0, failed = 0;
             var testClasses = Assembly.GetExecutingAssembly()
                 .GetTypes()
-                .Where(t => t.IsClass);
+                .Where(t => t.IsClass && t.IsPublic && !t.IsAbstract); // Only public, non-abstract classes
 
             foreach (var cls in testClasses)
             {
                 foreach (var method in cls.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static))
                 {
+                    // Only consider public methods
+                    if (!method.IsPublic) continue;
+
                     var testWithAttrs = method.GetCustomAttributes(typeof(TestWithAttribute), false);
                     foreach (TestWithAttribute attr in testWithAttrs)
                     {
                         total++;
                         var input = Activator.CreateInstance(attr.InputType);
+                        // If method is static, instance is null; otherwise, create instance
                         var instance = method.IsStatic ? null : Activator.CreateInstance(cls);
                         var expectExceptionAttr = (ExpectExceptionAttribute)method.GetCustomAttributes(typeof(ExpectExceptionAttribute), false).FirstOrDefault()!;
                         bool testPassed = false;

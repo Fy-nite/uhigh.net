@@ -234,6 +234,17 @@ namespace uhigh.Net.Parser
         /// <returns>The bool</returns>
         public bool TryResolveType(string typeName, out Type type)
         {
+            // Check user-defined types first (if provided)
+            if (UserTypeResolver != null)
+            {
+                var userType = UserTypeResolver(typeName);
+                if (userType != null)
+                {
+                    type = userType;
+                    return true;
+                }
+            }
+
             // Handle array syntax first (e.g., string[], int[])
             if (typeName.EndsWith("[]"))
             {
@@ -695,5 +706,10 @@ namespace uhigh.Net.Parser
 
             return matrix[a.Length, b.Length];
         }
+
+        /// <summary>
+        /// Optional callback to check for user-defined types
+        /// </summary>
+        public Func<string, Type?>? UserTypeResolver { get; set; }
     }
 }

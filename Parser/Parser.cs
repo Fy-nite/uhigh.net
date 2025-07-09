@@ -29,6 +29,7 @@ namespace uhigh.Net.Parser
         /// The attribute resolver
         /// </summary>
         private readonly ReflectionAttributeResolver _attributeResolver;
+        private readonly ReflectionTypeResolver _typeResolver;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Parser"/> class
@@ -42,6 +43,14 @@ namespace uhigh.Net.Parser
             _diagnostics = diagnostics ?? new DiagnosticsReporter(verboseMode);
             _methodChecker = new MethodChecker(_diagnostics);
             _attributeResolver = _methodChecker.GetAttributeResolver();
+            _typeResolver = _methodChecker.GetTypeResolver();
+            // Wire up user-defined type lookup for reflection resolver
+            _typeResolver.UserTypeResolver = name =>
+            {
+                if (_methodChecker.IsUserDefinedType(name))
+                    return typeof(object); // Use object as a placeholder for user-defined types
+                return null;
+            };
         }
 
         /// <summary>
@@ -151,6 +160,17 @@ namespace uhigh.Net.Parser
                                     var classNameToken = Consume(TokenType.Identifier, "Expected class name");
                                     var fullClassName = $"{namespaceName}.{classNameToken.Value}";
                                     
+                                    // Always register the class, even if empty
+                                    var tempClassDecl = new ClassDeclaration
+                                    {
+                                        Name = fullClassName,
+                                        Modifiers = modifiers,
+                                        Attributes = attributes,
+                                        Members = new List<Statement>()
+                                    };
+                                    var location = new SourceLocation(classNameToken.Line, classNameToken.Column);
+                                    _methodChecker.RegisterClass(tempClassDecl, location);
+                                    
                                     // Skip to class body and register methods
                                     while (!Check(TokenType.LeftBrace) && !IsAtEnd())
                                     {
@@ -203,16 +223,7 @@ namespace uhigh.Net.Parser
                             fullClassName += "." + Consume(TokenType.Identifier, "Expected identifier after '.'").Value;
                         }
 
-                        // Skip external classes
-                        if (hasExternalAttribute)
-                        {
-                            _diagnostics.ReportInfo($"Skipping registration for external class: {fullClassName}");
-                            // Skip to end of class declaration
-                            SkipToEndOfBlock();
-                            continue;
-                        }
-
-                        // Create a temporary class declaration for registration
+                        // Always register the class, even if empty
                         var tempClassDecl = new ClassDeclaration
                         {
                             Name = fullClassName,
@@ -220,9 +231,16 @@ namespace uhigh.Net.Parser
                             Attributes = attributes,
                             Members = new List<Statement>()
                         };
-
                         var location = new SourceLocation(classNameToken.Line, classNameToken.Column);
                         _methodChecker.RegisterClass(tempClassDecl, location);
+
+                        // Skip external classes
+                        if (hasExternalAttribute)
+                        {
+                            _diagnostics.ReportInfo($"Skipping registration for external class: {fullClassName}");
+                            SkipToEndOfBlock();
+                            continue;
+                        }
 
                         // Skip to class body and register methods
                         while (!Check(TokenType.LeftBrace) && !IsAtEnd())
@@ -907,6 +925,7 @@ namespace uhigh.Net.Parser
                 initializer = ParseExpression();
             }
 
+            // Attach attributes if available from context (handled in ParseClassMember)
             return new FieldDeclaration { Name = name, Type = type, Initializer = initializer };
         }
 
@@ -1235,7 +1254,7 @@ namespace uhigh.Net.Parser
                 if (Check(TokenType.If))
                 {
                     var elseIfStmt = ParseStatement(); // This will parse the "if" statement
-                    elseBranch = new List<Statement> { elseIfStmt! };
+                    elseBranch = new List<Statement> { elseIfStmt };
                 }
                 else
                 {
@@ -1497,7 +1516,7 @@ namespace uhigh.Net.Parser
                 else
                 {
                     _diagnostics.ReportParseError($"Invalid assignment target: {expr?.GetType().Name}", Previous());
-                    return new AssignmentExpression { Target = expr!, Operator = op, Value = value };
+                    return new AssignmentExpression { Target = expr, Operator = op, Value = value };
                 }
             }
 
@@ -1977,14 +1996,14 @@ namespace uhigh.Net.Parser
             if (value == null)
             {
                 _diagnostics.ReportParseError("Match expression missing value", Peek());
-                return new LiteralExpression { Value = null!, Type = TokenType.String };
+                return new LiteralExpression { Value = null, Type = TokenType.String };
             }
 
             // Expect opening brace immediately after match keyword and value
             if (!Check(TokenType.LeftBrace))
             {
                 _diagnostics.ReportParseError($"Expected '{{' after match value, found '{Peek().Value}'", Peek());
-                return new LiteralExpression { Value = null!, Type = TokenType.String };
+                return new LiteralExpression { Value = null, Type = TokenType.String };
             }
 
             Consume(TokenType.LeftBrace, "Expected '{' after match value");
@@ -2075,7 +2094,7 @@ namespace uhigh.Net.Parser
         private Expression ParseInterpolatedString()
         {
             var parts = new List<InterpolationPart>();
-            // var currentText = "";
+            var currentText = "";
     
             // This is a simplified version - a full implementation would need
             // more sophisticated tokenization for interpolated strings
@@ -2583,6 +2602,7 @@ namespace uhigh.Net.Parser
                 if (fieldDecl != null)
                 {
                     fieldDecl.Modifiers = modifiers;
+                    fieldDecl.Attributes = attributes;
                 }
                 return fieldDecl;
             }
@@ -2617,7 +2637,8 @@ namespace uhigh.Net.Parser
                         Name = fieldName,
                         Type = type,
                         Initializer = initializer,
-                        Modifiers = modifiers
+                        Modifiers = modifiers,
+                        Attributes = attributes
                     };
                 }
                 else
@@ -2644,7 +2665,8 @@ namespace uhigh.Net.Parser
                         Name = fieldName,
                         Type = type,
                         Initializer = initializer,
-                        Modifiers = modifiers
+                        Modifiers = modifiers,
+                        Attributes = attributes
                     };
                 }
             }
@@ -2663,7 +2685,7 @@ namespace uhigh.Net.Parser
         /// </summary>
         /// <returns>The statement</returns>
         private Statement ParseMatchStatement()
-        {
+               {
             // Parse: match <value> { ... } (match keyword already consumed)
             var value = ParseExpression();
             Consume(TokenType.LeftBrace, "Expected '{' after match value");
@@ -2688,7 +2710,7 @@ namespace uhigh.Net.Parser
         /// Parses the include statement
         /// </summary>
         /// <returns>The statement</returns>
-        private Statement ParseIncludeStatement()
+               private Statement ParseIncludeStatement()
         {
             // include "filename.uh"
             var fileToken = Consume(TokenType.String, "Expected file name after include");
