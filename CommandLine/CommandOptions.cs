@@ -133,7 +133,7 @@ namespace uhigh.Net.CommandLine
     /// </summary>
     public class TestOptions : BaseCommandOptions
     {
-        public string? Filter { get; set; }
+        public string? SkipFile { get; set; }
         public bool ListTests { get; set; }
     }
 
