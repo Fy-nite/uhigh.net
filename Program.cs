@@ -502,28 +502,28 @@ public class EntryPoint
     {
         var verboseOption = CommonOptions.CreateVerboseOption();
         var stdLibOption = CommonOptions.CreateStdLibPathOption();
-        var filterOption = new Option<string?>("--filter", "Filter tests to run");
+        var skipFileOption = new Option<string?>("--skip", "File of tests to skip");
         var listTestsOption = new Option<bool>("--list", "List available tests");
 
         var command = new Command("test", "Run tests")
         {
             verboseOption,
             stdLibOption,
-            filterOption,
-            listTestsOption
+            listTestsOption,
+            skipFileOption
         };
 
-        command.SetHandler((verbose, stdLibPath, filter, listTests) =>
+        command.SetHandler((verbose, stdLibPath, listTests, skipFile) =>
         {
             var options = new TestOptions
             {
                 Verbose = verbose,
                 StdLibPath = stdLibPath,
-                Filter = filter,
-                ListTests = listTests
+                ListTests = listTests,
+                SkipFile = skipFile
             };
             Environment.ExitCode = HandleTestCommand(options);
-        }, verboseOption, stdLibOption, filterOption, listTestsOption);
+        }, verboseOption, stdLibOption, listTestsOption, skipFileOption);
 
         return command;
     }
@@ -1000,8 +1000,13 @@ public class EntryPoint
         {
             Console.WriteLine("Running μHigh Tests...");
             Console.WriteLine();
+            List<string> skip = new();
+            if (options.SkipFile != null) {
+                using StreamReader reader = new(options.SkipFile);
+                while (!reader.EndOfStream) {string? line = reader.ReadLine(); if (line != null) {skip.Add(line.Trim());}}
+            }
             
-            var testSuites = uhigh.Net.Testing.TestRunner.RunAllTests();
+            var testSuites = uhigh.Net.Testing.TestRunner.RunAllTests(skip);
             uhigh.Net.Testing.TestRunner.PrintResults(testSuites);
             
             var totalFailed = testSuites.Sum(s => s.Counts.Failed);

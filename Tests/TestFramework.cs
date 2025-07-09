@@ -160,8 +160,9 @@ namespace uhigh.Net.Testing
                 data.Run();
             }
         }
+        public static List<TestSuiteResult> RunAllTests() {return RunAllTests(new List<string>());}
 
-        public static List<TestSuiteResult> RunAllTests() {
+        public static List<TestSuiteResult> RunAllTests(List<string> skip_tests) {
             Console.Write("Running Tests ");
             List<Thread> task_threads = new();
             if (TestRunnerConfig.multithreaded) {
@@ -181,7 +182,7 @@ namespace uhigh.Net.Testing
             var stopwatch = Stopwatch.StartNew();
             foreach (var testClass in testClasses)
             {
-                var suite = RunTestSuite(testClass);
+                var suite = RunTestSuite(testClass, skip_tests);
                 testSuites.Add(suite);
             }
             to_run_tests.Add(new TestRunnerData(typeof(TestRunner), null, null, null, null, true));
@@ -203,7 +204,7 @@ namespace uhigh.Net.Testing
         }
         
         
-        public static TestSuiteResult RunTestSuite(Type testClass) {
+        public static TestSuiteResult RunTestSuite(Type testClass, List<string> skip_tests) {
             var suite = new TestSuiteResult { Name = testClass.Name };
             
             var setupMethod = testClass.GetMethods().FirstOrDefault(m => m.GetCustomAttribute<SetupAttribute>() != null);
@@ -212,6 +213,17 @@ namespace uhigh.Net.Testing
 
             foreach (var testMethod in testMethods)
             {
+                if (skip_tests.Any(r => r.Equals(testMethod.Name))) {
+                    lock (suite) {
+                        suite.Counts.Skipped += 1;
+                        suite.Counts.Total += 1;
+                        var result = new TestResult { TestName = testMethod.Name };
+                        result.Status = TestStatus.Skipped;
+                        Console.WriteLine(testMethod.Name);
+                        suite.TestResults.Add(result);
+                        continue;
+                    }
+                }
                 lock (run_test_lock) {
                     TestRunnerData data = new TestRunnerData(testClass, testMethod, setupMethod, teardownMethod, suite);
                     to_run_tests.Add(data); // Queue test
