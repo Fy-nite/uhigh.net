@@ -160,13 +160,21 @@ namespace uhigh.Net.CodeGen
         {
             return statement switch
             {
-                NamespaceDeclaration nsDecl => $"{nsDecl.Name}.cs",
-                ClassDeclaration classDecl => $"{classDecl.Name}.cs", 
+                NamespaceDeclaration nsDecl => $"{nsDecl.Name.Replace(".", "_")}.cs", // Handle qualified namespace names
+                ClassDeclaration classDecl when !IsInsideNamespace(classDecl) => $"{classDecl.Name}.cs", // Only standalone classes
                 FunctionDeclaration funcDecl => "Functions.cs",
                 TypeAliasDeclaration typeAlias => "TypeAliases.cs",
                 ImportStatement => "Program.cs", // Imports go to main file
                 _ => "Program.cs" // Default file for loose statements
             };
+        }
+
+        // Helper method to check if a class is inside a namespace
+        private bool IsInsideNamespace(ClassDeclaration classDecl)
+        {
+            // This is a simple check - in practice you might want to track the parsing context
+            // For now, assume classes with qualified names or that appear after namespace declarations are inside namespaces
+            return false; // This method would need more context to implement properly
         }
 
         /// <summary>
@@ -268,6 +276,7 @@ namespace uhigh.Net.CodeGen
             output.AppendLine($"namespace {nsDecl.Name}");
             output.AppendLine("{");
 
+            // Generate ALL members within the namespace
             foreach (var member in nsDecl.Members)
             {
                 GenerateStatement(output, member, 1);

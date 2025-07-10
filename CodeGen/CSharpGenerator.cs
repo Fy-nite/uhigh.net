@@ -154,9 +154,9 @@ namespace uhigh.Net.CodeGen
             }
             _output.AppendLine();
 
-            // Collect all statements from all programs and organize them by type
+            // Collect all statements from all programs and organize them by namespace
             var allNamespaces = new Dictionary<string, List<Statement>>();
-            var allClasses = new Dictionary<string, List<Statement>>();
+            var standaloneClasses = new List<ClassDeclaration>();
             var allFunctions = new List<FunctionDeclaration>();
             var allStatements = new List<Statement>();
             var mainFunction = (FunctionDeclaration?)null;
@@ -172,12 +172,12 @@ namespace uhigh.Net.CodeGen
                         case NamespaceDeclaration nsDecl:
                             if (!allNamespaces.ContainsKey(nsDecl.Name))
                                 allNamespaces[nsDecl.Name] = new List<Statement>();
+                            // Add the entire namespace members as-is (these should already be complete classes)
                             allNamespaces[nsDecl.Name].AddRange(nsDecl.Members);
                             break;
                         case ClassDeclaration classDecl:
-                            if (!allClasses.ContainsKey(classDecl.Name))
-                                allClasses[classDecl.Name] = new List<Statement>();
-                            allClasses[classDecl.Name].AddRange(classDecl.Members);
+                            // These are standalone classes (not in namespaces)
+                            standaloneClasses.Add(classDecl);
                             break;
                         case FunctionDeclaration funcDecl:
                             if (funcDecl.Name == "main")
@@ -192,16 +192,16 @@ namespace uhigh.Net.CodeGen
                 }
             }
 
-            // Generate merged content
+            // Generate merged namespaces with their complete class structures
             if (allNamespaces.Count > 0)
             {
-                // Generate merged namespaces
                 foreach (var ns in allNamespaces)
                 {
                     _output.AppendLine($"namespace {ns.Key}");
                     _output.AppendLine("{");
                     _indentLevel++;
 
+                    // Generate all members in the namespace - these should be complete classes
                     foreach (var member in ns.Value)
                     {
                         GenerateStatement(member);
@@ -213,28 +213,23 @@ namespace uhigh.Net.CodeGen
                 }
             }
 
-            if (allClasses.Count > 0)
+            // Generate standalone classes (not in namespaces)
+            if (standaloneClasses.Count > 0)
             {
-                // Generate merged classes
-                foreach (var cls in allClasses)
+                foreach (var classDecl in standaloneClasses)
                 {
-                    _output.AppendLine($"public class {cls.Key}");
-                    _output.AppendLine("{");
-                    _indentLevel++;
-
-                    foreach (var member in cls.Value)
-                    {
-                        GenerateStatement(member);
-                    }
-
-                    _indentLevel--;
-                    _output.AppendLine("}");
-                    _output.AppendLine();
+                    GenerateClassDeclaration(classDecl);
                 }
             }
 
-            // If we have loose functions or statements, wrap them in the default namespace/class
-            if (allFunctions.Count > 0 || allStatements.Count > 0 || mainFunction != null)
+            // Only generate loose functions wrapper if we actually have loose functions/statements
+            // AND we don't already have classes with Main methods in namespaces
+            var hasMainInNamespace = allNamespaces.Values.Any(members =>
+                members.OfType<ClassDeclaration>().Any(c =>
+                    c.Members.OfType<MethodDeclaration>().Any(m => m.Name == "Main") ||
+                    c.Members.OfType<FunctionDeclaration>().Any(f => f.Name == "main" || f.Name == "Main")));
+
+            if ((allFunctions.Count > 0 || allStatements.Count > 0 || mainFunction != null) && !hasMainInNamespace)
             {
                 _output.AppendLine($"namespace {_rootNamespace}");
                 _output.AppendLine("{");
@@ -352,9 +347,17 @@ namespace uhigh.Net.CodeGen
             var hasMainFunction = program.Statements.OfType<FunctionDeclaration>().Any(f => f.Name == "main");
             
             // If source has its own namespace/class structure, use it as-is
-            if (hasNamespace || hasClass)
+            if (hasNamespace)
             {
-                // Generate the source structure directly without wrapping
+                // Generate all namespace declarations - this will include all classes within each namespace
+                foreach (var statement in program.Statements.Where(s => !(s is ImportStatement)))
+                {
+                    GenerateStatement(statement);
+                }
+            }
+            else if (hasClass)
+            {
+                // Generate all standalone classes
                 foreach (var statement in program.Statements.Where(s => !(s is ImportStatement)))
                 {
                     GenerateStatement(statement);
@@ -512,7 +515,16 @@ namespace uhigh.Net.CodeGen
             }
             
             _output.Append("class ");
-            _output.Append(classDecl.Name);
+            
+            // Handle qualified class names - extract just the class name part for C# generation
+            var className = classDecl.Name;
+            if (className.Contains('.'))
+            {
+                // For qualified names like "test.meow", just use "meow" as the class name
+                // The namespace should already be handled by the namespace generation
+                className = className.Substring(className.LastIndexOf('.') + 1);
+            }
+            _output.Append(className);
             
             if (classDecl.BaseClass != null)
             {
@@ -524,6 +536,7 @@ namespace uhigh.Net.CodeGen
             _output.AppendLine("{");
             _indentLevel++;
 
+            // Generate all class members
             foreach (var member in classDecl.Members)
             {
                 GenerateStatement(member);
@@ -682,6 +695,7 @@ namespace uhigh.Net.CodeGen
             _output.AppendLine("{");
             _indentLevel++;
 
+            // Generate all members within the namespace (including all classes)
             foreach (var member in nsDecl.Members)
             {
                 GenerateStatement(member);
