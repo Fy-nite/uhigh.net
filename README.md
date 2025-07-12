@@ -210,8 +210,7 @@ Check our [GitHub repository](https://github.com/fy-nite/uhigh.net) to get start
 
 ## License
 
-[Your License Here]
-
+AGPL
 ---
 
 *μHigh: Simple syntax, powerful runtime* ⚡
