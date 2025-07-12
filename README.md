@@ -9,7 +9,7 @@ A simple, modern programming language that compiles to C# and runs on .NET. μHi
 ```bash
 git clone https://github.com/fy-nite/uhigh.net
 cd uhigh.net
-dotnet build
+pwsh -c ./install.ps1
 ```
 
 ### Hello World
