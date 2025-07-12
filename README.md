@@ -94,21 +94,21 @@ uhigh test
 var name = "World"
 const PI = 3.14159
 
-func greet(person) {
+func greet(person: string) {
     return "Hello, " + person + "!"
 }
 
 // Classes and namespaces
 namespace MyApp {
     public class Calculator {
-        public func add(a, b) {
+        public func add(a: int , b: int): int {
             return a + b
         }
     }
 }
 
 // Control flow
-if (name != "") {
+if name != "" {
     print(greet(name))
 } else {
     print("Hello, Anonymous!")
