@@ -13,10 +13,26 @@
     <!-- Package Metadata -->
     <PackageId>uhigh</PackageId>
     <PackageVersion>1.1.2</PackageVersion>
-    <Authors>charlie-san</Authors>
+    <Authors>charlie-san, Finite</Authors>
     <Description>Micro-High on dotnet</Description>
     <PackageProjectUrl>https://github.com/fy-nite/uhigh.net</PackageProjectUrl>
     <RepositoryUrl>https://github.com/fy-nite/uhigh.net</RepositoryUrl>
+    <Configurations>Debug;Release;debug lsp</Configurations>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <PublishAot>False</PublishAot>
+    <SignAssembly>False</SignAssembly>
+    <Title>Micro-high</Title>
+    <Copyright>C 2025 Charlie-san, all rights reserved</Copyright>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryType>git</RepositoryType>
+    <NeutralLanguage>en-AU</NeutralLanguage>
+    <AssemblyVersion>1.0.0.1</AssemblyVersion>
+    <FileVersion>1.0.0.1</FileVersion>
+    <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
+    <IncludeSymbols>True</IncludeSymbols>
+    <SymbolPackageFormat>symbols.nupkg</SymbolPackageFormat>
+    <PackageLicenseExpression>AGPL-1.0-or-later</PackageLicenseExpression>
+    <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
   </PropertyGroup>
   
   <ItemGroup>
@@ -26,6 +42,36 @@
     <PackageReference Include="System.Text.Json" Version="9.0.0" />
     <PackageReference Include="System.IO.Compression" Version="4.3.0" />
         <PackageReference Include="LanguageServerProtocol" Version="7.0.0" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Compile Update="Properties\Resources.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  
+  <ItemGroup>
+    <EmbeddedResource Update="Properties\Resources.resx">
+      <Generator>PublicResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+  
+  <ItemGroup>
+    <None Update="README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+  
+  <ItemGroup>
+    <EditorConfigFiles Remove="D:\uhigh.net\Properties\.editorconfig" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <None Include="D:\uhigh.net\Properties\.editorconfig" />
   </ItemGroup>
 
 </Project>

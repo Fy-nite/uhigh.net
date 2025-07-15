@@ -1,8 +1,8 @@
 using System.Diagnostics;
-using System.Text.Json;
-using uhigh.Net.Diagnostics;
 using System.IO.Compression;
+using System.Text.Json;
 using System.Text.RegularExpressions;
+using uhigh.Net.Diagnostics;
 
 namespace uhigh.Net.NuGet
 {

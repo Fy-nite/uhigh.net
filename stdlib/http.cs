@@ -1,10 +1,5 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Net.Http;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace StdLib
 {
@@ -22,10 +17,10 @@ namespace StdLib
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
             AddHeaders(request, headers);
-            
+
             var response = await _httpClient.SendAsync(request);
             response.EnsureSuccessStatusCode();
-            
+
             return await response.Content.ReadAsStringAsync();
         }
 
@@ -36,13 +31,13 @@ namespace StdLib
         {
             var json = JsonSerializer.Serialize(data);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
-            
+
             using var request = new HttpRequestMessage(HttpMethod.Post, url) { Content = content };
             AddHeaders(request, headers);
-            
+
             var response = await _httpClient.SendAsync(request);
             response.EnsureSuccessStatusCode();
-            
+
             return await response.Content.ReadAsStringAsync();
         }
 
@@ -52,13 +47,13 @@ namespace StdLib
         public static async Task<string> PostFormAsync(string url, Dictionary<string, string> formData, Dictionary<string, string>? headers = null)
         {
             var content = new FormUrlEncodedContent(formData);
-            
+
             using var request = new HttpRequestMessage(HttpMethod.Post, url) { Content = content };
             AddHeaders(request, headers);
-            
+
             var response = await _httpClient.SendAsync(request);
             response.EnsureSuccessStatusCode();
-            
+
             return await response.Content.ReadAsStringAsync();
         }
 
@@ -69,10 +64,10 @@ namespace StdLib
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
             AddHeaders(request, headers);
-            
+
             var response = await _httpClient.SendAsync(request);
             response.EnsureSuccessStatusCode();
-            
+
             using var fileStream = new FileStream(filePath, FileMode.Create);
             await response.Content.CopyToAsync(fileStream);
         }
@@ -84,16 +79,16 @@ namespace StdLib
         {
             using var form = new MultipartFormDataContent();
             using var fileContent = new ByteArrayContent(await File.ReadAllBytesAsync(filePath));
-            
+
             fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
             form.Add(fileContent, fieldName, Path.GetFileName(filePath));
-            
+
             using var request = new HttpRequestMessage(HttpMethod.Post, url) { Content = form };
             AddHeaders(request, headers);
-            
+
             var response = await _httpClient.SendAsync(request);
             response.EnsureSuccessStatusCode();
-            
+
             return await response.Content.ReadAsStringAsync();
         }
 
@@ -117,7 +112,7 @@ namespace StdLib
         private static void AddHeaders(HttpRequestMessage request, Dictionary<string, string>? headers)
         {
             if (headers == null) return;
-            
+
             foreach (var header in headers)
             {
                 request.Headers.Add(header.Key, header.Value);

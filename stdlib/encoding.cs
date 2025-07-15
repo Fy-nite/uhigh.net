@@ -1,8 +1,7 @@
-using System;
-using System.Text;
-using System.Web;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
+using System.Web;
 
 namespace StdLib
 {
@@ -125,16 +124,16 @@ namespace StdLib
         public static string ToSlug(string input)
         {
             if (string.IsNullOrEmpty(input)) return "";
-            
+
             // Convert to lowercase and replace spaces with hyphens
             input = input.ToLower().Replace(" ", "-");
-            
+
             // Remove special characters
             input = Regex.Replace(input, @"[^a-z0-9\-]", "");
-            
+
             // Remove consecutive hyphens
             input = Regex.Replace(input, @"-+", "-");
-            
+
             // Trim hyphens from start and end
             return input.Trim('-');
         }

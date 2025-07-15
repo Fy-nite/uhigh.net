@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using StdLib;
-
 namespace StdLib.Examples
 {
     /// <summary>
@@ -48,7 +44,7 @@ namespace StdLib.Examples
             Console.WriteLine("=== JSON Serialization ===");
             var json = people.ToJson();
             Console.WriteLine(json);
-            
+
             var peopleFromJson = json.FromJson<List<Person>>();
             Console.WriteLine($"Loaded {peopleFromJson?.Count} people from JSON");
 
@@ -75,10 +71,10 @@ namespace StdLib.Examples
             Console.WriteLine("\n=== Deep Cloning ===");
             var originalPerson = people[0];
             var clonedPerson = Serializer.DeepClone(originalPerson);
-            
+
             Console.WriteLine($"Original: {originalPerson.Name}, Age: {originalPerson.Age}");
             Console.WriteLine($"Clone: {clonedPerson?.Name}, Age: {clonedPerson?.Age}");
-            
+
             // Modify clone to prove it's independent
             if (clonedPerson != null)
             {

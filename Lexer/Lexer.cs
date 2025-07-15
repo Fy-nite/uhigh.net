@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using uhigh.Net.Diagnostics;
 
 namespace uhigh.Net.Lexer
@@ -28,7 +27,7 @@ namespace uhigh.Net.Lexer
         /// The diagnostics
         /// </summary>
         private readonly DiagnosticsReporter _diagnostics;
-        
+
         /// <summary>
         /// The match
         /// </summary>
@@ -137,9 +136,9 @@ namespace uhigh.Net.Lexer
         public List<Token> Tokenize()
         {
             var tokens = new List<Token>();
-            
+
             _diagnostics.ReportInfo($"Starting tokenization of {_source.Length} characters");
-            
+
             while (_position < _source.Length)
             {
                 try
@@ -158,7 +157,7 @@ namespace uhigh.Net.Lexer
                     _column++;
                 }
             }
-            
+
             tokens.Add(new Token(TokenType.EOF, "", _line, _column));
             _diagnostics.ReportInfo($"Tokenization completed. Generated {tokens.Count} tokens");
             return tokens;
@@ -172,7 +171,7 @@ namespace uhigh.Net.Lexer
         private Token? NextToken()
         {
             SkipWhitespace();
-            
+
             if (_position >= _source.Length)
                 return null;
 
@@ -186,7 +185,7 @@ namespace uhigh.Net.Lexer
                 SkipLineComment();
                 return NextToken();
             }
-            
+
             if (current == '/' && Peek() == '*')
             {
                 SkipBlockComment();
@@ -281,7 +280,7 @@ namespace uhigh.Net.Lexer
         {
             _position += 2; // Skip /*
             _column += 2;
-            
+
             while (_position < _source.Length - 1)
             {
                 if (_source[_position] == '*' && _source[_position + 1] == '/')
@@ -290,7 +289,7 @@ namespace uhigh.Net.Lexer
                     _column += 2;
                     return;
                 }
-                
+
                 if (_source[_position] == '\n')
                 {
                     _line++;
@@ -325,7 +324,7 @@ namespace uhigh.Net.Lexer
             _position++; // Skip opening quote
             _column++;
             var start = _position;
-            
+
             while (_position < _source.Length && _source[_position] != '"')
             {
                 if (_source[_position] == '\n')
@@ -339,17 +338,17 @@ namespace uhigh.Net.Lexer
                 }
                 _position++;
             }
-            
+
             if (_position >= _source.Length)
             {
                 _diagnostics.ReportUnterminatedString(line, column);
                 throw new Exception($"Unterminated string at line {line}");
             }
-            
+
             var value = _source.Substring(start, _position - start);
             _position++; // Skip closing quote
             _column++;
-            
+
             return new Token(TokenType.String, value, line, column);
         }
 
@@ -363,7 +362,7 @@ namespace uhigh.Net.Lexer
         {
             var start = _position;
             bool hasDecimalPoint = false;
-            
+
             while (_position < _source.Length && (char.IsDigit(_source[_position]) || _source[_position] == '.'))
             {
                 if (_source[_position] == '.')
@@ -378,15 +377,15 @@ namespace uhigh.Net.Lexer
                 _position++;
                 _column++;
             }
-            
+
             var value = _source.Substring(start, _position - start);
-            
+
             // Validate the number format
             if (!double.TryParse(value, out _))
             {
                 _diagnostics.ReportInvalidNumber(value, line, column);
             }
-            
+
             return new Token(TokenType.Number, value, line, column);
         }
 
@@ -399,37 +398,37 @@ namespace uhigh.Net.Lexer
         private Token ReadIdentifier(int line, int column)
         {
             var start = _position;
-            
+
             // Read the first identifier part
             while (_position < _source.Length && (char.IsLetterOrDigit(_source[_position]) || _source[_position] == '_'))
             {
                 _position++;
                 _column++;
             }
-            
+
             var value = _source.Substring(start, _position - start);
-            
+
             // Handle dotted identifiers (namespace.class.method, System.Collections.Generic, etc.)
             while (_position < _source.Length && _source[_position] == '.')
             {
                 // Look ahead to see if there's an identifier after the dot
-                if (_position + 1 < _source.Length && 
+                if (_position + 1 < _source.Length &&
                     (char.IsLetter(_source[_position + 1]) || _source[_position + 1] == '_'))
                 {
                     // Add the dot
                     value += ".";
                     _position++; // Skip dot
                     _column++;
-                    
+
                     // Read the next identifier part
                     var identifierStart = _position;
-                    while (_position < _source.Length && 
+                    while (_position < _source.Length &&
                            (char.IsLetterOrDigit(_source[_position]) || _source[_position] == '_'))
                     {
                         _position++;
                         _column++;
                     }
-                    
+
                     // Add the identifier part after the dot
                     if (_position > identifierStart)
                     {
@@ -450,7 +449,7 @@ namespace uhigh.Net.Lexer
                     break;
                 }
             }
-            
+
             // Handle array syntax for type identifiers (e.g., string[], List<string>[])
             // Only if this looks like a type (starts with uppercase or is a known type keyword)
             if (IsTypeIdentifier(value) && _position < _source.Length && _source[_position] == '[')
@@ -464,25 +463,25 @@ namespace uhigh.Net.Lexer
                     _column += 2;
                 }
             }
-            
+
             // Check if this is a keyword (only check the base identifier for keywords)
             var baseIdentifier = value.Contains('.') ? value.Split('.')[0] : value;
             if (value.EndsWith("[]"))
             {
                 baseIdentifier = baseIdentifier.Replace("[]", "");
             }
-            
+
             var tokenType = Keywords.ContainsKey(baseIdentifier) ? Keywords[baseIdentifier] : TokenType.Identifier;
-            
+
             // For dotted identifiers or array types, always treat as Identifier regardless of the first part being a keyword
             if (value.Contains('.') || value.EndsWith("[]"))
             {
                 tokenType = TokenType.Identifier;
             }
-            
+
             return new Token(tokenType, value, line, column);
         }
-        
+
         /// <summary>
         /// Ises the type identifier using the specified identifier
         /// </summary>
@@ -492,14 +491,14 @@ namespace uhigh.Net.Lexer
         {
             // Check if this looks like a type name
             if (string.IsNullOrEmpty(identifier)) return false;
-            
+
             // Known built-in types
             var builtinTypes = new[] { "string", "int", "float", "bool", "void", "object", "double", "decimal" };
             if (builtinTypes.Contains(identifier)) return true;
-            
+
             // Check if it's a generic type (contains < >)
             if (identifier.Contains('<') && identifier.Contains('>')) return true;
-            
+
             // Check if it starts with uppercase (typical for class names)
             return char.IsUpper(identifier[0]);
         }
@@ -548,7 +547,7 @@ namespace uhigh.Net.Lexer
             _column += 2;
             var parts = new List<string>();
             var expressions = new List<string>();
-            
+
             while (_position < _source.Length && _source[_position] != '"')
             {
                 if (_source[_position] == '{')
@@ -558,7 +557,7 @@ namespace uhigh.Net.Lexer
                     _column++;
                     var exprStart = _position;
                     var braceCount = 1;
-                    
+
                     while (_position < _source.Length && braceCount > 0)
                     {
                         if (_source[_position] == '{') braceCount++;
@@ -566,7 +565,7 @@ namespace uhigh.Net.Lexer
                         _position++;
                         _column++;
                     }
-                    
+
                     var expression = _source.Substring(exprStart, _position - exprStart - 1);
                     expressions.Add(expression);
                 }
@@ -578,20 +577,20 @@ namespace uhigh.Net.Lexer
                         _position++;
                         _column++;
                     }
-                    
+
                     if (_position > textStart)
                     {
                         parts.Add(_source.Substring(textStart, _position - textStart));
                     }
                 }
             }
-            
+
             if (_position < _source.Length)
             {
                 _position++; // Skip closing "
                 _column++;
             }
-            
+
             // For now, return as a string with special marker
             var value = string.Join("", parts.Zip(expressions, (p, e) => p + "{" + e + "}"));
             return new Token(TokenType.String, "$\"" + value + "\"", line, column);

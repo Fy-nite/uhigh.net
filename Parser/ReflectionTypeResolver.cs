@@ -1,7 +1,4 @@
-using System;
-using System.Collections.Generic;
 using System.Reflection;
-using System.Linq;
 using uhigh.Net.Diagnostics;
 
 namespace uhigh.Net.Parser
@@ -82,9 +79,9 @@ namespace uhigh.Net.Parser
             ScanAssembly(typeof(System.Collections.IEnumerable).Assembly); // System.Collections
             ScanAssembly(typeof(System.Collections.Generic.List<>).Assembly); // System.Collections.Generic.List
             ScanAssembly(typeof(System.Collections.Generic.HashSet<>).Assembly); // System.Collections.Generic.HashSet
-            
+
             // Try to scan uhigh.StdLib assembly more reliably
-            try 
+            try
             {
                 var stdLibAssembly = Assembly.LoadFrom("uhigh.StdLib.dll");
                 ScanAssembly(stdLibAssembly);
@@ -99,7 +96,7 @@ namespace uhigh.Net.Parser
                     ScanAssembly(stdLibAssembly);
                 }
             }
-            
+
             // Scan current assembly for custom types
             ScanAssembly(Assembly.GetExecutingAssembly());
 
@@ -125,7 +122,7 @@ namespace uhigh.Net.Parser
                     RegisterType(type);
                 }
                 _diagnostics.ReportInfo($"Scanned assembly {assembly.GetName().Name} - found {types.Length} types");
-                
+
                 // Also scan for attributes
                 _attributeResolver?.ScanAssembly(assembly);
             }
@@ -171,7 +168,7 @@ namespace uhigh.Net.Parser
                 {
                     _genericTypeDefinitions[genericName] = type;
                 }
-                
+
                 // Also register with full namespace
                 if (!string.IsNullOrEmpty(type.Namespace))
                 {
@@ -194,7 +191,7 @@ namespace uhigh.Net.Parser
         private void DiscoverMethods(Type type)
         {
             var methods = type.GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance);
-            
+
             foreach (var method in methods)
             {
                 // Register by simple method name
@@ -275,9 +272,9 @@ namespace uhigh.Net.Parser
             }
 
             // Try case-insensitive lookup
-            var match = _discoveredTypes.FirstOrDefault(kvp => 
+            var match = _discoveredTypes.FirstOrDefault(kvp =>
                 string.Equals(kvp.Key, typeName, StringComparison.OrdinalIgnoreCase));
-            
+
             if (!match.Equals(default(KeyValuePair<string, Type>)))
             {
                 type = match.Value;
@@ -316,7 +313,7 @@ namespace uhigh.Net.Parser
             }
 
             // partial matching is broken for now.
-       
+
             // // Try partial matching for common types if nothing else worked
             // // This is useful for cases like "list" or "dictionary"
             // var partialMatch = _discoveredTypes.FirstOrDefault(kvp =>
@@ -386,9 +383,9 @@ namespace uhigh.Net.Parser
                     else
                     {
                         // Try case-insensitive lookup for generic types
-                        var genericMatch2 = _genericTypeDefinitions.FirstOrDefault(kvp => 
+                        var genericMatch2 = _genericTypeDefinitions.FirstOrDefault(kvp =>
                             string.Equals(kvp.Key, baseTypeName, StringComparison.OrdinalIgnoreCase));
-                        
+
                         if (!genericMatch2.Equals(default(KeyValuePair<string, Type>)))
                         {
                             genericTypeDef = genericMatch2.Value;
@@ -430,10 +427,10 @@ namespace uhigh.Net.Parser
 
                 // Create the generic type
                 type = genericTypeDef.MakeGenericType(typeArgs);
-                
+
                 // Cache the resolved type for future use
                 _discoveredTypes[typeName] = type;
-                
+
                 return true;
             }
             catch (Exception ex)
@@ -458,7 +455,7 @@ namespace uhigh.Net.Parser
             for (int i = 0; i < typeArgsString.Length; i++)
             {
                 var c = typeArgsString[i];
-                
+
                 if (c == '<')
                 {
                     depth++;
@@ -583,12 +580,12 @@ namespace uhigh.Net.Parser
         private bool IsMethodMatch(MethodInfo method, List<Expression> arguments)
         {
             var parameters = method.GetParameters();
-            
+
             // Check parameter count (allowing for params arrays)
             if (parameters.Length != arguments.Count)
             {
                 // Check if last parameter is params array
-                if (parameters.Length > 0 && 
+                if (parameters.Length > 0 &&
                     parameters.Last().GetCustomAttribute<ParamArrayAttribute>() != null &&
                     arguments.Count >= parameters.Length - 1)
                 {
@@ -619,8 +616,17 @@ namespace uhigh.Net.Parser
         /// <returns>A list of string</returns>
         public List<string> GetSimilarTypes(string typeName)
         {
+            // Prioritize types that start with the input, then others by Levenshtein distance
+            var startsWith = _discoveredTypes.Keys
+                .Where(name => name.StartsWith(typeName, StringComparison.OrdinalIgnoreCase))
+                .Take(5)
+                .ToList();
+
+            if (startsWith.Count > 0)
+                return startsWith;
+
             return _discoveredTypes.Keys
-                .Where(name => LevenshteinDistance(typeName, name) <= 2)
+                .OrderBy(name => LevenshteinDistance(typeName, name))
                 .Take(5)
                 .ToList();
         }
@@ -632,8 +638,17 @@ namespace uhigh.Net.Parser
         /// <returns>A list of string</returns>
         public List<string> GetSimilarMethods(string methodName)
         {
+            // Prioritize methods that start with the input, then others by Levenshtein distance
+            var startsWith = _discoveredMethods.Keys
+                .Where(name => name.StartsWith(methodName, StringComparison.OrdinalIgnoreCase))
+                .Take(5)
+                .ToList();
+
+            if (startsWith.Count > 0)
+                return startsWith;
+
             return _discoveredMethods.Keys
-                .Where(name => LevenshteinDistance(methodName, name) <= 2)
+                .OrderBy(name => LevenshteinDistance(methodName, name))
                 .Take(5)
                 .ToList();
         }

@@ -53,7 +53,7 @@ namespace uhigh.Net.CommandLine
         public static Argument<string> CreateSourceFileArgument()
         {
             return new Argument<string>(
-                name: "source-file", 
+                name: "source-file",
                 description: "Path to the source file");
         }
     }

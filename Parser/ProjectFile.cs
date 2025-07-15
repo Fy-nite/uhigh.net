@@ -49,7 +49,7 @@ namespace uhigh.Net
 
                 using var stream = new FileStream(projectPath, FileMode.Open, FileAccess.Read);
                 var project = (uhighProject?)Serializer.Deserialize(stream);
-                
+
                 if (project == null)
                 {
                     diagnostics?.ReportError($"Failed to parse project file: {projectPath}");
@@ -59,19 +59,19 @@ namespace uhigh.Net
                 // Resolve relative paths relative to the project directory
                 var projectDir = Path.GetDirectoryName(Path.GetFullPath(projectPath)) ?? "";
                 diagnostics?.ReportInfo($"Project directory: {projectDir}");
-                
+
                 // Keep source files as relative paths for now - they'll be resolved during compilation
                 // This allows the project file to remain portable
                 for (int i = 0; i < project.SourceFiles.Count; i++)
                 {
                     var relativePath = project.SourceFiles[i];
-                    var fullPath = Path.IsPathRooted(relativePath) 
-                        ? relativePath 
+                    var fullPath = Path.IsPathRooted(relativePath)
+                        ? relativePath
                         : Path.Combine(projectDir, relativePath);
-                    
+
                     var exists = File.Exists(fullPath);
                     diagnostics?.ReportInfo($"Source file: {relativePath} (exists: {exists})");
-                    
+
                     if (!exists)
                     {
                         diagnostics?.ReportWarning($"Source file not found: {fullPath}");
@@ -79,7 +79,7 @@ namespace uhigh.Net
                 }
 
                 diagnostics?.ReportInfo($"Loaded project: {project.Name} v{project.Version} with {project.SourceFiles.Count} source files");
-                
+
                 return Task.FromResult<uhighProject?>(project);
             }
             catch (Exception ex)
@@ -111,7 +111,7 @@ namespace uhigh.Net
                 using var writer = XmlWriter.Create(projectPath, settings);
                 Serializer.Serialize(writer, project);
                 await writer.FlushAsync();
-                
+
                 diagnostics?.ReportInfo($"Saved project file: {projectPath}");
                 return true;
             }

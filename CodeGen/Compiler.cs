@@ -1,8 +1,7 @@
-using uhigh.Net.Lexer;
-using uhigh.Net.Parser;
+using System.Diagnostics;
 using uhigh.Net.CodeGen;
 using uhigh.Net.Diagnostics;
-using System.Diagnostics;
+using uhigh.Net.Parser;
 
 namespace uhigh.Net
 {
@@ -41,15 +40,15 @@ namespace uhigh.Net
         public async Task<bool> CompileFile(string sourceFile, string? outputFile = null)
         {
             var diagnostics = new DiagnosticsReporter(_verboseMode, sourceFile);
-            
+
             try
             {
                 // Read source code
                 var source = await File.ReadAllTextAsync(sourceFile);
-                
+
                 // Compile to C#
                 var csharpCode = CompileToCS(source, diagnostics);
-                
+
                 if (diagnostics.HasErrors)
                 {
                     diagnostics.PrintSummary();
@@ -58,7 +57,7 @@ namespace uhigh.Net
 
                 // Use in-memory compiler with standard library path
                 var inMemoryCompiler = new InMemoryCompiler(_stdLibPath);
-                
+
                 if (outputFile != null)
                 {
                     var success = await inMemoryCompiler.CompileToExecutable(csharpCode, outputFile);
@@ -89,18 +88,18 @@ namespace uhigh.Net
         public async Task<bool> CompileToExecutable(string sourceFile, string outputFile)
         {
             var diagnostics = new DiagnosticsReporter(_verboseMode, sourceFile);
-            
+
             try
             {
                 var source = await File.ReadAllTextAsync(sourceFile);
                 var csharpCode = CompileToCS(source, diagnostics);
-                
+
                 if (diagnostics.HasErrors)
                 {
                     diagnostics.PrintSummary();
                     return false;
                 }
-                
+
                 var inMemoryCompiler = new InMemoryCompiler(_stdLibPath);
                 if (_verboseMode)
                 {
@@ -108,7 +107,7 @@ namespace uhigh.Net
                     Console.WriteLine(csharpCode);
                     Console.WriteLine();
                 }
-                
+
                 var success = await inMemoryCompiler.CompileToExecutable(csharpCode, outputFile, "Generated");
                 diagnostics.PrintSummary();
                 return success;
@@ -129,20 +128,20 @@ namespace uhigh.Net
         public async Task<bool> CompileAndRunInMemory(string sourceFile)
         {
             var diagnostics = new DiagnosticsReporter(_verboseMode, sourceFile);
-            
+
             try
             {
                 var source = await File.ReadAllTextAsync(sourceFile);
                 var csharpCode = CompileToCS(source, diagnostics);
-                
+
                 if (diagnostics.HasErrors)
                 {
                     diagnostics.PrintSummary();
                     return false;
                 }
-                
+
                 var inMemoryCompiler = new InMemoryCompiler(_stdLibPath);
-                var success = await inMemoryCompiler.CompileAndRun(csharpCode, null,null);
+                var success = await inMemoryCompiler.CompileAndRun(csharpCode, null, null);
                 // Print the generated C# code if in verbose mode plus diagnostics summary
                 if (_verboseMode)
                 {
@@ -174,23 +173,23 @@ namespace uhigh.Net
         public string CompileToCS(string source, DiagnosticsReporter? diagnostics = null, string? rootNamespace = null, string? className = null)
         {
             diagnostics ??= new DiagnosticsReporter(_verboseMode);
-            
+
             try
             {
                 if (_verboseMode)
                 {
                     diagnostics.ReportInfo("Starting μHigh compilation pipeline");
                 }
-                
+
                 // Tokenize
                 var lexer = new Lexer.Lexer(source, diagnostics, _verboseMode);
                 var tokens = lexer.Tokenize();
-                
+
                 if (diagnostics.HasErrors)
                 {
                     throw new Exception("Tokenization failed");
                 }
-                
+
                 // Parse
                 var parser = new Parser.Parser(tokens, diagnostics, _verboseMode);
                 var ast = parser.Parse();
@@ -202,11 +201,11 @@ namespace uhigh.Net
                 {
                     throw new Exception("Parsing failed");
                 }
-                
+
                 // Generate C# with root namespace and class name
                 var generator = new CSharpGenerator();
                 var result = generator.Generate(ast, diagnostics, rootNamespace, className);
-                
+
                 if (_verboseMode)
                 {
                     diagnostics.ReportInfo("μHigh compilation pipeline completed successfully");
@@ -232,23 +231,23 @@ namespace uhigh.Net
         public Program CompileToAST(string source, DiagnosticsReporter? diagnostics = null)
         {
             diagnostics ??= new DiagnosticsReporter(_verboseMode);
-            
+
             try
             {
                 if (_verboseMode)
                 {
                     diagnostics.ReportInfo("Starting μHigh AST compilation");
                 }
-                
+
                 // Tokenize
                 var lexer = new Lexer.Lexer(source, diagnostics, _verboseMode);
                 var tokens = lexer.Tokenize();
-                
+
                 if (diagnostics.HasErrors)
                 {
                     throw new Exception("Tokenization failed");
                 }
-                
+
                 // Parse
                 var parser = new Parser.Parser(tokens, diagnostics, _verboseMode);
                 var ast = parser.Parse();
@@ -260,7 +259,7 @@ namespace uhigh.Net
                 {
                     throw new Exception("Parsing failed");
                 }
-                
+
                 if (_verboseMode)
                 {
                     diagnostics.ReportInfo("μHigh AST compilation completed successfully");
@@ -283,23 +282,23 @@ namespace uhigh.Net
         public async Task<bool> PrintAST(string sourceFile)
         {
             var diagnostics = new DiagnosticsReporter(_verboseMode, sourceFile);
-            
+
             try
             {
                 var source = await File.ReadAllTextAsync(sourceFile);
                 var ast = CompileToAST(source, diagnostics);
-                
+
                 if (diagnostics.HasErrors)
                 {
                     diagnostics.PrintSummary();
                     return false;
                 }
-                
+
                 Console.WriteLine("Abstract Syntax Tree (AST):");
                 Console.WriteLine("===========================");
                 Console.WriteLine();
                 PrintASTNode(ast, 0);
-                
+
                 diagnostics.PrintSummary();
                 return true;
             }
@@ -672,43 +671,43 @@ namespace uhigh.Net
         public async Task<bool> SaveCSharpCode(string sourceFile, string outputFolder)
         {
             var diagnostics = new DiagnosticsReporter(_verboseMode, sourceFile);
-            
+
             try
             {
                 var source = await File.ReadAllTextAsync(sourceFile);
                 var csharpCode = CompileToCS(source, diagnostics);
-                
+
                 if (diagnostics.HasErrors)
                 {
                     diagnostics.PrintSummary();
                     return false;
                 }
-                
+
                 // Create output directory if it doesn't exist
                 if (!Directory.Exists(outputFolder))
                 {
                     Directory.CreateDirectory(outputFolder);
                     Console.WriteLine($"Created directory: {outputFolder}");
                 }
-                
+
                 // Generate filename based on source file
                 var sourceFileName = Path.GetFileNameWithoutExtension(sourceFile);
                 var outputFileName = $"{sourceFileName}.cs";
                 var outputPath = Path.Combine(outputFolder, outputFileName);
-                
+
                 // Save the C# code
                 await File.WriteAllTextAsync(outputPath, csharpCode);
                 Console.WriteLine($"C# code saved to: {outputPath}");
-                
+
                 // Also create a basic project file for convenience
                 await CreateProjectFile(outputFolder, sourceFileName);
-                
+
                 if (_verboseMode)
                 {
                     Console.WriteLine("Generated C# code:");
                     Console.WriteLine(csharpCode);
                 }
-                
+
                 diagnostics.PrintSummary();
                 return true;
             }
@@ -719,7 +718,7 @@ namespace uhigh.Net
                 return false;
             }
         }
-        
+
         /// <summary>
         /// Creates the project file using the specified output folder
         /// </summary>
@@ -771,7 +770,7 @@ namespace uhigh.Net
 
                 process.Start();
                 await process.WaitForExitAsync();
-                
+
                 return process.ExitCode == 0;
             }
             catch
@@ -790,7 +789,7 @@ namespace uhigh.Net
         {
             var diagnostics = new DiagnosticsReporter(_verboseMode, projectPath);
             var overallTimer = Stopwatch.StartNew();
-            
+
             try
             {
                 // Validate that this is actually a project file
@@ -833,7 +832,7 @@ namespace uhigh.Net
                         {
                             var assemblies = nugetManager.GetPackageAssemblies(package, project.Target);
                             nugetAssemblies.AddRange(assemblies);
-                            
+
                             diagnostics.ReportInfo($"Added {assemblies.Count} assemblies from package {package.Name} v{package.Version}");
                         }
 
@@ -869,16 +868,16 @@ namespace uhigh.Net
                         foreach (var sourceFileRelative in project.SourceFiles)
                         {
                             // Resolve source file path relative to project directory
-                            var fullSourcePath = Path.IsPathRooted(sourceFileRelative) 
-                                ? sourceFileRelative 
+                            var fullSourcePath = Path.IsPathRooted(sourceFileRelative)
+                                ? sourceFileRelative
                                 : Path.Combine(projectDir, sourceFileRelative);
-                            
+
 
                             fullSourcePath = Path.GetFullPath(fullSourcePath);
-                            
+
 
                             diagnostics.ReportInfo($"Processing: {Path.GetRelativePath(projectDir, fullSourcePath)}");
-                                
+
                             if (!File.Exists(fullSourcePath))
                             {
                                 diagnostics.ReportError($"Source file not found: {fullSourcePath}");
@@ -896,16 +895,16 @@ namespace uhigh.Net
                             {
                                 var source = await File.ReadAllTextAsync(fullSourcePath);
                                 diagnostics.ReportInfo($"Read {source.Length} characters from {Path.GetFileName(fullSourcePath)}");
-                                
+
                                 // Compile to AST
                                 var ast = CompileToAST(source, diagnostics, Path.GetFileName(fullSourcePath));
-                                
+
                                 if (diagnostics.HasErrors)
                                 {
                                     diagnostics.ReportError($"Failed to compile {fullSourcePath}");
                                     continue;
                                 }
-                                
+
                                 allPrograms.Add(ast);
                                 diagnostics.ReportInfo($"Successfully compiled {Path.GetFileName(fullSourcePath)}");
                             }
@@ -932,7 +931,7 @@ namespace uhigh.Net
                     {
                         var generator = new CSharpGenerator();
                         combinedCode = generator.GenerateCombined(allPrograms, diagnostics, projectRootNamespace, projectClassName);
-                        
+
                         if (diagnostics.HasErrors)
                         {
                             diagnostics.PrintSummary();
@@ -941,7 +940,7 @@ namespace uhigh.Net
 
                         // Check for main method in executable projects
                         var hasMainMethod = combinedCode.Contains("static void Main") || combinedCode.Contains("static async Task Main");
-                        
+
                         if (!hasMainMethod && project.OutputType.Equals("Exe", StringComparison.OrdinalIgnoreCase))
                         {
                             diagnostics.ReportError("No main method found in executable project. Make sure you have a 'func main()' function.");
@@ -964,7 +963,7 @@ namespace uhigh.Net
                     using (var compileTimer = new NuGet.OperationTimer("Compiling to executable", diagnostics, _verboseMode))
                     {
                         var inMemoryCompiler = new InMemoryCompiler(_stdLibPath);
-                        
+
                         if (outputFile != null)
                         {
                             // Resolve output file relative to project directory
@@ -972,7 +971,7 @@ namespace uhigh.Net
                             {
                                 outputFile = Path.Combine(projectDir, outputFile);
                             }
-                            
+
                             success = await inMemoryCompiler.CompileToExecutable(combinedCode, outputFile, projectRootNamespace, projectClassName, project.OutputType, nugetAssemblies);
                             if (success)
                             {
@@ -982,10 +981,10 @@ namespace uhigh.Net
                         else
                         {
                             // Default output file based on project name and type
-                            var defaultOutputFile = project.OutputType.Equals("Library", StringComparison.OrdinalIgnoreCase) 
+                            var defaultOutputFile = project.OutputType.Equals("Library", StringComparison.OrdinalIgnoreCase)
                                 ? Path.Combine(projectDir, $"{project.Name}.dll")
                                 : Path.Combine(projectDir, $"{project.Name}.exe");
-                            
+
                             success = await inMemoryCompiler.CompileToExecutable(combinedCode, defaultOutputFile, projectRootNamespace, projectClassName, project.OutputType, nugetAssemblies);
                             if (success)
                             {
@@ -1022,7 +1021,7 @@ namespace uhigh.Net
             if (hasTopLevelMain) return true;
 
             // Check for Main method in classes
-            var hasClassMain = program.Statements.OfType<ClassDeclaration>().Any(c => 
+            var hasClassMain = program.Statements.OfType<ClassDeclaration>().Any(c =>
                 c.Members.OfType<MethodDeclaration>().Any(m => m.Name == "Main"));
             if (hasClassMain) return true;
 
@@ -1053,21 +1052,21 @@ namespace uhigh.Net
                 {
                     diagnostics.ReportInfo($"Compiling {fileName} to AST");
                 }
-                
+
                 // Tokenize
                 var lexer = new Lexer.Lexer(source, diagnostics, _verboseMode);
                 var tokens = lexer.Tokenize();
-                
+
                 if (diagnostics.HasErrors)
                 {
                     throw new Exception($"Tokenization failed for {fileName}");
                 }
-                
+
                 if (_verboseMode)
                 {
                     diagnostics.ReportInfo($"Generated {tokens.Count} tokens for {fileName}");
                 }
-                
+
                 // Parse
                 var parser = new Parser.Parser(tokens, diagnostics, _verboseMode);
                 var ast = parser.Parse();
@@ -1076,7 +1075,7 @@ namespace uhigh.Net
                 {
                     throw new Exception($"Parsing failed for {fileName}");
                 }
-                
+
                 if (_verboseMode)
                 {
                     diagnostics.ReportInfo($"Generated AST with {ast.Statements.Count} statements for {fileName}");
@@ -1177,7 +1176,7 @@ namespace uhigh.Net
         public async Task<bool> SaveProjectAsCSharp(string projectPath, string outputFolder)
         {
             var diagnostics = new DiagnosticsReporter(_verboseMode, projectPath);
-            
+
             try
             {
                 var project = await ProjectFile.LoadAsync(projectPath, diagnostics);
@@ -1207,16 +1206,16 @@ namespace uhigh.Net
                     }
 
                     var source = await File.ReadAllTextAsync(sourceFile);
-                    
+
                     var lexer = new Lexer.Lexer(source, diagnostics);
                     var tokens = lexer.Tokenize();
-                    
+
                     if (diagnostics.HasErrors)
                     {
                         diagnostics.PrintSummary();
                         return false;
                     }
-                    
+
                     var parser = new Parser.Parser(tokens, diagnostics);
                     var ast = parser.Parse();
                     ast = ProcessIncludes(ast, diagnostics, new HashSet<string>());
@@ -1226,7 +1225,7 @@ namespace uhigh.Net
                         diagnostics.PrintSummary();
                         return false;
                     }
-                    
+
                     allPrograms.Add(ast);
                 }
 
@@ -1240,7 +1239,7 @@ namespace uhigh.Net
                 // Generate combined C# code with deduplicated using statements
                 var generator = new CSharpGenerator();
                 var combinedCode = generator.GenerateCombined(allPrograms, diagnostics, projectRootNamespace, projectClassName);
-                
+
                 if (diagnostics.HasErrors)
                 {
                     diagnostics.PrintSummary();
@@ -1250,19 +1249,19 @@ namespace uhigh.Net
                 // Save combined C# code
                 var outputFileName = $"{project.Name}.cs";
                 var outputPath = Path.Combine(outputFolder, outputFileName);
-                
+
                 await File.WriteAllTextAsync(outputPath, combinedCode);
                 Console.WriteLine($"Combined C# code saved to: {outputPath}");
 
                 // Create project file with dependencies
                 await CreateProjectFileFromuhighProject(outputFolder, project);
-                
+
                 if (_verboseMode)
                 {
                     Console.WriteLine("Generated combined C# code:");
                     Console.WriteLine(combinedCode);
                 }
-                
+
                 diagnostics.PrintSummary();
                 return true;
             }
@@ -1324,7 +1323,7 @@ namespace uhigh.Net
         public async Task<bool> CreateProject(string projectName, string? projectDir = null, string? description = null, string? author = null, string outputType = "Exe", string target = "net9.0")
         {
             var diagnostics = new DiagnosticsReporter(_verboseMode);
-            
+
             try
             {
                 projectDir ??= Environment.CurrentDirectory;
@@ -1344,7 +1343,7 @@ namespace uhigh.Net
                 };
 
                 var success = await ProjectFile.CreateAsync(projectName, fullProjectDir, diagnostics);
-                
+
                 if (success)
                 {
                     Console.WriteLine($"Created project '{projectName}' in '{fullProjectDir}'");
@@ -1352,7 +1351,7 @@ namespace uhigh.Net
                     Console.WriteLine($"Main file: {Path.Combine(fullProjectDir, "main.uh")}");
                     Console.WriteLine($"Output type: {outputType}");
                 }
-                
+
                 diagnostics.PrintSummary();
                 return success;
             }
@@ -1372,7 +1371,7 @@ namespace uhigh.Net
         public async Task<bool> ListProjectInfo(string projectPath)
         {
             var diagnostics = new DiagnosticsReporter(_verboseMode, projectPath);
-            
+
             try
             {
                 var project = await ProjectFile.LoadAsync(projectPath, diagnostics);
@@ -1386,18 +1385,18 @@ namespace uhigh.Net
                 Console.WriteLine($"Version: {project.Version}");
                 Console.WriteLine($"Target: {project.Target}");
                 Console.WriteLine($"Output Type: {project.OutputType}");
-                
+
                 if (!string.IsNullOrEmpty(project.Description))
                     Console.WriteLine($"Description: {project.Description}");
-                
+
                 if (!string.IsNullOrEmpty(project.Author))
                     Console.WriteLine($"Author: {project.Author}");
-                
+
                 if (!string.IsNullOrEmpty(project.RootNamespace))
                     Console.WriteLine($"Root Namespace: {project.RootNamespace}");
-                
+
                 Console.WriteLine($"Nullable: {project.Nullable}");
-                
+
                 Console.WriteLine("\nSource Files:");
                 foreach (var file in project.SourceFiles)
                 {
@@ -1443,7 +1442,7 @@ namespace uhigh.Net
         public async Task<bool> AddSourceFileToProject(string projectPath, string sourceFile, bool createFile = false)
         {
             var diagnostics = new DiagnosticsReporter(_verboseMode, projectPath);
-            
+
             try
             {
                 var project = await ProjectFile.LoadAsync(projectPath, diagnostics);
@@ -1456,7 +1455,7 @@ namespace uhigh.Net
                 // Make path relative to project directory
                 var projectDir = Path.GetDirectoryName(projectPath) ?? "";
                 var relativePath = Path.GetRelativePath(projectDir, sourceFile);
-                
+
                 if (project.SourceFiles.Contains(relativePath))
                 {
                     Console.WriteLine($"Source file '{relativePath}' is already in the project");
@@ -1477,12 +1476,12 @@ namespace uhigh.Net
 
                 project.SourceFiles.Add(relativePath);
                 var success = await ProjectFile.SaveAsync(project, projectPath, diagnostics);
-                
+
                 if (success)
                 {
                     Console.WriteLine($"Added source file '{relativePath}' to project");
                 }
-                
+
                 diagnostics.PrintSummary();
                 return success;
             }
@@ -1504,7 +1503,7 @@ namespace uhigh.Net
         public async Task<bool> AddPackageToProject(string projectPath, string packageName, string version)
         {
             var diagnostics = new DiagnosticsReporter(_verboseMode, projectPath);
-            
+
             try
             {
                 var project = await ProjectFile.LoadAsync(projectPath, diagnostics);
@@ -1532,12 +1531,12 @@ namespace uhigh.Net
                 }
 
                 var success = await ProjectFile.SaveAsync(project, projectPath, diagnostics);
-                
+
                 if (success)
                 {
                     Console.WriteLine($"Added package '{packageName}' v{version} to project");
                 }
-                
+
                 diagnostics.PrintSummary();
                 return success;
             }
@@ -1601,7 +1600,7 @@ namespace uhigh.Net
         public async Task<bool> SaveCSharpCodeFromProject(string projectPath, string outputFolder)
         {
             var diagnostics = new DiagnosticsReporter(_verboseMode, projectPath);
-            
+
             try
             {
                 var project = await ProjectFile.LoadAsync(projectPath, diagnostics);
@@ -1634,7 +1633,7 @@ namespace uhigh.Net
 
                     var source = await File.ReadAllTextAsync(sourceFile);
                     var csharpCode = CompileToCS(source, diagnostics, projectRootNamespace, projectClassName);
-                    
+
                     if (diagnostics.HasErrors)
                     {
                         diagnostics.PrintSummary();
@@ -1651,7 +1650,7 @@ namespace uhigh.Net
                     var sourceFileName = Path.GetFileNameWithoutExtension(sourceFile);
                     var outputFileName = $"{sourceFileName}.cs";
                     var outputPath = Path.Combine(outputFolder, outputFileName);
-                    
+
                     await File.WriteAllTextAsync(outputPath, csharpCode);
                     generatedFiles.Add(outputFileName);
                     Console.WriteLine($"Generated: {outputPath}");
@@ -1666,7 +1665,7 @@ namespace uhigh.Net
 
                 // Create project file that references all generated C# files
                 await CreateProjectFileFromuhighProjectWithFiles(outputFolder, project, generatedFiles, hasMainMethod);
-                
+
                 if (_verboseMode)
                 {
                     Console.WriteLine($"Generated {generatedFiles.Count} C# files:");
@@ -1675,7 +1674,7 @@ namespace uhigh.Net
                         Console.WriteLine($"  - {file}");
                     }
                 }
-                
+
                 diagnostics.PrintSummary();
                 return true;
             }
@@ -1708,7 +1707,7 @@ namespace uhigh.Net
 
             // Include all generated C# files in the project
             var compileItems = generatedFiles.Select(f => $@"    <Compile Include=""{f}"" />");
-        
+
 
             // Determine output type - if no main method found in an Exe project, warn but still create
             var outputType = uhighProject.OutputType;
@@ -1732,14 +1731,14 @@ namespace uhigh.Net
 
             var projectPath = Path.Combine(outputFolder, $"{uhighProject.Name}.csproj");
             await File.WriteAllTextAsync(projectPath, projectContent);
-            
+
             Console.WriteLine($"Project file created: {projectPath}");
             Console.WriteLine($"Build with: dotnet build \"{projectPath}\"");
             if (outputType.Equals("Exe", StringComparison.OrdinalIgnoreCase))
             {
                 Console.WriteLine($"Run with: dotnet run --project \"{projectPath}\"");
             }
-            
+
             if (_verboseMode)
             {
                 Console.WriteLine("Generated project file:");
@@ -1829,7 +1828,7 @@ namespace uhigh.Net
             }
             finally
             {
-             
+
             }
         }
     }

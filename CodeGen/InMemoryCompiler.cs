@@ -1,11 +1,9 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Emit;
+using System.Collections.Concurrent;
 using System.Reflection;
 using System.Runtime.Loader;
-using System.Runtime.InteropServices;
-using System.Collections.Concurrent;
 
 namespace uhigh.Net.CodeGen
 {
@@ -22,7 +20,7 @@ namespace uhigh.Net.CodeGen
         /// The std lib path
         /// </summary>
         private readonly string _stdLibPath;
-        
+
         // Add caching for assemblies and references
         /// <summary>
         /// The assembly cache
@@ -83,14 +81,14 @@ namespace uhigh.Net.CodeGen
         {
             // Create cache key
             var cacheKey = $"{stdLibPath ?? "default"}:{string.Join(";", additionalAssemblies ?? new List<string>())}";
-            
+
             if (_referenceCache.TryGetValue(cacheKey, out var cachedReferences))
             {
                 return cachedReferences;
             }
-            
+
             var references = new List<MetadataReference>();
-            
+
             // Use only the basic, compatible references
             references.AddRange(new[]
             {
@@ -118,7 +116,7 @@ namespace uhigh.Net.CodeGen
             // Add standard library references with caching
             var stdLibReferences = GetStandardLibraryReferences(stdLibPath);
             references.AddRange(stdLibReferences);
-            
+
             // Add NuGet package references
             if (additionalAssemblies != null)
             {
@@ -137,11 +135,11 @@ namespace uhigh.Net.CodeGen
                     }
                 }
             }
-            
+
             // Add additional system assemblies safely
             TryAddSystemAssembly(references, "System.Runtime");
             TryAddSystemAssembly(references, "System.Collections");
-            
+
             var referencesArray = references.ToArray();
             _referenceCache[cacheKey] = referencesArray;
             return referencesArray;
@@ -237,9 +235,9 @@ namespace uhigh.Net.CodeGen
                 // Create hash for caching
                 var codeHash = csharpCode.GetHashCode().ToString();
                 var cacheKey = $"{codeHash}:{rootNamespace}:{className}";
-                
+
                 byte[] assemblyBytes;
-                
+
                 // Check cache first for identical code
                 if (_assemblyCache.TryGetValue(cacheKey, out var cachedBytes))
                 {
@@ -252,36 +250,36 @@ namespace uhigh.Net.CodeGen
                     {
                         assemblyBytes = CompileToAssemblyBytes(csharpCode, rootNamespace, className, outputType, additionalAssemblies)!;
                         if (assemblyBytes == null) return false;
-                        
+
                         // Cache successful compilation
                         _assemblyCache[cacheKey] = assemblyBytes;
                     }
                 }
-                
+
                 // Save to file if requested
                 if (outputPath != null)
                 {
                     await File.WriteAllBytesAsync(outputPath, assemblyBytes);
                     var fileType = outputType.Equals("Library", StringComparison.OrdinalIgnoreCase) ? "Library" : "Executable";
                     Console.WriteLine($"{fileType} saved to: {outputPath}");
-                    
+
                     if (outputType.Equals("Exe", StringComparison.OrdinalIgnoreCase))
                     {
                         await CreateRuntimeConfigAsync(outputPath);
                     }
-                    
+
                     if (!OperatingSystem.IsWindows() && outputType.Equals("Exe", StringComparison.OrdinalIgnoreCase))
                     {
                         File.SetUnixFileMode(outputPath, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
                     }
                 }
-                
+
                 // Execute if it's an executable
                 if (outputType.Equals("Exe", StringComparison.OrdinalIgnoreCase))
                 {
                     return await ExecuteAssembly(assemblyBytes, rootNamespace, className);
                 }
-                
+
                 return true;
             }
             catch (Exception ex)
@@ -307,10 +305,10 @@ namespace uhigh.Net.CodeGen
                 var syntaxTree = CSharpSyntaxTree.ParseText(csharpCode);
                 var sourceInfo = ExtractSourceInfo(syntaxTree);
                 var references = GetAssemblyReferences(_stdLibPath, additionalAssemblies);
-                
+
                 var actualRootNamespace = rootNamespace ?? sourceInfo.Namespace;
                 var actualClassName = className ?? sourceInfo.MainClassName ?? "Program";
-                
+
                 string? mainTypeName = null;
                 if (actualRootNamespace != null)
                 {
@@ -320,14 +318,14 @@ namespace uhigh.Net.CodeGen
                 {
                     mainTypeName = actualClassName;
                 }
-                
-                var outputKind = outputType.Equals("Library", StringComparison.OrdinalIgnoreCase) 
-                    ? OutputKind.DynamicallyLinkedLibrary 
+
+                var outputKind = outputType.Equals("Library", StringComparison.OrdinalIgnoreCase)
+                    ? OutputKind.DynamicallyLinkedLibrary
                     : OutputKind.ConsoleApplication;
-                
+
                 // Use unique assembly name to avoid conflicts
                 var uniqueAssemblyName = $"GeneratedAssembly_{DateTime.Now.Ticks}_{Guid.NewGuid().ToString("N")[..8]}";
-                
+
                 var compilation = CSharpCompilation.Create(
                     uniqueAssemblyName,
                     new[] { syntaxTree },
@@ -336,10 +334,10 @@ namespace uhigh.Net.CodeGen
                         outputKind,
                         mainTypeName: outputKind == OutputKind.ConsoleApplication && sourceInfo.HasMainMethod ? mainTypeName : null,
                         optimizationLevel: OptimizationLevel.Release)); // Use release mode for better performance
-                
+
                 using var memoryStream = new MemoryStream();
                 var emitResult = compilation.Emit(memoryStream);
-                
+
                 if (!emitResult.Success)
                 {
                     Console.WriteLine("Compilation failed:");
@@ -349,7 +347,7 @@ namespace uhigh.Net.CodeGen
                     }
                     return null;
                 }
-                
+
                 return memoryStream.ToArray();
             }
             catch (Exception ex)
@@ -373,10 +371,10 @@ namespace uhigh.Net.CodeGen
             {
                 using var memoryStream = new MemoryStream(assemblyBytes);
                 var assembly = AssemblyLoadContext.Default.LoadFromStream(memoryStream);
-                
+
                 var actualClassName = className ?? "Program";
                 var mainTypeName = rootNamespace != null ? $"{rootNamespace}.{actualClassName}" : actualClassName;
-                
+
                 var programType = assembly.GetType(mainTypeName);
                 if (programType == null)
                 {
@@ -391,13 +389,13 @@ namespace uhigh.Net.CodeGen
                         }
                     }
                 }
-                
+
                 if (programType == null)
                 {
                     Console.WriteLine($"Could not find {mainTypeName} type or any type with Main method");
                     return false;
                 }
-                
+
                 var mainMethods = programType.GetMethod("Main", BindingFlags.Public | BindingFlags.Static);
                 if (mainMethods == null)
                 {
@@ -407,7 +405,7 @@ namespace uhigh.Net.CodeGen
 
                 // Execute with timeout protection
                 var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-                
+
                 await Task.Run(() =>
                 {
                     var parameters = mainMethods.GetParameters();
@@ -424,7 +422,7 @@ namespace uhigh.Net.CodeGen
                         throw new InvalidOperationException("Unsupported Main method signature");
                     }
                 }, cancellationTokenSource.Token);
-                
+
                 return true;
             }
             catch (OperationCanceledException)
@@ -472,7 +470,7 @@ namespace uhigh.Net.CodeGen
                 // Check if this class has a Main method (C# style)
                 var hasMainMethod = classDecl.Members
                     .OfType<MethodDeclarationSyntax>()
-                    .Any(m => m.Identifier.ValueText == "Main" && 
+                    .Any(m => m.Identifier.ValueText == "Main" &&
                              m.Modifiers.Any(mod => mod.IsKind(SyntaxKind.StaticKeyword)));
 
                 if (hasMainMethod)
@@ -484,7 +482,7 @@ namespace uhigh.Net.CodeGen
                 // Also check for μHigh-style main method (lower case)
                 var hasMainFunction = classDecl.Members
                     .OfType<MethodDeclarationSyntax>()
-                    .Any(m => m.Identifier.ValueText == "main" && 
+                    .Any(m => m.Identifier.ValueText == "main" &&
                              m.Modifiers.Any(mod => mod.IsKind(SyntaxKind.StaticKeyword)));
 
                 if (hasMainFunction)
@@ -518,10 +516,10 @@ namespace uhigh.Net.CodeGen
             {
                 sourceInfo.MainClassName = sourceInfo.AllClasses.First();
             }
-            
+
             return sourceInfo;
         }
-        
+
         /// <summary>
         /// Compiles the to bytes using the specified csharp code
         /// </summary>
@@ -532,18 +530,18 @@ namespace uhigh.Net.CodeGen
             try
             {
                 var syntaxTree = CSharpSyntaxTree.ParseText(csharpCode);
-                
+
                 var references = GetAssemblyReferences(_stdLibPath);
-                
+
                 var compilation = CSharpCompilation.Create(
                     "dotHighAssembly",
                     new[] { syntaxTree },
                     references,
                     new CSharpCompilationOptions(OutputKind.ConsoleApplication));
-                
+
                 using var memoryStream = new MemoryStream();
                 var emitResult = compilation.Emit(memoryStream);
-                
+
                 if (!emitResult.Success)
                 {
                     foreach (var diagnostic in emitResult.Diagnostics)
@@ -555,7 +553,7 @@ namespace uhigh.Net.CodeGen
                     }
                     Environment.Exit(1); // exit on fail
                 }
-                
+
                 return Task.FromResult<byte[]?>(memoryStream.ToArray());
             }
             catch (Exception ex)
@@ -564,7 +562,7 @@ namespace uhigh.Net.CodeGen
                 return Task.FromResult<byte[]?>(null);
             }
         }
-        
+
         /// <summary>
         /// Compiles the to executable using the specified csharp code
         /// </summary>
@@ -580,22 +578,22 @@ namespace uhigh.Net.CodeGen
             try
             {
                 var syntaxTree = CSharpSyntaxTree.ParseText(csharpCode);
-                
+
                 // Extract source information
                 var sourceInfo = ExtractSourceInfo(syntaxTree);
-                
+
                 var references = GetAssemblyReferences(_stdLibPath, additionalAssemblies);
-                
+
                 // Use extracted info or provided parameters or defaults
                 var actualRootNamespace = rootNamespace ?? sourceInfo.Namespace ?? "Generated";
                 var actualClassName = className ?? sourceInfo.MainClassName ?? "Program";
                 var mainTypeName = $"{actualRootNamespace}.{actualClassName}";
-                
+
                 // Determine output kind and file extension
-                var outputKind = outputType.Equals("Library", StringComparison.OrdinalIgnoreCase) 
-                    ? OutputKind.DynamicallyLinkedLibrary 
+                var outputKind = outputType.Equals("Library", StringComparison.OrdinalIgnoreCase)
+                    ? OutputKind.DynamicallyLinkedLibrary
                     : OutputKind.ConsoleApplication;
-                
+
                 // Adjust output path extension based on output type
                 if (outputType.Equals("Library", StringComparison.OrdinalIgnoreCase))
                 {
@@ -605,13 +603,13 @@ namespace uhigh.Net.CodeGen
                 {
                     outputPath = Path.ChangeExtension(outputPath, ".exe");
                 }
-                
+
                 // Create build directory
                 var buildDir = Path.Combine(Path.GetDirectoryName(outputPath)!, "build");
                 Directory.CreateDirectory(buildDir);
-                
+
                 var finalPath = Path.Combine(buildDir, Path.GetFileName(outputPath));
-                
+
                 var compilation = CSharpCompilation.Create(
                     Path.GetFileNameWithoutExtension(outputPath),
                     new[] { syntaxTree },
@@ -619,9 +617,9 @@ namespace uhigh.Net.CodeGen
                     new CSharpCompilationOptions(
                         outputKind,
                         mainTypeName: outputKind == OutputKind.ConsoleApplication && sourceInfo.HasMainMethod ? mainTypeName : null));
-                
+
                 var emitResult = compilation.Emit(finalPath);
-                
+
                 if (!emitResult.Success)
                 {
                     Console.WriteLine("Compilation failed:");
@@ -632,13 +630,13 @@ namespace uhigh.Net.CodeGen
                             Console.WriteLine($"  Error: {diagnostic.GetMessage()}");
                         }
                     }
-                    
-                    Environment.Exit(1);    
+
+                    Environment.Exit(1);
                 }
-                
+
                 // Copy required assemblies to build directory
                 await CopyRequiredAssemblies(buildDir, additionalAssemblies);
-                
+
                 // Create runtime configuration file only for executables
                 if (outputKind == OutputKind.ConsoleApplication)
                 {
@@ -650,9 +648,9 @@ namespace uhigh.Net.CodeGen
                 {
                     Console.WriteLine($"Library created: {finalPath}");
                 }
-                
+
                 Console.WriteLine($"Build directory: {buildDir}");
-                
+
                 return true;
             }
             catch (Exception ex)
@@ -661,7 +659,7 @@ namespace uhigh.Net.CodeGen
                 return false;
             }
         }
-        
+
         /// <summary>
         /// Copies the required assemblies using the specified build dir
         /// </summary>
@@ -691,7 +689,7 @@ namespace uhigh.Net.CodeGen
                     }
                 }
             }
-            
+
             // Copy μHigh compiler assembly (uhigh.dll) to build directory if present
             var uhighDllPath = Path.Combine(AppContext.BaseDirectory, "uhigh.dll");
             if (File.Exists(uhighDllPath))
@@ -720,7 +718,7 @@ namespace uhigh.Net.CodeGen
                                 File.Copy(assembly, destPath);
                                 Console.WriteLine($"Copied NuGet assembly: {fileName}");
                             }
-                            
+
                             // Also copy any related files (pdb, xml, etc.)
                             var assemblyDir = Path.GetDirectoryName(assembly);
                             if (assemblyDir != null)
@@ -728,7 +726,7 @@ namespace uhigh.Net.CodeGen
                                 var baseName = Path.GetFileNameWithoutExtension(assembly);
                                 var relatedFiles = Directory.GetFiles(assemblyDir, $"{baseName}.*")
                                     .Where(f => !f.Equals(assembly, StringComparison.OrdinalIgnoreCase));
-                                
+
                                 foreach (var relatedFile in relatedFiles)
                                 {
                                     var relatedFileName = Path.GetFileName(relatedFile);
@@ -755,11 +753,11 @@ namespace uhigh.Net.CodeGen
                     }
                 }
             }
-            
+
             Console.WriteLine("Required assemblies copied to build directory");
             return Task.CompletedTask;
         }
-        
+
         /// <summary>
         /// Creates the runtime config using the specified executable path
         /// </summary>
@@ -767,11 +765,11 @@ namespace uhigh.Net.CodeGen
         private async Task CreateRuntimeConfigAsync(string executablePath)
         {
             var runtimeConfigPath = Path.ChangeExtension(executablePath, ".runtimeconfig.json");
-            
+
             // Get the actual runtime version
             var runtimeVersion = Environment.Version;
             var tfm = $"net{runtimeVersion.Major}.{runtimeVersion.Minor}";
-            
+
             var runtimeConfig = new
             {
                 runtimeOptions = new
@@ -788,12 +786,12 @@ namespace uhigh.Net.CodeGen
                     }
                 }
             };
-            
+
             var json = System.Text.Json.JsonSerializer.Serialize(runtimeConfig, new System.Text.Json.JsonSerializerOptions
             {
                 WriteIndented = true
             });
-            
+
             await File.WriteAllTextAsync(runtimeConfigPath, json);
             Console.WriteLine($"Runtime config created: {runtimeConfigPath}");
         }

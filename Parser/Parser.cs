@@ -1,6 +1,6 @@
-using uhigh.Net.Lexer;
-using uhigh.Net.Diagnostics;
 using System.Text;
+using uhigh.Net.Diagnostics;
+using uhigh.Net.Lexer;
 
 namespace uhigh.Net.Parser
 {
@@ -140,17 +140,17 @@ namespace uhigh.Net.Parser
                     {
                         Advance(); // Skip 'namespace'
                         var namespaceName = Consume(TokenType.Identifier, "Expected namespace name").Value;
-                        
+
                         // Skip to namespace body
                         while (!Check(TokenType.LeftBrace) && !IsAtEnd())
                         {
                             Advance();
                         }
-                        
+
                         if (Check(TokenType.LeftBrace))
                         {
                             Advance(); // Skip '{'
-                            
+
                             // Process namespace contents
                             while (!Check(TokenType.RightBrace) && !IsAtEnd())
                             {
@@ -159,7 +159,7 @@ namespace uhigh.Net.Parser
                                     Advance(); // Skip 'class'
                                     var classNameToken = Consume(TokenType.Identifier, "Expected class name");
                                     var fullClassName = $"{namespaceName}.{classNameToken.Value}";
-                                    
+
                                     // Always register the class, even if empty
                                     var tempClassDecl = new ClassDeclaration
                                     {
@@ -170,24 +170,24 @@ namespace uhigh.Net.Parser
                                     };
                                     var location = new SourceLocation(classNameToken.Line, classNameToken.Column);
                                     _methodChecker.RegisterClass(tempClassDecl, location);
-                                    
+
                                     // Skip to class body and register methods
                                     while (!Check(TokenType.LeftBrace) && !IsAtEnd())
                                     {
                                         Advance();
                                     }
-                                    
+
                                     if (Check(TokenType.LeftBrace))
                                     {
                                         Advance(); // Skip '{'
-                                        
+
                                         while (!Check(TokenType.RightBrace) && !IsAtEnd())
                                         {
                                             if (Check(TokenType.Func))
                                             {
                                                 Advance(); // Skip 'func'
                                                 var methodNameToken = Consume(TokenType.Identifier, "Expected method name");
-                                                
+
                                                 var method = new MethodDeclaration { Name = methodNameToken.Value };
                                                 var methodLocation = new SourceLocation(methodNameToken.Line, methodNameToken.Column);
                                                 _methodChecker.RegisterMethod(method, fullClassName, methodLocation);
@@ -197,7 +197,7 @@ namespace uhigh.Net.Parser
                                                 Advance();
                                             }
                                         }
-                                        
+
                                         if (Check(TokenType.RightBrace)) Advance(); // Skip '}'
                                     }
                                 }
@@ -206,7 +206,7 @@ namespace uhigh.Net.Parser
                                     Advance();
                                 }
                             }
-                            
+
                             if (Check(TokenType.RightBrace)) Advance(); // Skip '}'
                         }
                     }
@@ -269,7 +269,7 @@ namespace uhigh.Net.Parser
                                     Advance();
                                 }
                             }
-                            
+
                             if (Check(TokenType.RightBrace)) Advance(); // Skip '}'
                         }
                     }
@@ -334,7 +334,7 @@ namespace uhigh.Net.Parser
             {
                 Advance();
             }
-            
+
             if (Check(TokenType.LeftBrace))
             {
                 Advance(); // Skip opening brace
@@ -363,7 +363,7 @@ namespace uhigh.Net.Parser
                     Advance();
                 }
             }
-            
+
             // Skip return type
             if (Check(TokenType.Colon))
             {
@@ -418,7 +418,7 @@ namespace uhigh.Net.Parser
                         return classDecl;
                     }
                     // Add other declaration types as needed
-                    
+
                     // If we have attributes/modifiers but no valid declaration, that's an error
                     _diagnostics.ReportParseError($"Expected declaration after attributes/modifiers, found '{Peek().Value}'", Peek());
                     return null;
@@ -489,7 +489,7 @@ namespace uhigh.Net.Parser
         private Statement ParseUsingStatement()
         {
             var identifier = Consume(TokenType.Identifier, "Expected namespace or type name after 'using'").Value;
-            
+
             // Handle qualified names (e.g., System.Collections.Generic)
             while (Match(TokenType.Dot))
             {
@@ -682,7 +682,7 @@ namespace uhigh.Net.Parser
         private string ParseTypeName()
         {
             string typeName;
-            
+
             // Handle built-in type keywords
             if (Check(TokenType.Array))
             {
@@ -722,10 +722,10 @@ namespace uhigh.Net.Parser
                     _diagnostics.ReportParseError("Attributes cannot appear in type context", Peek());
                     throw new ParseException("Unexpected attribute in type context");
                 }
-                
+
                 typeName = Consume(TokenType.Identifier, "Expected type name").Value;
             }
-            
+
             // Handle generic type parameters if not already included in the identifier
             if (!typeName.Contains('<') && Match(TokenType.Less)) // <
             {
@@ -739,10 +739,10 @@ namespace uhigh.Net.Parser
                         typeName += ", ";
                     }
                 } while (!Check(TokenType.Greater) && !IsAtEnd());
-                
+
                 Consume(TokenType.Greater, "Expected '>' after generic type arguments");
                 typeName += ">";
-                
+
                 // Handle array syntax after generic parameters if not already included
                 if (!typeName.Contains("[]") && Match(TokenType.LeftBracket))
                 {
@@ -750,7 +750,7 @@ namespace uhigh.Net.Parser
                     typeName += "[]";
                 }
             }
-            
+
             // Validate the type using reflection - but be more lenient
             if (!_methodChecker.ValidateType(typeName, Peek()))
             {
@@ -760,7 +760,7 @@ namespace uhigh.Net.Parser
                     _diagnostics.ReportWarning($"Type '{typeName}' may not be valid", Peek().Line, Peek().Column, "UH300");
                 }
             }
-            
+
             return typeName;
         }
 
@@ -772,7 +772,7 @@ namespace uhigh.Net.Parser
         private TypeAnnotation ParseTypeAnnotation()
         {
             string typeName;
-            
+
             // Handle built-in type keywords
             if (Check(TokenType.Array))
             {
@@ -808,7 +808,7 @@ namespace uhigh.Net.Parser
             {
                 typeName = Consume(TokenType.Identifier, "Expected type name").Value;
             }
-            
+
             var typeAnn = new TypeAnnotation { Name = typeName };
 
             // Handle generic type parameters first (e.g., List<string>)
@@ -848,7 +848,7 @@ namespace uhigh.Net.Parser
         {
             if (typeAnn.TypeArguments.Count == 0)
                 return typeAnn.Name;
-            
+
             return $"{typeAnn.Name}<{string.Join(",", typeAnn.TypeArguments.Select(t => BuildTypeString(t)))}>";
         }
 
@@ -863,21 +863,21 @@ namespace uhigh.Net.Parser
             // Allow type parameters (single uppercase letters or T-prefixed names)
             if (typeName.Length == 1 && char.IsUpper(typeName[0]))
                 return true;
-            
+
             if (typeName.StartsWith("T") && typeName.Length <= 10 && char.IsUpper(typeName[0]))
                 return true;
-            
+
             // Allow common generic patterns
             if (typeName.Contains('<') && typeName.Contains('>'))
                 return true;
-            
+
             // Allow common framework types
-            var commonTypes = new[] { 
+            var commonTypes = new[] {
                 "string", "int", "float", "bool", "void", "object", "double", "decimal",
                 "List", "Dictionary", "Array", "IEnumerable", "ICollection", "HashSet",
                 "TimestampedEvent", "Observable", "EventStream"
             };
-            
+
             return commonTypes.Any(ct => typeName.Contains(ct));
         }
 
@@ -1306,23 +1306,23 @@ namespace uhigh.Net.Parser
             {
                 var isNewVariable = Match(TokenType.Var);
                 var iteratorName = Consume(TokenType.Identifier, "Expected iterator variable name").Value;
-                
+
                 if (Match(TokenType.In))
                 {
                     // This is a for-in loop
                     var iterableExpr = ParseExpression();
-                    
+
                     Consume(TokenType.LeftBrace, "Expected '{' after for-in expression");
-                    
+
                     var body = new List<Statement>();
                     while (!Check(TokenType.RightBrace) && !IsAtEnd())
                     {
                         var stmt = ParseStatement();
                         if (stmt != null) body.Add(stmt);
                     }
-                    
+
                     Consume(TokenType.RightBrace, "Expected '}' after for loop body");
-                    
+
                     return new ForStatement
                     {
                         IteratorVariable = iteratorName,
@@ -1353,13 +1353,13 @@ namespace uhigh.Net.Parser
         {
             // Traditional for loop: for (init; condition; increment)
             Consume(TokenType.LeftParen, "Expected '(' after 'for'");
-            
+
             var init = ParseStatement();
             Consume(TokenType.Semicolon, "Expected ';' after for loop initializer");
             var condition = ParseExpression();
             Consume(TokenType.Semicolon, "Expected ';' after for loop condition");
             var update = ParseExpressionStatement();
-            
+
             Consume(TokenType.RightParen, "Expected ')' after for loop header");
             Consume(TokenType.LeftBrace, "Expected '{' after for loop header");
 
@@ -1506,7 +1506,7 @@ namespace uhigh.Net.Parser
             {
                 var op = Previous().Type;
                 var value = ParseAssignment();
-                
+
                 // Ensure we have a valid assignment target
                 if (expr is IdentifierExpression || expr is MemberAccessExpression || expr is IndexExpression
                     || expr is QualifiedIdentifierExpression) // <-- allow qualified identifiers
@@ -1699,13 +1699,13 @@ namespace uhigh.Net.Parser
                 else if (Match(TokenType.Dot))
                 {
                     var name = Consume(TokenType.Identifier, "Expected property name after '.'").Value;
-                    
+
                     // Check for array-specific method calls
                     if (Check(TokenType.LeftParen) && IsArrayMethod(name))
                     {
                         Advance(); // consume '('
                         var arguments = new List<Expression>();
-                        
+
                         if (!Check(TokenType.RightParen))
                         {
                             do
@@ -1713,13 +1713,13 @@ namespace uhigh.Net.Parser
                                 arguments.Add(ParseExpression());
                             } while (Match(TokenType.Comma));
                         }
-                        
+
                         Consume(TokenType.RightParen, "Expected ')' after arguments");
-                        expr = new ArrayMethodCallExpression 
-                        { 
-                            Array = expr, 
-                            MethodName = name, 
-                            Arguments = arguments 
+                        expr = new ArrayMethodCallExpression
+                        {
+                            Array = expr,
+                            MethodName = name,
+                            Arguments = arguments
                         };
                     }
                     else
@@ -1743,8 +1743,8 @@ namespace uhigh.Net.Parser
         /// <returns>The bool</returns>
         private bool IsArrayMethod(string methodName)
         {
-            var arrayMethods = new[] { 
-                "createIndice", "collect", "mapToArray", "collectAll", 
+            var arrayMethods = new[] {
+                "createIndice", "collect", "mapToArray", "collectAll",
                 "at", "add", "return", "append", "pop", "sort", "reverse",
                 "chunk", "flatten", "rotate", "slidingWindow", "mostFrequent", "diff"
             };
@@ -1776,8 +1776,8 @@ namespace uhigh.Net.Parser
                 {
                     // Check if the token after the identifier suggests this is an attribute
                     var tokenAfterIdent = _current + 2 < _tokens.Count ? _tokens[_current + 2] : null;
-                    if (tokenAfterIdent != null && 
-                        (tokenAfterIdent.Type == TokenType.RightBracket || 
+                    if (tokenAfterIdent != null &&
+                        (tokenAfterIdent.Type == TokenType.RightBracket ||
                          tokenAfterIdent.Type == TokenType.LeftParen))
                     {
                         // This looks like an attribute, but we're in expression context
@@ -1801,9 +1801,9 @@ namespace uhigh.Net.Parser
                 Consume(TokenType.LeftParen, "Expected '(' after 'range'");
                 var end = ParseExpression();
                 Consume(TokenType.RightParen, "Expected ')' after range expression");
-                
-                return new RangeExpression 
-                { 
+
+                return new RangeExpression
+                {
                     Start = new LiteralExpression { Value = 0, Type = TokenType.Number },
                     End = end,
                     IsExclusive = false
@@ -1830,17 +1830,17 @@ namespace uhigh.Net.Parser
             {
                 return ParseInterpolatedString();
             }
-            
+
             if (Match(TokenType.New))
             {
                 var className = Consume(TokenType.Identifier, "Expected class name after 'new'").Value;
-                
+
                 // Handle qualified class names (e.g., microshell.shell)
                 while (Match(TokenType.Dot))
                 {
                     className += "." + Consume(TokenType.Identifier, "Expected identifier after '.'").Value;
                 }
-                
+
                 // Handle generic type parameters
                 if (Match(TokenType.Less))
                 {
@@ -1854,11 +1854,11 @@ namespace uhigh.Net.Parser
                             className += ", ";
                         }
                     } while (!Check(TokenType.Greater) && !IsAtEnd());
-                    
+
                     Consume(TokenType.Greater, "Expected '>' after generic type arguments");
                     className += ">";
                 }
-                
+
                 Consume(TokenType.LeftParen, "Expected '(' after class name");
                 var arguments = new List<Expression>();
 
@@ -1871,7 +1871,7 @@ namespace uhigh.Net.Parser
                 }
 
                 Consume(TokenType.RightParen, "Expected ')' after constructor arguments");
-                
+
                 return new ConstructorCallExpression
                 {
                     ClassName = className,
@@ -1882,7 +1882,7 @@ namespace uhigh.Net.Parser
             if (Match(TokenType.Identifier))
             {
                 var identifier = Previous().Value;
-                
+
                 // Check for qualified identifiers (e.g., object.method)
                 if (identifier.Contains('.'))
                 {
@@ -1893,7 +1893,7 @@ namespace uhigh.Net.Parser
                     return new IdentifierExpression { Name = identifier };
                 }
             }
-            
+
 
             if (Match(TokenType.LeftParen))
             {
@@ -1901,7 +1901,7 @@ namespace uhigh.Net.Parser
                 var start = _current;
                 var isLambda = false;
                 var paramCount = 0;
-                
+
                 // Parse potential parameter list
                 if (!Check(TokenType.RightParen))
                 {
@@ -1911,7 +1911,7 @@ namespace uhigh.Net.Parser
                         {
                             Advance();
                             paramCount++;
-                            
+
                             // Optional type annotation
                             if (Match(TokenType.Colon))
                             {
@@ -1924,7 +1924,7 @@ namespace uhigh.Net.Parser
                         }
                     } while (Match(TokenType.Comma));
                 }
-                
+
                 // Check if followed by ) =>
                 if (Check(TokenType.RightParen))
                 {
@@ -1934,35 +1934,35 @@ namespace uhigh.Net.Parser
                         isLambda = true;
                     }
                 }
-                
+
                 // Reset position
                 _current = start - 1; // Back to before the '('
                 Advance(); // consume '('
-                
+
                 if (isLambda)
                 {
                     // Parse as lambda expression
                     var parameters = new List<Parameter>();
-                    
+
                     if (!Check(TokenType.RightParen))
                     {
                         do
                         {
                             var paramName = Consume(TokenType.Identifier, "Expected parameter name").Value;
                             string? paramType = null;
-                            
+
                             if (Match(TokenType.Colon))
                             {
                                 paramType = ParseTypeName();
                             }
-                            
+
                             parameters.Add(new Parameter(paramName, paramType));
                         } while (Match(TokenType.Comma));
                     }
-                    
+
                     Consume(TokenType.RightParen, "Expected ')' after lambda parameters");
                     Consume(TokenType.Arrow, "Expected '=>' after lambda parameters");
-                    
+
                     var body = ParseExpression();
                     return new LambdaExpression
                     {
@@ -2053,23 +2053,23 @@ namespace uhigh.Net.Parser
             }
 
             Consume(TokenType.Arrow, "Expected '=>' after match pattern");
-            
+
             // Support both expression and block forms
             Expression result;
             if (Check(TokenType.LeftBrace))
             {
                 // Block form: { statements... }
                 Advance(); // consume '{'
-                
+
                 var statements = new List<Statement>();
                 while (!Check(TokenType.RightBrace) && !IsAtEnd())
                 {
                     var stmt = ParseStatement();
                     if (stmt != null) statements.Add(stmt);
                 }
-                
+
                 Consume(TokenType.RightBrace, "Expected '}' after match arm block");
-                
+
                 // Wrap the block in a special expression
                 result = new BlockExpression { Statements = statements };
             }
@@ -2095,16 +2095,16 @@ namespace uhigh.Net.Parser
         {
             var parts = new List<InterpolationPart>();
             var currentText = "";
-    
+
             // This is a simplified version - a full implementation would need
             // more sophisticated tokenization for interpolated strings
             var stringValue = Previous().Value;
-    
+
             // Parse the interpolated string format $"text{expr}text"
             // For now, convert to string concatenation
             return new LiteralExpression { Value = stringValue, Type = TokenType.String };
         }
-        
+
         /// <summary>
         /// Finishes the call using the specified callee
         /// </summary>
@@ -2113,7 +2113,7 @@ namespace uhigh.Net.Parser
         private Expression FinishCall(Expression callee)
         {
             var arguments = new List<Expression>();
-            
+
             if (!Check(TokenType.RightParen))
             {
                 do
@@ -2129,9 +2129,9 @@ namespace uhigh.Net.Parser
                     }
                 } while (Match(TokenType.Comma));
             }
-            
+
             Consume(TokenType.RightParen, "Expected ')' after arguments");
-            
+
             return new CallExpression { Function = callee, Arguments = arguments };
         }
 
@@ -2139,7 +2139,7 @@ namespace uhigh.Net.Parser
         private bool IsLambdaExpression()
         {
             var checkpoint = _current;
-            
+
             // Case 1: Single parameter lambda: identifier =>
             if (Check(TokenType.Identifier))
             {
@@ -2150,23 +2150,23 @@ namespace uhigh.Net.Parser
                     return true;
                 }
             }
-            
+
             // Case 2: Multi-parameter lambda: (param1, param2) =>
             _current = checkpoint; // reset
             if (Check(TokenType.LeftParen))
             {
                 Advance(); // consume (
-                
+
                 // Skip parameter list
                 var parenCount = 1;
                 while (parenCount > 0 && !IsAtEnd())
                 {
                     if (Check(TokenType.LeftParen)) parenCount++;
                     else if (Check(TokenType.RightParen)) parenCount--;
-                    
+
                     if (parenCount > 0) Advance();
                 }
-                
+
                 if (parenCount == 0)
                 {
                     Advance(); // consume )
@@ -2177,7 +2177,7 @@ namespace uhigh.Net.Parser
                     }
                 }
             }
-            
+
             _current = checkpoint; // reset
             return false;
         }
@@ -2186,7 +2186,7 @@ namespace uhigh.Net.Parser
         private LambdaExpression ParseLambdaExpression()
         {
             var parameters = new List<Parameter>();
-            
+
             // Single parameter case: identifier =>
             if (Check(TokenType.Identifier) && PeekAhead(1)?.Type == TokenType.Arrow)
             {
@@ -2198,29 +2198,29 @@ namespace uhigh.Net.Parser
             else if (Check(TokenType.LeftParen))
             {
                 Consume(TokenType.LeftParen, "Expected '(' for lambda parameters");
-                
+
                 if (!Check(TokenType.RightParen))
                 {
                     do
                     {
                         var paramName = Consume(TokenType.Identifier, "Expected parameter name").Value;
                         string? paramType = null;
-                        
+
                         if (Match(TokenType.Colon))
                         {
                             paramType = ParseTypeName();
                         }
-                        
+
                         parameters.Add(new Parameter(paramName, paramType));
                     } while (Match(TokenType.Comma));
                 }
-                
+
                 Consume(TokenType.RightParen, "Expected ')' after lambda parameters");
                 Consume(TokenType.Arrow, "Expected '=>' after lambda parameters");
             }
-            
+
             var body = ParseLambdaBody();
-            
+
             return new LambdaExpression
             {
                 Parameters = parameters,
@@ -2237,14 +2237,14 @@ namespace uhigh.Net.Parser
                 // Block lambda: { statements }
                 Advance(); // consume {
                 var statements = new List<Statement>();
-                
+
                 while (!Check(TokenType.RightBrace) && !IsAtEnd())
                 {
                     var stmt = ParseStatement();
                     if (stmt != null)
                         statements.Add(stmt);
                 }
-                
+
                 Consume(TokenType.RightBrace, "Expected '}' after lambda body");
                 return (null, statements);
             }
@@ -2430,7 +2430,7 @@ namespace uhigh.Net.Parser
         private AttributeDeclaration ParseAttribute()
         {
             Consume(TokenType.LeftBracket, "Expected '['");
-            
+
             var nameToken = Consume(TokenType.Identifier, "Expected attribute name");
             var name = nameToken.Value;
 
@@ -2685,7 +2685,7 @@ namespace uhigh.Net.Parser
         /// </summary>
         /// <returns>The statement</returns>
         private Statement ParseMatchStatement()
-               {
+        {
             // Parse: match <value> { ... } (match keyword already consumed)
             var value = ParseExpression();
             Consume(TokenType.LeftBrace, "Expected '{' after match value");
@@ -2710,7 +2710,7 @@ namespace uhigh.Net.Parser
         /// Parses the include statement
         /// </summary>
         /// <returns>The statement</returns>
-               private Statement ParseIncludeStatement()
+        private Statement ParseIncludeStatement()
         {
             // include "filename.uh"
             var fileToken = Consume(TokenType.String, "Expected file name after include");

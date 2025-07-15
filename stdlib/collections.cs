@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
 namespace StdLib
 {
     /// <summary>
@@ -57,7 +53,7 @@ namespace StdLib
             var added = modified.Except(original).ToList();
             var removed = original.Except(modified).ToList();
             var common = original.Intersect(modified).ToList();
-            
+
             return new ArrayDiff<T>
             {
                 Added = added,
@@ -76,7 +72,7 @@ namespace StdLib
             if (!source.Any()) return groups;
 
             var currentGroup = new List<T> { source.First() };
-            
+
             for (int i = 1; i < source.Count; i++)
             {
                 if (areConsecutive(source[i - 1], source[i]))
@@ -90,7 +86,7 @@ namespace StdLib
                 }
             }
             groups.Add(currentGroup);
-            
+
             return groups;
         }
 
@@ -100,10 +96,10 @@ namespace StdLib
         public static List<T> Rotate<T>(this List<T> source, int positions)
         {
             if (source.Count == 0) return source;
-            
+
             positions = positions % source.Count;
             if (positions < 0) positions += source.Count;
-            
+
             return source.Skip(positions).Concat(source.Take(positions)).ToList();
         }
 

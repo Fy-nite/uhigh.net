@@ -1,7 +1,5 @@
-using System.Reflection;
-using uhigh.Net.Parser;
 using uhigh.Net.Lexer;
-using uhigh.Net.Diagnostics;
+using uhigh.Net.Parser;
 
 namespace uhigh.Net.Testing
 {
@@ -35,7 +33,7 @@ namespace uhigh.Net.Testing
 
             Assert.AreEqual(1, program.Statements.Count);
             Assert.IsTrue(program.Statements[0] is VariableDeclaration);
-            
+
             var varDecl = (VariableDeclaration)program.Statements[0];
             Assert.AreEqual("x", varDecl.Name);
             Assert.IsNotNull(varDecl.Initializer);
@@ -52,7 +50,7 @@ namespace uhigh.Net.Testing
 
             Assert.AreEqual(1, program.Statements.Count);
             Assert.IsTrue(program.Statements[0] is FunctionDeclaration);
-            
+
             var funcDecl = (FunctionDeclaration)program.Statements[0];
             Assert.AreEqual("add", funcDecl.Name);
             Assert.AreEqual(2, funcDecl.Parameters.Count);
@@ -80,7 +78,7 @@ namespace uhigh.Net.Testing
 
             Assert.AreEqual(1, program.Statements.Count);
             Assert.IsTrue(program.Statements[0] is ClassDeclaration);
-            
+
             var classDecl = (ClassDeclaration)program.Statements[0];
             Assert.AreEqual("Person", classDecl.Name);
             Assert.IsTrue(classDecl.Modifiers.Contains("public"));
@@ -102,7 +100,7 @@ namespace uhigh.Net.Testing
 
             Assert.AreEqual(1, program.Statements.Count);
             Assert.IsTrue(program.Statements[0] is NamespaceDeclaration);
-            
+
             var nsDecl = (NamespaceDeclaration)program.Statements[0];
             Assert.AreEqual("MyApp", nsDecl.Name);
             Assert.AreEqual(1, nsDecl.Members.Count);
@@ -129,17 +127,17 @@ namespace uhigh.Net.Testing
 
             Assert.AreEqual(1, program.Statements.Count);
             Assert.IsTrue(program.Statements[0] is NamespaceDeclaration);
-            
+
             var nsDecl = (NamespaceDeclaration)program.Statements[0];
             Assert.AreEqual("test", nsDecl.Name);
             Assert.AreEqual(2, nsDecl.Members.Count);
-            
+
             // Verify both classes are present
             var classes = nsDecl.Members.OfType<ClassDeclaration>().ToList();
             Assert.AreEqual(2, classes.Count);
             Assert.IsTrue(classes.Any(c => c.Name == "meow"));
             Assert.IsTrue(classes.Any(c => c.Name == "cat"));
-            
+
             // Verify the cat class has the feed method with meow parameter
             var catClass = classes.First(c => c.Name == "cat");
             var feedMethod = catClass.Members.OfType<MethodDeclaration>().FirstOrDefault(m => m.Name == "feed");
@@ -163,7 +161,7 @@ namespace uhigh.Net.Testing
 
             Assert.AreEqual(1, program.Statements.Count);
             Assert.IsTrue(program.Statements[0] is IfStatement);
-            
+
             var ifStmt = (IfStatement)program.Statements[0];
             Assert.IsNotNull(ifStmt.Condition);
             Assert.AreEqual(1, ifStmt.ThenBranch.Count);
@@ -186,14 +184,14 @@ namespace uhigh.Net.Testing
 
             Assert.AreEqual(1, program.Statements.Count);
             Assert.IsTrue(program.Statements[0] is MatchStatement);
-            
+
             var matchStmt = (MatchStatement)program.Statements[0];
             Assert.IsNotNull(matchStmt.Value);
             Assert.IsTrue(matchStmt.Value is IdentifierExpression);
-            
+
             var valueExpr = (IdentifierExpression)matchStmt.Value;
             Assert.AreEqual("cmd", valueExpr.Name);
-            
+
             Assert.AreEqual(3, matchStmt.Arms.Count);
             Assert.IsTrue(matchStmt.Arms[2].IsDefault);
         }
@@ -212,7 +210,7 @@ namespace uhigh.Net.Testing
 
             Assert.AreEqual(1, program.Statements.Count);
             Assert.IsTrue(program.Statements[0] is WhileStatement);
-            
+
             var whileStmt = (WhileStatement)program.Statements[0];
             Assert.IsNotNull(whileStmt.Condition);
             Assert.AreEqual(2, whileStmt.Body.Count);
@@ -228,7 +226,7 @@ namespace uhigh.Net.Testing
 
             var varDecl = (VariableDeclaration)program.Statements[0];
             Assert.IsTrue(varDecl.Initializer is BinaryExpression);
-            
+
             var binExpr = (BinaryExpression)varDecl.Initializer!;
             Assert.AreEqual(TokenType.Plus, binExpr.Operator);
             Assert.IsTrue(binExpr.Left is IdentifierExpression);
@@ -245,10 +243,10 @@ namespace uhigh.Net.Testing
 
             Assert.AreEqual(1, program.Statements.Count);
             Assert.IsTrue(program.Statements[0] is ExpressionStatement);
-            
+
             var exprStmt = (ExpressionStatement)program.Statements[0];
             Assert.IsTrue(exprStmt.Expression is CallExpression);
-            
+
             var callExpr = (CallExpression)exprStmt.Expression;
             Assert.AreEqual(2, callExpr.Arguments.Count);
         }
@@ -263,7 +261,7 @@ namespace uhigh.Net.Testing
 
             var varDecl = (VariableDeclaration)program.Statements[0];
             Assert.IsTrue(varDecl.Initializer is ConstructorCallExpression);
-            
+
             var ctorCall = (ConstructorCallExpression)varDecl.Initializer!;
             Assert.AreEqual("Person", ctorCall.ClassName);
             Assert.AreEqual(2, ctorCall.Arguments.Count);
@@ -278,20 +276,20 @@ namespace uhigh.Net.Testing
             var program = ParseSource("var name = person.getName()");
 
             var varDecl = (VariableDeclaration)program.Statements[0];
-            
+
             // Debug what we actually got
             Console.WriteLine($"Initializer type: {varDecl.Initializer?.GetType().Name}");
-            
+
             // The parser might be creating a CallExpression directly instead of member access
             if (varDecl.Initializer is CallExpression callExpr)
             {
                 Console.WriteLine($"Function type: {callExpr.Function?.GetType().Name}");
-                
+
                 if (callExpr.Function is MemberAccessExpression memberAccess)
                 {
                     Assert.IsTrue(memberAccess.Object is IdentifierExpression);
                     Assert.AreEqual("getName", memberAccess.MemberName);
-                    
+
                     var identExpr = (IdentifierExpression)memberAccess.Object;
                     Assert.AreEqual("person", identExpr.Name);
                 }
@@ -323,9 +321,9 @@ namespace uhigh.Net.Testing
 
             Assert.AreEqual(1, program.Statements.Count);
             Assert.IsTrue(program.Statements[0] is FunctionDeclaration);
-            
+
             var funcDecl = (FunctionDeclaration)program.Statements[0];
-            
+
             Assert.IsNotNull(funcDecl.Attributes, "Function should have attributes");
             Assert.AreEqual(1, funcDecl.Attributes.Count, "Should have exactly one attribute");
             Assert.AreEqual("external", funcDecl.Attributes[0].Name);
@@ -342,15 +340,15 @@ namespace uhigh.Net.Testing
 
             Assert.AreEqual(1, program.Statements.Count);
             Assert.IsTrue(program.Statements[0] is FunctionDeclaration);
-            
+
             var funcDecl = (FunctionDeclaration)program.Statements[0];
-            
+
             Assert.IsNotNull(funcDecl.Attributes);
             Assert.AreEqual(1, funcDecl.Attributes.Count);
             Assert.AreEqual("PrintAttribute", funcDecl.Attributes[0].Name);
             Assert.AreEqual(1, funcDecl.Attributes[0].Arguments.Count);
             Assert.IsTrue(funcDecl.Attributes[0].Arguments[0] is LiteralExpression);
-            
+
             var arg = (LiteralExpression)funcDecl.Attributes[0].Arguments[0];
             Assert.AreEqual("Test message", arg.Value);
         }
@@ -378,18 +376,18 @@ namespace uhigh.Net.Testing
 
             Assert.AreEqual(1, program.Statements.Count);
             Assert.IsTrue(program.Statements[0] is ClassDeclaration);
-            
+
             var classDecl = (ClassDeclaration)program.Statements[0];
             Assert.AreEqual("Calculator", classDecl.Name);
             Assert.IsTrue(classDecl.Modifiers.Contains("public"));
-            
+
             // Debug output to see what members were parsed
             Console.WriteLine($"Found {classDecl.Members.Count} members:");
             for (int i = 0; i < classDecl.Members.Count; i++)
             {
                 var member = classDecl.Members[i];
                 Console.WriteLine($"  {i}: {member.GetType().Name}");
-                
+
                 if (member is FieldDeclaration field)
                 {
                     Console.WriteLine($"    Field: {field.Name}, Modifiers: [{string.Join(", ", field.Modifiers)}]");
@@ -399,17 +397,17 @@ namespace uhigh.Net.Testing
                     Console.WriteLine($"    Method: {method.Name}, Modifiers: [{string.Join(", ", method.Modifiers)}]");
                 }
             }
-            
+
             // The test was expecting 3 members but got 2 - let's be more flexible
             // Should have at least 1 field
             var fieldCount = classDecl.Members.Count(m => m is FieldDeclaration);
             var methodCount = classDecl.Members.Count(m => m is MethodDeclaration);
-            
+
             Console.WriteLine($"Field count: {fieldCount}, Method count: {methodCount}");
-            
+
             Assert.IsTrue(fieldCount >= 1, "Should have at least one field");
             Assert.IsTrue(methodCount >= 1, "Should have at least one method");
-            
+
             // Find the field
             var fieldDecl = classDecl.Members.OfType<FieldDeclaration>().FirstOrDefault();
             Assert.IsNotNull(fieldDecl, "Should have a field declaration");
@@ -435,19 +433,19 @@ namespace uhigh.Net.Testing
 
             Assert.AreEqual(1, program.Statements.Count);
             Assert.IsTrue(program.Statements[0] is VariableDeclaration);
-            
+
             var varDecl = (VariableDeclaration)program.Statements[0];
-            Assert.IsTrue(varDecl.Initializer is MatchExpression, 
+            Assert.IsTrue(varDecl.Initializer is MatchExpression,
                 $"Expected MatchExpression, got {varDecl.Initializer?.GetType().Name}");
-            
+
             var matchExpr = (MatchExpression)varDecl.Initializer!;
             Assert.IsTrue(matchExpr.Value is IdentifierExpression);
             Assert.AreEqual(3, matchExpr.Arms.Count);
-            
+
             // Test first arm
             Assert.IsFalse(matchExpr.Arms[0].IsDefault);
             Assert.AreEqual(1, matchExpr.Arms[0].Patterns.Count);
-            
+
             // Test default arm
             Assert.IsTrue(matchExpr.Arms[2].IsDefault);
         }
@@ -467,10 +465,10 @@ namespace uhigh.Net.Testing
                 }");
 
             Assert.AreEqual(2, program.Statements.Count);
-            
+
             var resultDecl = (VariableDeclaration)program.Statements[1];
             Assert.IsTrue(resultDecl.Initializer is MatchExpression);
-            
+
             var matchExpr = (MatchExpression)resultDecl.Initializer!;
             Assert.IsTrue(matchExpr.Value is IdentifierExpression);
             var valueExpr = (IdentifierExpression)matchExpr.Value;
@@ -492,7 +490,7 @@ namespace uhigh.Net.Testing
 
             var varDecl = (VariableDeclaration)program.Statements[0];
             var matchExpr = (MatchExpression)varDecl.Initializer!;
-            
+
             Assert.AreEqual(3, matchExpr.Arms[0].Patterns.Count);
             Assert.AreEqual(3, matchExpr.Arms[1].Patterns.Count);
             Assert.IsTrue(matchExpr.Arms[2].IsDefault);
@@ -514,7 +512,7 @@ namespace uhigh.Net.Testing
 
             var varDecl = (VariableDeclaration)program.Statements[0];
             var matchExpr = (MatchExpression)varDecl.Initializer!;
-            
+
             Assert.AreEqual(4, matchExpr.Arms.Count);
             Assert.IsTrue(matchExpr.Arms[0].Result is CallExpression);
             Assert.IsTrue(matchExpr.Arms[3].IsDefault);
@@ -537,10 +535,10 @@ namespace uhigh.Net.Testing
             Assert.AreEqual(2, program.Statements.Count);
             Assert.IsTrue(program.Statements[0] is VariableDeclaration);
             Assert.IsTrue(program.Statements[1] is ExpressionStatement);
-            
+
             var exprStmt = (ExpressionStatement)program.Statements[1];
             Assert.IsTrue(exprStmt.Expression is AssignmentExpression);
-            
+
             var assignment = (AssignmentExpression)exprStmt.Expression;
             Assert.IsTrue(assignment.Value is MatchExpression);
         }
@@ -562,11 +560,11 @@ namespace uhigh.Net.Testing
                     var w = 3.2
                     var area = calculate_area(l, w)
                 }");
-            
+
             Assert.AreEqual(2, program.Statements.Count);
             Assert.IsTrue(program.Statements[0] is FunctionDeclaration);
             Assert.IsTrue(program.Statements[1] is FunctionDeclaration);
-            
+
             var mainFunc = (FunctionDeclaration)program.Statements[1];
             Assert.AreEqual("main", mainFunc.Name);
             Assert.AreEqual(3, mainFunc.Body.Count); // 3 variable declarations
@@ -590,17 +588,17 @@ namespace uhigh.Net.Testing
                     var area = calculate_area(l, w)
                     Console.WriteLine(""The area of the rectangle is: "" + area)
                 }");
-            
+
             // The parse should succeed
             Assert.AreEqual(2, program.Statements.Count);
-            
+
             // Both should be function declarations
             var calculateAreaFunc = program.Statements[0] as FunctionDeclaration;
             var mainFunc = program.Statements[1] as FunctionDeclaration;
-            
+
             Assert.IsNotNull(calculateAreaFunc);
             Assert.IsNotNull(mainFunc);
-            
+
             // Verify the calculate_area function has the right signature
             Assert.AreEqual("calculate_area", calculateAreaFunc!.Name);
             Assert.AreEqual(2, calculateAreaFunc.Parameters.Count);
@@ -608,7 +606,7 @@ namespace uhigh.Net.Testing
             Assert.AreEqual("float", calculateAreaFunc.Parameters[0].Type);
             Assert.AreEqual("width", calculateAreaFunc.Parameters[1].Name);
             Assert.AreEqual("float", calculateAreaFunc.Parameters[1].Type);
-            
+
             // Verify the main function
             Assert.AreEqual("main", mainFunc!.Name);
             Assert.AreEqual(4, mainFunc.Body.Count); // 3 var declarations + 1 console call
@@ -635,20 +633,20 @@ namespace uhigh.Net.Testing
 
             Assert.AreEqual(1, program.Statements.Count);
             Assert.IsTrue(program.Statements[0] is VariableDeclaration);
-            
+
             var varDecl = (VariableDeclaration)program.Statements[0];
             Assert.IsTrue(varDecl.Initializer is MatchExpression);
-            
+
             var matchExpr = (MatchExpression)varDecl.Initializer!;
             Assert.AreEqual(3, matchExpr.Arms.Count);
-            
+
             // First two arms should have block expressions
             Assert.IsTrue(matchExpr.Arms[0].Result is BlockExpression);
             Assert.IsTrue(matchExpr.Arms[1].Result is BlockExpression);
-            
+
             // Last arm should be a simple expression
             Assert.IsFalse(matchExpr.Arms[2].Result is BlockExpression);
-            
+
             // Check block content
             var firstBlock = (BlockExpression)matchExpr.Arms[0].Result;
             Assert.AreEqual(2, firstBlock.Statements.Count); // print + return
@@ -667,12 +665,12 @@ namespace uhigh.Net.Testing
 
             Assert.AreEqual(1, program.Statements.Count);
             Assert.IsTrue(program.Statements[0] is ForStatement);
-            
+
             var forStmt = (ForStatement)program.Statements[0];
             Assert.IsTrue(forStmt.IsForInLoop);
             Assert.AreEqual("i", forStmt.IteratorVariable);
             Assert.IsTrue(forStmt.IterableExpression is RangeExpression);
-            
+
             var rangeExpr = (RangeExpression)forStmt.IterableExpression!;
             Assert.IsTrue(rangeExpr.IsSimpleRange);
             Assert.IsNotNull(rangeExpr.End);
@@ -691,12 +689,12 @@ namespace uhigh.Net.Testing
 
             Assert.AreEqual(1, program.Statements.Count);
             Assert.IsTrue(program.Statements[0] is ForStatement);
-            
+
             var forStmt = (ForStatement)program.Statements[0];
             Assert.IsTrue(forStmt.IsForInLoop);
             Assert.AreEqual("item", forStmt.IteratorVariable);
             Assert.IsTrue(forStmt.IterableExpression is IdentifierExpression);
-            
+
             var identExpr = (IdentifierExpression)forStmt.IterableExpression!;
             Assert.AreEqual("items", identExpr.Name);
         }
@@ -714,7 +712,7 @@ namespace uhigh.Net.Testing
 
             Assert.AreEqual(1, program.Statements.Count);
             Assert.IsTrue(program.Statements[0] is ForStatement);
-            
+
             var forStmt = (ForStatement)program.Statements[0];
             Assert.IsFalse(forStmt.IsForInLoop);
             Assert.IsNotNull(forStmt.Initializer);
@@ -732,10 +730,10 @@ namespace uhigh.Net.Testing
 
             Assert.AreEqual(1, program.Statements.Count);
             Assert.IsTrue(program.Statements[0] is VariableDeclaration);
-            
+
             var varDecl = (VariableDeclaration)program.Statements[0];
             Assert.IsTrue(varDecl.Initializer is ConstructorCallExpression);
-            
+
             var ctorCall = (ConstructorCallExpression)varDecl.Initializer!;
             Assert.AreEqual("List<string>", ctorCall.ClassName);
             Assert.AreEqual(0, ctorCall.Arguments.Count);
@@ -766,16 +764,16 @@ namespace uhigh.Net.Testing
                 var flags: bool[] = [true, false]");
 
             Assert.AreEqual(3, program.Statements.Count);
-            
+
             // Test string array - now the type should be parsed as a single token
             var stringArrayDecl = (VariableDeclaration)program.Statements[0];
             Assert.AreEqual("string[]", stringArrayDecl.Type);
             Assert.IsTrue(stringArrayDecl.Initializer is ArrayExpression);
-            
+
             // Test int array
             var intArrayDecl = (VariableDeclaration)program.Statements[1];
             Assert.AreEqual("int[]", intArrayDecl.Type);
-            
+
             // Test bool array
             var boolArrayDecl = (VariableDeclaration)program.Statements[2];
             Assert.AreEqual("bool[]", boolArrayDecl.Type);
@@ -796,7 +794,7 @@ namespace uhigh.Net.Testing
 
             Assert.AreEqual(1, program.Statements.Count);
             Assert.IsTrue(program.Statements[0] is FunctionDeclaration);
-            
+
             var funcDecl = (FunctionDeclaration)program.Statements[0];
             Assert.AreEqual("processItems", funcDecl.Name);
             Assert.AreEqual(1, funcDecl.Parameters.Count);
@@ -812,13 +810,13 @@ namespace uhigh.Net.Testing
         public void TestProjectCompilation()
         {
             var projectPath = Path.Combine(Environment.CurrentDirectory, "testing", "uh", "simple-project.uhighproj");
-            
+
             // Ensure the test files exist
             Assert.IsTrue(File.Exists(projectPath), $"Project file should exist at {projectPath}");
-            
+
             var mainPath = Path.Combine(Path.GetDirectoryName(projectPath)!, "main.uh");
             Assert.IsTrue(File.Exists(mainPath), $"Main file should exist at {mainPath}");
-            
+
             // Test loading the project
             var project = ProjectFile.LoadAsync(projectPath).Result;
             Assert.IsNotNull(project, "Project should load successfully");

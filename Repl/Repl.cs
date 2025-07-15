@@ -1,11 +1,7 @@
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
-using uhigh.Net.CodeGen;
-using uhigh.Net.Diagnostics;
-using uhigh.Net.Lexer;
-using uhigh.Net.Parser;
 using System.Reflection;
-using System.Text;
+using uhigh.Net.Diagnostics;
 
 namespace uhigh.Net.Repl
 {
@@ -102,7 +98,7 @@ namespace uhigh.Net.Repl
                     Console.ForegroundColor = ConsoleColor.Red;
                     Console.WriteLine($"Error: {ex.Message}");
                     Console.ResetColor();
-                    
+
                     if (_verboseMode)
                     {
                         Console.WriteLine($"Stack trace: {ex.StackTrace}");
@@ -123,7 +119,7 @@ namespace uhigh.Net.Repl
             var isMultiLine = false;
             var basePrompt = "μhigh> ";
             var continuationPrompt = "    ...> ";
-            
+
             // Display initial prompt
             Console.Write(basePrompt);
             var startTop = Console.CursorTop;
@@ -132,7 +128,7 @@ namespace uhigh.Net.Repl
             while (true)
             {
                 var key = Console.ReadKey(true);
-                
+
                 if (key.Key == ConsoleKey.Enter)
                 {
                     if (key.Modifiers == ConsoleModifiers.Control)
@@ -149,7 +145,7 @@ namespace uhigh.Net.Repl
                     {
                         // Regular Enter - check if we need more input
                         var fullInput = string.Join("\n", lines.Where(l => !string.IsNullOrWhiteSpace(l) || lines.Count == 1));
-                        
+
                         if (isMultiLine && string.IsNullOrWhiteSpace(lines[currentLineIndex]) && !NeedsMoreInput(fullInput))
                         {
                             // Empty line in multiline mode and no more input needed - execute
@@ -369,14 +365,14 @@ namespace uhigh.Net.Repl
         /// <param name="basePrompt">The base prompt</param>
         /// <param name="continuationPrompt">The continuation prompt</param>
         /// <param name="startTop">The start top</param>
-        private void RedrawMultiLineInput(List<string> lines, int currentLineIndex, int cursorPosition, 
+        private void RedrawMultiLineInput(List<string> lines, int currentLineIndex, int cursorPosition,
             string basePrompt, string continuationPrompt, int startTop)
         {
             try
             {
                 // Save current position
                 var currentTop = Console.CursorTop;
-                
+
                 // Clear existing lines - be more conservative about clearing
                 var maxLinesToClear = Math.Max(lines.Count, currentTop - startTop + 1);
                 for (int i = 0; i < maxLinesToClear && (startTop + i) < Console.BufferHeight; i++)
@@ -392,7 +388,7 @@ namespace uhigh.Net.Repl
                         break;
                     }
                 }
-                
+
                 // Redraw all lines
                 for (int i = 0; i < lines.Count; i++)
                 {
@@ -400,17 +396,17 @@ namespace uhigh.Net.Repl
                     {
                         var targetTop = startTop + i;
                         if (targetTop >= Console.BufferHeight) break;
-                        
+
                         Console.SetCursorPosition(0, targetTop);
                         var prompt = i == 0 ? basePrompt : continuationPrompt;
                         var lineContent = prompt + lines[i];
-                        
+
                         // Truncate if line is too long for console
                         if (lineContent.Length >= Console.WindowWidth)
                         {
                             lineContent = lineContent.Substring(0, Console.WindowWidth - 1);
                         }
-                        
+
                         Console.Write(lineContent);
                     }
                     catch (ArgumentOutOfRangeException)
@@ -419,14 +415,14 @@ namespace uhigh.Net.Repl
                         break;
                     }
                 }
-                
+
                 // Position cursor correctly
                 try
                 {
                     var targetTop = startTop + currentLineIndex;
                     var prompt = currentLineIndex == 0 ? basePrompt : continuationPrompt;
                     var targetLeft = prompt.Length + cursorPosition;
-                    
+
                     // Ensure cursor position is within bounds
                     if (targetTop < Console.BufferHeight && targetLeft < Console.WindowWidth)
                     {
@@ -496,7 +492,7 @@ namespace uhigh.Net.Repl
         {
             if (string.IsNullOrWhiteSpace(input))
                 return false;
-                
+
             int paren = 0, brace = 0, bracket = 0;
             bool inString = false, inChar = false, escape = false;
 
@@ -531,12 +527,12 @@ namespace uhigh.Net.Repl
                 if (c == '[') bracket++;
                 if (c == ']') bracket--;
             }
-            
+
             // If any are unclosed, need more input
             return paren > 0 || brace > 0 || bracket > 0;
         }
 
-       
+
         /// <summary>
         /// Redraws the current line using the specified input
         /// </summary>
@@ -547,19 +543,19 @@ namespace uhigh.Net.Repl
             var prompt = GetCurrentPrompt();
             var currentLeft = Console.CursorLeft;
             var currentTop = Console.CursorTop;
-            
+
             // Move to beginning of current line
             Console.SetCursorPosition(0, currentTop);
-            
+
             // Clear the line
             Console.Write(new string(' ', Console.WindowWidth - 1));
-            
+
             // Move back to beginning
             Console.SetCursorPosition(0, currentTop);
-            
+
             // Write prompt and input
             Console.Write(prompt + input);
-            
+
             // Position cursor correctly
             Console.SetCursorPosition(prompt.Length + cursorPosition, currentTop);
         }
@@ -622,7 +618,7 @@ public static bool @bool(object obj) => obj != null && !obj.Equals(0) && !obj.Eq
 ";
 
                 _scriptState = await CSharpScript.RunAsync(initCode, options);
-                
+
                 if (_verboseMode)
                 {
                     Console.WriteLine("C# scripting environment initialized with μHigh built-ins");
@@ -635,7 +631,7 @@ public static bool @bool(object obj) => obj != null && !obj.Equals(0) && !obj.Eq
                     Console.WriteLine($"Warning: Failed to initialize full scripting environment: {ex.Message}");
                     Console.WriteLine("Attempting minimal initialization...");
                 }
-                
+
                 // Fallback to minimal initialization
                 try
                 {
@@ -648,9 +644,9 @@ public static bool @bool(object obj) => obj != null && !obj.Equals(0) && !obj.Eq
 public static void print(object value) => System.Console.WriteLine(value);
 public static void println(object value) => System.Console.WriteLine(value);
 ";
-                    
+
                     _scriptState = await CSharpScript.RunAsync(minimalCode, minimalOptions);
-                    
+
                     if (_verboseMode)
                     {
                         Console.WriteLine("Minimal C# scripting environment initialized");
@@ -682,7 +678,7 @@ public static void println(object value) => System.Console.WriteLine(value);
                 try
                 {
                     csharpCode = _compiler.CompileToCS(input, diagnostics);
-                    
+
                     if (diagnostics.HasErrors)
                     {
                         // If μHigh compilation fails, try as direct C# code
@@ -699,11 +695,11 @@ public static void println(object value) => System.Console.WriteLine(value);
 
                 // Extract the generated C# statements from the wrapper
                 var extractedCode = ExtractExecutableCode(csharpCode);
-                
+
                 if (!string.IsNullOrEmpty(extractedCode))
                 {
                     _csharpStatements.Add(extractedCode);
-                    
+
                     if (_saveCSharpTo != null)
                     {
                         await SaveGeneratedCSharp(extractedCode);
@@ -744,7 +740,7 @@ public static void println(object value) => System.Console.WriteLine(value);
                 }
 
                 _scriptState = await _scriptState!.ContinueWithAsync(code);
-                
+
                 // Display result if it's not null and not void
                 if (_scriptState.ReturnValue != null)
                 {
@@ -804,7 +800,7 @@ public static void println(object value) => System.Console.WriteLine(value);
                     // Count braces on this line
                     var openBraces = line.Count(c => c == '{');
                     var closeBraces = line.Count(c => c == '}');
-                    
+
                     braceCount += openBraces;
                     braceCount -= closeBraces;
 
@@ -844,14 +840,14 @@ public static void println(object value) => System.Console.WriteLine(value);
 
                 var fileName = $"repl_session_{DateTime.Now:yyyyMMdd_HHmmss}.cs";
                 var filePath = Path.Combine(_saveCSharpTo, fileName);
-                
+
                 var fullCode = $@"// μHigh REPL Session - Command {_commandCount}
 // Generated: {DateTime.Now}
 // Original μHigh: {_sessionHistory.Last()}
 
 {code}
 ";
-                
+
                 await File.WriteAllTextAsync(filePath, fullCode);
                 Console.WriteLine($"Generated C# saved to: {filePath}");
             }
@@ -992,7 +988,7 @@ public static void println(object value) => System.Console.WriteLine(value);
             _csharpStatements.Clear();
             _commandCount = 0;
             _scriptState = null;
-            
+
             await InitializeScriptingEnvironment();
             Console.WriteLine("Session reset");
         }
@@ -1101,7 +1097,7 @@ public static void println(object value) => System.Console.WriteLine(value);
 
                 var json = await File.ReadAllTextAsync(filename);
                 var sessionData = System.Text.Json.JsonSerializer.Deserialize<dynamic>(json);
-                
+
                 Console.WriteLine($"Session loaded from: {filename}");
                 Console.WriteLine("Use :history to see loaded commands");
             }

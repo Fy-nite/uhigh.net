@@ -6,19 +6,19 @@ namespace uhigh.Net.Parser
     /// The ast node class
     /// </summary>
     public abstract class ASTNode { }
-    
+
     // Expressions
     /// <summary>
     /// The expression class
     /// </summary>
     /// <seealso cref="ASTNode"/>
     public abstract class Expression : ASTNode { }
-    
+
     /// <summary>
     /// The literal expression class
     /// </summary>
     /// <seealso cref="Expression"/>
-    public class LiteralExpression : Expression 
+    public class LiteralExpression : Expression
     {
         /// <summary>
         /// Gets or sets the value of the value
@@ -29,30 +29,30 @@ namespace uhigh.Net.Parser
         /// </summary>
         public TokenType Type { get; set; }
     }
-    
+
     /// <summary>
     /// The identifier expression class
     /// </summary>
     /// <seealso cref="Expression"/>
-    public class IdentifierExpression : Expression 
+    public class IdentifierExpression : Expression
     {
         /// <summary>
         /// Gets or sets the value of the name
         /// </summary>
         public string Name { get; set; } = "";
     }
-    
+
     /// <summary>
     /// The qualified identifier expression class
     /// </summary>
     /// <seealso cref="Expression"/>
-    public class QualifiedIdentifierExpression : Expression 
+    public class QualifiedIdentifierExpression : Expression
     {
         /// <summary>
         /// Gets or sets the value of the name
         /// </summary>
         public string Name { get; set; } = "";
-        
+
         /// <summary>
         /// Gets the parts
         /// </summary>
@@ -61,7 +61,7 @@ namespace uhigh.Net.Parser
         {
             return Name.Split('.');
         }
-        
+
         /// <summary>
         /// Gets the namespace
         /// </summary>
@@ -71,7 +71,7 @@ namespace uhigh.Net.Parser
             var parts = GetParts();
             return parts.Length > 1 ? string.Join(".", parts.Take(parts.Length - 1)) : "";
         }
-        
+
         /// <summary>
         /// Gets the method name
         /// </summary>
@@ -82,12 +82,12 @@ namespace uhigh.Net.Parser
             return parts.Last();
         }
     }
-    
+
     /// <summary>
     /// The binary expression class
     /// </summary>
     /// <seealso cref="Expression"/>
-    public class BinaryExpression : Expression 
+    public class BinaryExpression : Expression
     {
         /// <summary>
         /// Gets or sets the value of the left
@@ -102,12 +102,12 @@ namespace uhigh.Net.Parser
         /// </summary>
         public Expression Right { get; set; } = null!;
     }
-    
+
     /// <summary>
     /// The unary expression class
     /// </summary>
     /// <seealso cref="Expression"/>
-    public class UnaryExpression : Expression 
+    public class UnaryExpression : Expression
     {
         /// <summary>
         /// Gets or sets the value of the operator
@@ -118,12 +118,12 @@ namespace uhigh.Net.Parser
         /// </summary>
         public Expression Operand { get; set; } = null!;
     }
-    
+
     /// <summary>
     /// The call expression class
     /// </summary>
     /// <seealso cref="Expression"/>
-    public class CallExpression : Expression 
+    public class CallExpression : Expression
     {
         /// <summary>
         /// Gets or sets the value of the function
@@ -138,12 +138,12 @@ namespace uhigh.Net.Parser
         /// </summary>
         public bool SupportsVariableArguments { get; set; } // For functions like print that can take multiple args
     }
-    
+
     /// <summary>
     /// The constructor call expression class
     /// </summary>
     /// <seealso cref="Expression"/>
-    public class ConstructorCallExpression : Expression 
+    public class ConstructorCallExpression : Expression
     {
         /// <summary>
         /// Gets or sets the value of the class name
@@ -159,25 +159,25 @@ namespace uhigh.Net.Parser
     /// The array expression class
     /// </summary>
     /// <seealso cref="Expression"/>
-    public class ArrayExpression : Expression 
+    public class ArrayExpression : Expression
     {
         /// <summary>
         /// Gets or sets the value of the elements
         /// </summary>
         public List<Expression> Elements { get; set; } = new();
-        
+
         // Add support for typed arrays
         /// <summary>
         /// Gets or sets the value of the element type
         /// </summary>
         public string? ElementType { get; set; }
-        
+
         // Add support for array method chaining
         /// <summary>
         /// Gets or sets the value of the method calls
         /// </summary>
         public List<MethodCallChain> MethodCalls { get; set; } = new();
-        
+
         // Add support for array indices
         /// <summary>
         /// Gets or sets the value of the is indice
@@ -187,19 +187,19 @@ namespace uhigh.Net.Parser
         /// Gets or sets the value of the start offset
         /// </summary>
         public Expression? StartOffset { get; set; }
-        
+
         // Add array type specification for explicit array types
         /// <summary>
         /// Gets or sets the value of the array type
         /// </summary>
         public string? ArrayType { get; set; } // e.g., "string[]", "int[]"
     }
-    
+
     /// <summary>
     /// The index expression class
     /// </summary>
     /// <seealso cref="Expression"/>
-    public class IndexExpression : Expression 
+    public class IndexExpression : Expression
     {
         /// <summary>
         /// Gets or sets the value of the object
@@ -210,12 +210,12 @@ namespace uhigh.Net.Parser
         /// </summary>
         public Expression Index { get; set; } = null!;
     }
-    
+
     /// <summary>
     /// The assignment expression class
     /// </summary>
     /// <seealso cref="Expression"/>
-    public class AssignmentExpression : Expression 
+    public class AssignmentExpression : Expression
     {
         /// <summary>
         /// Gets or sets the value of the target
@@ -230,7 +230,7 @@ namespace uhigh.Net.Parser
         /// </summary>
         public Expression Value { get; set; } = null!;
     }
-    
+
     /// <summary>
     /// The member access expression class
     /// </summary>
@@ -246,37 +246,37 @@ namespace uhigh.Net.Parser
         /// </summary>
         public string MemberName { get; set; } = "";
     }
-    
+
     /// <summary>
     /// The this expression class
     /// </summary>
     /// <seealso cref="Expression"/>
     public class ThisExpression : Expression { }
-    
+
     // Statements
     /// <summary>
     /// The statement class
     /// </summary>
     /// <seealso cref="ASTNode"/>
     public abstract class Statement : ASTNode { }
-    
+
     /// <summary>
     /// The expression statement class
     /// </summary>
     /// <seealso cref="Statement"/>
-    public class ExpressionStatement : Statement 
+    public class ExpressionStatement : Statement
     {
         /// <summary>
         /// Gets or sets the value of the expression
         /// </summary>
         public Expression Expression { get; set; } = null!;
     }
-    
+
     /// <summary>
     /// The match statement class
     /// </summary>
     /// <seealso cref="Statement"/>
-    public class MatchStatement : Statement 
+    public class MatchStatement : Statement
     {
         /// <summary>
         /// Gets or sets the value of the value
@@ -310,12 +310,12 @@ namespace uhigh.Net.Parser
         /// </summary>
         public bool IsConstant { get; set; }
     }
-    
+
     /// <summary>
     /// The if statement class
     /// </summary>
     /// <seealso cref="Statement"/>
-    public class IfStatement : Statement 
+    public class IfStatement : Statement
     {
         /// <summary>
         /// Gets or sets the value of the condition
@@ -330,12 +330,12 @@ namespace uhigh.Net.Parser
         /// </summary>
         public List<Statement>? ElseBranch { get; set; }
     }
-    
+
     /// <summary>
     /// The while statement class
     /// </summary>
     /// <seealso cref="Statement"/>
-    public class WhileStatement : Statement 
+    public class WhileStatement : Statement
     {
         /// <summary>
         /// Gets or sets the value of the condition
@@ -346,12 +346,12 @@ namespace uhigh.Net.Parser
         /// </summary>
         public List<Statement> Body { get; set; } = new();
     }
-    
+
     /// <summary>
     /// The for statement class
     /// </summary>
     /// <seealso cref="Statement"/>
-    public class ForStatement : Statement 
+    public class ForStatement : Statement
     {
         /// <summary>
         /// Gets or sets the value of the initializer
@@ -369,7 +369,7 @@ namespace uhigh.Net.Parser
         /// Gets or sets the value of the body
         /// </summary>
         public List<Statement> Body { get; set; } = new();
-        
+
         // Add support for for-in loops
         /// <summary>
         /// Gets or sets the value of the iterator variable
@@ -384,43 +384,43 @@ namespace uhigh.Net.Parser
         /// </summary>
         public bool IsForInLoop => IteratorVariable != null && IterableExpression != null;
     }
-    
+
     /// <summary>
     /// The return statement class
     /// </summary>
     /// <seealso cref="Statement"/>
-    public class ReturnStatement : Statement 
+    public class ReturnStatement : Statement
     {
         /// <summary>
         /// Gets or sets the value of the value
         /// </summary>
         public Expression? Value { get; set; }
     }
-    
+
     /// <summary>
     /// The break statement class
     /// </summary>
     /// <seealso cref="Statement"/>
     public class BreakStatement : Statement { }
-    
+
     /// <summary>
     /// The continue statement class
     /// </summary>
     /// <seealso cref="Statement"/>
     public class ContinueStatement : Statement { }
-    
+
     /// <summary>
     /// The sharp block class
     /// </summary>
     /// <seealso cref="Statement"/>
-    public class SharpBlock : Statement 
+    public class SharpBlock : Statement
     {
         /// <summary>
         /// Gets or sets the value of the code
         /// </summary>
         public string Code { get; set; } = "";
     }
-    
+
     /// <summary>
     /// The class declaration class
     /// </summary>
@@ -447,13 +447,13 @@ namespace uhigh.Net.Parser
         /// Gets or sets the value of the attributes
         /// </summary>
         public List<AttributeDeclaration> Attributes { get; set; } = new(); // Add this
-        
+
         /// <summary>
         /// Gets the value of the is public
         /// </summary>
         public bool IsPublic => Modifiers.Contains("public");
     }
-    
+
     /// <summary>
     /// The namespace declaration class
     /// </summary>
@@ -469,7 +469,7 @@ namespace uhigh.Net.Parser
         /// </summary>
         public List<Statement> Members { get; set; } = new();
     }
-    
+
     /// <summary>
     /// The import statement class
     /// </summary>
@@ -489,7 +489,7 @@ namespace uhigh.Net.Parser
         /// </summary>
         public string? Alias { get; set; }
     }
-    
+
     /// <summary>
     /// The include statement class
     /// </summary>
@@ -501,7 +501,7 @@ namespace uhigh.Net.Parser
         /// </summary>
         public string FileName { get; set; } = "";
     }
-    
+
     /// <summary>
     /// The method declaration class
     /// </summary>
@@ -541,7 +541,7 @@ namespace uhigh.Net.Parser
         /// </summary>
         public List<string> Modifiers { get; set; } = new(); // New: access modifiers
     }
-    
+
     /// <summary>
     /// The property accessor class
     /// </summary>
@@ -561,7 +561,7 @@ namespace uhigh.Net.Parser
         /// </summary>
         public List<Statement> Statements { get; set; } = new(); // for block body
     }
-    
+
     /// <summary>
     /// The property declaration class
     /// </summary>
@@ -630,7 +630,7 @@ namespace uhigh.Net.Parser
         public List<string> Modifiers { get; set; } = new();
         public List<uhigh.Net.Parser.AttributeDeclaration> Attributes { get; set; } = new(); // New: attributes for fields
     }
-    
+
     /// <summary>
     /// The enum declaration class
     /// </summary>
@@ -793,7 +793,7 @@ namespace uhigh.Net.Parser
         /// Gets or sets the value of the is exclusive
         /// </summary>
         public bool IsExclusive { get; set; } // true for ..<, false for ..
-        
+
         // Add support for simple range(n) calls
         /// <summary>
         /// Gets the value of the is simple range
@@ -816,7 +816,7 @@ namespace uhigh.Net.Parser
         /// </summary>
         public List<MatchArm> Arms { get; set; } = new();
     }
-    
+
     /// <summary>
     /// The match arm class
     /// </summary>
@@ -836,13 +836,13 @@ namespace uhigh.Net.Parser
         /// </summary>
         public bool IsDefault { get; set; } // true for _ pattern
     }
-    
+
     // Top-level
     /// <summary>
     /// The function declaration class
     /// </summary>
     /// <seealso cref="Statement"/>
-    public class FunctionDeclaration : Statement 
+    public class FunctionDeclaration : Statement
     {
         /// <summary>
         /// Gets or sets the value of the name
@@ -869,7 +869,7 @@ namespace uhigh.Net.Parser
         /// </summary>
         public List<string> Modifiers { get; set; } = new(); // New: access modifiers
     }
-    
+
     /// <summary>
     /// The attribute declaration class
     /// </summary>
@@ -884,7 +884,7 @@ namespace uhigh.Net.Parser
         /// Gets or sets the value of the arguments
         /// </summary>
         public List<Expression> Arguments { get; set; } = new();
-        
+
         // Helper properties for common attributes
         /// <summary>
         /// Gets the value of the is external
@@ -895,12 +895,12 @@ namespace uhigh.Net.Parser
         /// </summary>
         public bool IsDotNetFunc => Name.Equals("dotnetfunc", StringComparison.OrdinalIgnoreCase);
     }
-    
+
     /// <summary>
     /// The parameter class
     /// </summary>
     /// <seealso cref="ASTNode"/>
-    public class Parameter : ASTNode 
+    public class Parameter : ASTNode
     {
         /// <summary>
         /// Gets or sets the value of the name
@@ -910,12 +910,12 @@ namespace uhigh.Net.Parser
         /// Gets or sets the value of the type
         /// </summary>
         public string? Type { get; set; }
-        
+
         /// <summary>
         /// Initializes a new instance of the <see cref="Parameter"/> class
         /// </summary>
         public Parameter() { }
-        
+
         /// <summary>
         /// Initializes a new instance of the <see cref="Parameter"/> class
         /// </summary>
@@ -927,12 +927,12 @@ namespace uhigh.Net.Parser
             Type = type;
         }
     }
-    
+
     /// <summary>
     /// The program class
     /// </summary>
     /// <seealso cref="ASTNode"/>
-    public class Program : ASTNode 
+    public class Program : ASTNode
     {
         /// <summary>
         /// Gets or sets the value of the statements
@@ -1144,7 +1144,7 @@ namespace uhigh.Net.Parser
         /// Gets or sets the value of the is async
         /// </summary>
         public bool IsAsync { get; set; }
-        
+
         /// <summary>
         /// Gets the value of the is expression lambda
         /// </summary>

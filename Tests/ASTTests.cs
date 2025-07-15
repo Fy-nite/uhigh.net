@@ -1,6 +1,5 @@
-using System.Linq;
-using uhigh.Net.Parser;
 using uhigh.Net.Lexer;
+using uhigh.Net.Parser;
 
 namespace uhigh.Net.Testing
 {
@@ -35,11 +34,11 @@ namespace uhigh.Net.Testing
         {
             var left = new IdentifierExpression { Name = "x" };
             var right = new LiteralExpression { Value = 5, Type = TokenType.Number };
-            var binExpr = new BinaryExpression 
-            { 
-                Left = left, 
-                Operator = TokenType.Plus, 
-                Right = right 
+            var binExpr = new BinaryExpression
+            {
+                Left = left,
+                Operator = TokenType.Plus,
+                Right = right
             };
 
             Assert.AreEqual(left, binExpr.Left);
@@ -57,10 +56,10 @@ namespace uhigh.Net.Testing
         {
             var param1 = new Parameter("x", "int");
             var param2 = new Parameter("y", "int");
-            var returnStmt = new ReturnStatement 
-            { 
-                Value = new BinaryExpression 
-                { 
+            var returnStmt = new ReturnStatement
+            {
+                Value = new BinaryExpression
+                {
                     Left = new IdentifierExpression { Name = "x" },
                     Operator = TokenType.Plus,
                     Right = new IdentifierExpression { Name = "y" }
@@ -90,9 +89,9 @@ namespace uhigh.Net.Testing
         [Test]
         public void TestClassDeclarationStructure()
         {
-            var field = new FieldDeclaration 
-            { 
-                Name = "name", 
+            var field = new FieldDeclaration
+            {
+                Name = "name",
                 Type = "string",
                 Modifiers = new List<string> { "private" }
             };
@@ -103,12 +102,12 @@ namespace uhigh.Net.Testing
                 ReturnType = "string",
                 Body = new List<Statement>
                 {
-                    new ReturnStatement 
-                    { 
-                        Value = new MemberAccessExpression 
-                        { 
-                            Object = new ThisExpression(), 
-                            MemberName = "name" 
+                    new ReturnStatement
+                    {
+                        Value = new MemberAccessExpression
+                        {
+                            Object = new ThisExpression(),
+                            MemberName = "name"
                         }
                     }
                 },
@@ -172,10 +171,10 @@ namespace uhigh.Net.Testing
         {
             var function = new IdentifierExpression { Name = "print" };
             var argument = new LiteralExpression { Value = "Hello", Type = TokenType.String };
-            var callExpr = new CallExpression 
-            { 
-                Function = function, 
-                Arguments = new List<Expression> { argument } 
+            var callExpr = new CallExpression
+            {
+                Function = function,
+                Arguments = new List<Expression> { argument }
             };
 
             Assert.AreEqual(function, callExpr.Function);
@@ -210,10 +209,10 @@ namespace uhigh.Net.Testing
         public void TestMemberAccessExpression()
         {
             var obj = new IdentifierExpression { Name = "person" };
-            var memberAccess = new MemberAccessExpression 
-            { 
-                Object = obj, 
-                MemberName = "name" 
+            var memberAccess = new MemberAccessExpression
+            {
+                Object = obj,
+                MemberName = "name"
             };
 
             Assert.AreEqual(obj, memberAccess.Object);
@@ -285,10 +284,10 @@ namespace uhigh.Net.Testing
             // Multi-parameter lambda
             var multiParam = new LambdaExpression
             {
-                Parameters = new List<Parameter> 
-                { 
-                    new Parameter("x"), 
-                    new Parameter("y") 
+                Parameters = new List<Parameter>
+                {
+                    new Parameter("x"),
+                    new Parameter("y")
                 },
                 Body = new BinaryExpression
                 {

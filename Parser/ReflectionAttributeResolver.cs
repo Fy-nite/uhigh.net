@@ -1,7 +1,4 @@
-using System;
-using System.Collections.Generic;
 using System.Reflection;
-using System.Linq;
 using uhigh.Net.Diagnostics;
 
 namespace uhigh.Net.Parser
@@ -39,7 +36,7 @@ namespace uhigh.Net.Parser
         /// Gets or sets the value of the description
         /// </summary>
         public string? Description { get; set; }
-        
+
         /// <summary>
         /// Cans the apply to using the specified target
         /// </summary>
@@ -95,9 +92,9 @@ namespace uhigh.Net.Parser
             ScanAssembly(typeof(System.ComponentModel.DataAnnotations.RequiredAttribute).Assembly); // DataAnnotations
             ScanAssembly(typeof(System.Text.Json.Serialization.JsonPropertyNameAttribute).Assembly); // System.Text.Json
             ScanAssembly(typeof(System.Runtime.Serialization.DataMemberAttribute).Assembly); // System.Runtime.Serialization
-            
+
             // Try to scan common attribute assemblies
-            try 
+            try
             {
                 var newtonsoft = Assembly.LoadFrom("Newtonsoft.Json.dll");
                 ScanAssembly(newtonsoft);
@@ -248,9 +245,9 @@ namespace uhigh.Net.Parser
             }
 
             // Try case-insensitive lookup
-            var match = _discoveredAttributes.FirstOrDefault(kvp => 
+            var match = _discoveredAttributes.FirstOrDefault(kvp =>
                 string.Equals(kvp.Key, attributeName, StringComparison.OrdinalIgnoreCase));
-            
+
             if (!match.Equals(default(KeyValuePair<string, List<AttributeInfo>>)))
             {
                 attributeInfos = match.Value;
@@ -276,7 +273,7 @@ namespace uhigh.Net.Parser
                 AllowMultiple = true,
                 Inherited = true
             };
-            
+
             attributeInfos = new List<AttributeInfo> { placeholderInfo };
             return true; // Allow unknown attributes for now
         }
@@ -293,14 +290,14 @@ namespace uhigh.Net.Parser
             if (!TryResolveAttribute(attribute.Name, out var attributeInfos))
             {
                 var errorLocation = location ?? new SourceLocation(0, 0);
-                _diagnostics.ReportError($"Unknown attribute: {attribute.Name}", 
+                _diagnostics.ReportError($"Unknown attribute: {attribute.Name}",
                     errorLocation.Line, errorLocation.Column, "UH402");
-                
+
                 // Suggest similar attributes
                 var suggestions = GetSimilarAttributes(attribute.Name);
                 if (suggestions.Any())
                 {
-                    _diagnostics.ReportWarning($"Did you mean: {string.Join(", ", suggestions)}?", 
+                    _diagnostics.ReportWarning($"Did you mean: {string.Join(", ", suggestions)}?",
                         errorLocation.Line, errorLocation.Column, "UH403");
                 }
                 return false;
@@ -311,7 +308,7 @@ namespace uhigh.Net.Parser
             if (attributeInfo == null)
             {
                 var errorLocation = location ?? new SourceLocation(0, 0);
-                _diagnostics.ReportError($"Attribute '{attribute.Name}' cannot be applied to {target}", 
+                _diagnostics.ReportError($"Attribute '{attribute.Name}' cannot be applied to {target}",
                     errorLocation.Line, errorLocation.Column, "UH404");
                 return false;
             }
@@ -330,7 +327,7 @@ namespace uhigh.Net.Parser
         private bool ValidateAttributeArguments(AttributeDeclaration attribute, AttributeInfo attributeInfo, SourceLocation? location)
         {
             var errorLocation = location ?? new SourceLocation(0, 0);
-            
+
             // Check if we have the right number of arguments
             var requiredParams = attributeInfo.Parameters.Count(p => !p.HasDefaultValue);
             var providedArgs = attribute.Arguments.Count;
@@ -356,7 +353,7 @@ namespace uhigh.Net.Parser
             {
                 var param = attributeInfo.Parameters[i];
                 var arg = attribute.Arguments[i];
-                
+
                 if (!IsArgumentCompatible(arg, param.ParameterType))
                 {
                     _diagnostics.ReportWarning(

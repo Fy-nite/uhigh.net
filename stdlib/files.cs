@@ -1,10 +1,5 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace StdLib
 {
@@ -139,13 +134,13 @@ namespace StdLib
             string[] suffixes = { "B", "KB", "MB", "GB", "TB", "PB" };
             int counter = 0;
             decimal number = bytes;
-            
+
             while (Math.Round(number / 1024) >= 1)
             {
                 number /= 1024;
                 counter++;
             }
-            
+
             return $"{number:n1} {suffixes[counter]}";
         }
 
@@ -208,7 +203,7 @@ namespace StdLib
                 WriteIndented = prettyPrint,
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             };
-            
+
             var json = JsonSerializer.Serialize(obj, options);
             WriteText(path, json);
         }
@@ -222,10 +217,10 @@ namespace StdLib
             var directory = Path.GetDirectoryName(path) ?? "";
             var fileNameWithoutExt = GetFileNameWithoutExtension(path);
             var extension = Path.GetExtension(path);
-            
+
             var backupPath = Path.Combine(directory, $"{fileNameWithoutExt}_{timestamp}{extension}");
             CopyFile(path, backupPath);
-            
+
             return backupPath;
         }
 
@@ -245,15 +240,15 @@ namespace StdLib
         {
             var directory = Path.GetDirectoryName(path) ?? "";
             var fileName = Path.GetFileName(path);
-            
+
             var watcher = new FileSystemWatcher(directory, fileName)
             {
                 NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size,
                 EnableRaisingEvents = true
             };
-            
+
             watcher.Changed += (sender, e) => onChanged(e.FullPath);
-            
+
             return watcher;
         }
     }
@@ -314,7 +309,7 @@ namespace StdLib
         public static void CopyDirectory(string sourcePath, string destinationPath)
         {
             CreateDirectory(destinationPath);
-            
+
             // Copy files
             foreach (var file in GetFiles(sourcePath))
             {
@@ -322,7 +317,7 @@ namespace StdLib
                 var destFile = Path.Combine(destinationPath, fileName);
                 FileUtils.CopyFile(file, destFile);
             }
-            
+
             // Copy subdirectories
             foreach (var dir in GetDirectories(sourcePath))
             {
@@ -388,12 +383,12 @@ namespace StdLib
         public static void CleanDirectory(string path)
         {
             if (!DirectoryExists(path)) return;
-            
+
             foreach (var file in GetFiles(path))
             {
                 FileUtils.DeleteFile(file);
             }
-            
+
             foreach (var dir in GetDirectories(path))
             {
                 DeleteDirectory(dir);
@@ -477,20 +472,20 @@ namespace StdLib
         public static string GetUniqueFileName(string path)
         {
             if (!FileUtils.FileExists(path)) return path;
-            
+
             var directory = Path.GetDirectoryName(path) ?? "";
             var fileName = FileUtils.GetFileNameWithoutExtension(path);
             var extension = Path.GetExtension(path);
-            
+
             int counter = 1;
             string newPath;
-            
+
             do
             {
                 newPath = Path.Combine(directory, $"{fileName} ({counter}){extension}");
                 counter++;
             } while (FileUtils.FileExists(newPath));
-            
+
             return newPath;
         }
     }

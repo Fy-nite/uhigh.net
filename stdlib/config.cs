@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Text.Json;
 
 namespace StdLib
@@ -23,7 +20,7 @@ namespace StdLib
             {
                 var json = File.ReadAllText(filePath);
                 var config = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
-                
+
                 if (config != null)
                 {
                     foreach (var kvp in config)
@@ -41,7 +38,7 @@ namespace StdLib
         {
             var targetPath = filePath ?? _configFilePath;
             if (targetPath == null) throw new InvalidOperationException("No config file path specified");
-            
+
             var json = JsonSerializer.Serialize(_config, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(targetPath, json);
         }
@@ -53,12 +50,12 @@ namespace StdLib
         {
             if (!_config.TryGetValue(key, out var value))
                 return defaultValue;
-            
+
             if (value is JsonElement jsonElement)
             {
                 return JsonSerializer.Deserialize<T>(jsonElement.GetRawText());
             }
-            
+
             return (T?)value;
         }
 

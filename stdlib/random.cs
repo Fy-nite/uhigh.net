@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -179,7 +176,7 @@ namespace StdLib
         public static int SecureRandomInt(int min, int max)
         {
             if (min >= max) throw new ArgumentException("Min must be less than max");
-            
+
             uint range = (uint)(max - min);
             uint bytes = GetRandomUInt32() % range;
             return (int)(min + bytes);
@@ -192,17 +189,17 @@ namespace StdLib
         {
             var itemsList = items.ToList();
             if (count > itemsList.Count) throw new ArgumentException("Sample size cannot be larger than collection size");
-            
+
             var result = new List<T>();
             var indices = Enumerable.Range(0, itemsList.Count).ToList();
-            
+
             for (int i = 0; i < count; i++)
             {
                 int randomIndex = _random.Next(indices.Count);
                 result.Add(itemsList[indices[randomIndex]]);
                 indices.RemoveAt(randomIndex);
             }
-            
+
             return result;
         }
 
@@ -215,22 +212,22 @@ namespace StdLib
             static double NextGaussian()
             {
                 double? nextGaussian = null;
-                
+
                 if (nextGaussian.HasValue)
                 {
                     var temp = nextGaussian.Value;
                     nextGaussian = null;
                     return temp;
                 }
-                
+
                 double u1 = 1.0 - _random.NextDouble();
                 double u2 = 1.0 - _random.NextDouble();
                 double randStdNormal = Math.Sqrt(-2.0 * Math.Log(u1)) * Math.Sin(2.0 * Math.PI * u2);
                 nextGaussian = Math.Sqrt(-2.0 * Math.Log(u1)) * Math.Cos(2.0 * Math.PI * u2);
-                
+
                 return randStdNormal;
             }
-            
+
             return mean + stdDev * NextGaussian();
         }
 
@@ -241,7 +238,7 @@ namespace StdLib
         {
             var totalWeight = weights.Values.Sum();
             var randomValue = _random.NextDouble() * totalWeight;
-            
+
             double cumulativeWeight = 0;
             foreach (var kvp in weights)
             {
@@ -251,7 +248,7 @@ namespace StdLib
                     return kvp.Key;
                 }
             }
-            
+
             return weights.Keys.Last(); // Fallback
         }
 
@@ -352,11 +349,11 @@ namespace StdLib
             var parts = notation.ToLower().Split('+');
             var diceStr = parts[0];
             var bonus = parts.Length > 1 ? int.Parse(parts[1]) : 0;
-            
+
             var diceParts = diceStr.Split('d');
             var count = int.Parse(diceParts[0]);
             var sides = int.Parse(diceParts[1]);
-            
+
             return RollSum(count, sides) + bonus;
         }
     }

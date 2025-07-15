@@ -1,7 +1,7 @@
-using uhigh.Net.Parser;
-using uhigh.Net.Lexer;
-using uhigh.Net.Diagnostics;
 using System.Text;
+using uhigh.Net.Diagnostics;
+using uhigh.Net.Lexer;
+using uhigh.Net.Parser;
 
 namespace uhigh.Net.CodeGen
 {
@@ -239,7 +239,7 @@ namespace uhigh.Net.CodeGen
                 _output.AppendLine($"namespace {_rootNamespace}");
                 _output.AppendLine("{");
                 _indentLevel++;
-                
+
                 _output.AppendLine($"public class {_className}");
                 _output.AppendLine("{");
                 _indentLevel++;
@@ -290,7 +290,7 @@ namespace uhigh.Net.CodeGen
 
             var hasNamespace = program.Statements.Any(s => s is NamespaceDeclaration);
             var hasClass = program.Statements.Any(s => s is ClassDeclaration);
-            
+
             // Generate the source structure directly without wrapping or using statements
             foreach (var statement in program.Statements.Where(s => !(s is ImportStatement)))
             {
@@ -350,7 +350,7 @@ namespace uhigh.Net.CodeGen
             var hasNamespace = program.Statements.Any(s => s is NamespaceDeclaration);
             var hasClass = program.Statements.Any(s => s is ClassDeclaration);
             var hasMainFunction = program.Statements.OfType<FunctionDeclaration>().Any(f => f.Name == "main");
-            
+
             // If source has its own namespace/class structure, use it as-is
             if (hasNamespace || hasClass)
             {
@@ -500,7 +500,7 @@ namespace uhigh.Net.CodeGen
             GenerateAttributes(classDecl.Attributes);
 
             Indent();
-            
+
             // Generate modifiers
             if (classDecl.Modifiers.Count > 0)
             {
@@ -510,15 +510,15 @@ namespace uhigh.Net.CodeGen
             {
                 _output.Append("public "); // Default to public
             }
-            
+
             _output.Append("class ");
             _output.Append(classDecl.Name);
-            
+
             if (classDecl.BaseClass != null)
             {
                 _output.Append($" : {classDecl.BaseClass}");
             }
-            
+
             _output.AppendLine();
             Indent();
             _output.AppendLine("{");
@@ -550,7 +550,7 @@ namespace uhigh.Net.CodeGen
 
                 Indent();
                 _output.Append($"[{attribute.Name}");
-                
+
                 if (attribute.Arguments.Count > 0)
                 {
                     _output.Append("(");
@@ -561,7 +561,7 @@ namespace uhigh.Net.CodeGen
                     }
                     _output.Append(")");
                 }
-                
+
                 _output.AppendLine("]");
             }
         }
@@ -583,7 +583,7 @@ namespace uhigh.Net.CodeGen
                 case NamespaceDeclaration nsDecl:
                     GenerateNamespaceDeclaration(nsDecl);
                     break;
-                
+
                 case ClassDeclaration classDecl:
                     GenerateClassDeclaration(classDecl);
                     break;
@@ -638,7 +638,7 @@ namespace uhigh.Net.CodeGen
                 case ExpressionStatement exprStmt:
                     Indent();
                     // check if it's a using statement
- 
+
                     GenerateExpression(exprStmt.Expression);
                     _output.AppendLine(";");
                     break;
@@ -659,7 +659,7 @@ namespace uhigh.Net.CodeGen
                 _diagnostics.ReportCodeGenWarning("Empty sharp block found");
                 return;
             }
-            
+
             // Split the code into lines and indent each line properly
             var lines = sharpBlock.Code.Split('\n');
             foreach (var line in lines)
@@ -713,7 +713,7 @@ namespace uhigh.Net.CodeGen
             GenerateAttributes(methodDecl.Attributes);
 
             Indent();
-            
+
             // Generate modifiers
             if (methodDecl.Modifiers.Count > 0)
             {
@@ -723,7 +723,7 @@ namespace uhigh.Net.CodeGen
             {
                 _output.Append("public "); // Default to public
             }
-            
+
             if (methodDecl.IsConstructor)
             {
                 _output.Append($"{GetCurrentClassName()}(");
@@ -733,17 +733,17 @@ namespace uhigh.Net.CodeGen
                 var returnType = methodDecl.ReturnType != null ? ConvertType(methodDecl.ReturnType) : "void";
                 _output.Append($"{returnType} {methodDecl.Name}(");
             }
-            
+
             // Parameters
             for (int i = 0; i < methodDecl.Parameters.Count; i++)
             {
                 var param = methodDecl.Parameters[i];
                 if (i > 0) _output.Append(", ");
-                
+
                 var paramType = param.Type != null ? ConvertType(param.Type) : "object";
                 _output.Append($"{paramType} {param.Name}");
             }
-            
+
             _output.AppendLine(")");
             Indent();
             _output.AppendLine("{");
@@ -768,22 +768,22 @@ namespace uhigh.Net.CodeGen
         {
             Indent();
             _output.Append("public ");
-            
+
             var propType = propDecl.Type != null ? ConvertType(propDecl.Type) : "object";
             _output.Append($"{propType} {propDecl.Name}");
-            
+
             if (propDecl.Accessors.Count > 0)
             {
                 _output.AppendLine();
                 Indent();
                 _output.AppendLine("{");
                 _indentLevel++;
-                
+
                 foreach (var accessor in propDecl.Accessors)
                 {
                     Indent();
                     _output.Append(accessor.Type);
-                    
+
                     if (accessor.Body != null)
                     {
                         // Expression-bodied accessor: get => expression;
@@ -798,12 +798,12 @@ namespace uhigh.Net.CodeGen
                         Indent();
                         _output.AppendLine("{");
                         _indentLevel++;
-                        
+
                         foreach (var stmt in accessor.Statements)
                         {
                             GenerateStatement(stmt);
                         }
-                        
+
                         _indentLevel--;
                         Indent();
                         _output.AppendLine("}");
@@ -814,7 +814,7 @@ namespace uhigh.Net.CodeGen
                         _output.AppendLine(";");
                     }
                 }
-                
+
                 _indentLevel--;
                 Indent();
                 _output.AppendLine("}");
@@ -843,7 +843,7 @@ namespace uhigh.Net.CodeGen
             GenerateAttributes(fieldDecl.Attributes);
 
             Indent();
-            
+
             // Generate modifiers
             if (fieldDecl.Modifiers.Count > 0)
             {
@@ -853,16 +853,16 @@ namespace uhigh.Net.CodeGen
             {
                 _output.Append("private "); // Default to private for fields
             }
-            
+
             var fieldType = fieldDecl.Type != null ? ConvertType(fieldDecl.Type) : "object";
             _output.Append($"{fieldType} {fieldDecl.Name}");
-            
+
             if (fieldDecl.Initializer != null)
             {
                 _output.Append(" = ");
                 GenerateExpression(fieldDecl.Initializer);
             }
-            
+
             _output.AppendLine(";");
         }
 
@@ -884,7 +884,7 @@ namespace uhigh.Net.CodeGen
         private void GenerateVariableDeclaration(VariableDeclaration varDecl)
         {
             Indent();
-            
+
             if (varDecl.IsConstant)
             {
                 _output.Append("const ");
@@ -893,15 +893,15 @@ namespace uhigh.Net.CodeGen
             {
                 _output.Append("var ");
             }
-            
+
             _output.Append(varDecl.Name);
-            
+
             if (varDecl.Initializer != null)
             {
                 _output.Append(" = ");
                 GenerateExpression(varDecl.Initializer);
             }
-            
+
             _output.AppendLine(";");
         }
 
@@ -932,7 +932,7 @@ namespace uhigh.Net.CodeGen
             GenerateAttributes(funcDecl.Attributes);
 
             Indent();
-            
+
             // Generate modifiers
             if (funcDecl.Modifiers.Count > 0)
             {
@@ -942,7 +942,7 @@ namespace uhigh.Net.CodeGen
             {
                 _output.Append("public static "); // Default to public static for functions
             }
-            
+
             // Return type
             if (funcDecl.ReturnType != null)
             {
@@ -952,19 +952,19 @@ namespace uhigh.Net.CodeGen
             {
                 _output.Append("void");
             }
-            
+
             _output.Append($" {funcDecl.Name}(");
-            
+
             // Parameters
             for (int i = 0; i < funcDecl.Parameters.Count; i++)
             {
                 var param = funcDecl.Parameters[i];
                 if (i > 0) _output.Append(", ");
-                
+
                 var paramType = param.Type != null ? ConvertType(param.Type) : "object";
                 _output.Append($"{paramType} {param.Name}");
             }
-            
+
             _output.AppendLine(")");
             Indent();
             _output.AppendLine("{");
@@ -1054,12 +1054,12 @@ namespace uhigh.Net.CodeGen
         private void GenerateForStatement(ForStatement forStmt)
         {
             Indent();
-            
+
             if (forStmt.IsForInLoop)
             {
                 // Generate foreach loop
                 _output.Append($"foreach (var {forStmt.IteratorVariable} in ");
-                
+
                 // Handle different iterable types
                 if (forStmt.IterableExpression is RangeExpression rangeExpr)
                 {
@@ -1069,14 +1069,14 @@ namespace uhigh.Net.CodeGen
                 {
                     GenerateExpression(forStmt.IterableExpression!);
                 }
-                
+
                 _output.AppendLine(")");
             }
             else
             {
                 // Traditional for loop
                 _output.Append("for (");
-                
+
                 if (forStmt.Initializer != null)
                 {
                     // Remove the semicolon from the initializer since we're adding it manually
@@ -1090,11 +1090,11 @@ namespace uhigh.Net.CodeGen
                     }
                 }
                 _output.Append("; ");
-                
+
                 if (forStmt.Condition != null)
                     GenerateExpression(forStmt.Condition);
                 _output.Append("; ");
-                
+
                 if (forStmt.Increment != null)
                 {
                     // Generate increment without semicolon
@@ -1106,10 +1106,10 @@ namespace uhigh.Net.CodeGen
                         _output.Length = _output.Length - (newContent.EndsWith(";\n") ? 2 : 1);
                     }
                 }
-                
+
                 _output.AppendLine(")");
             }
-            
+
             Indent();
             _output.AppendLine("{");
             _indentLevel++;
@@ -1239,15 +1239,15 @@ namespace uhigh.Net.CodeGen
                         _output.Append(")");
                     }
                     break;
-                
+
                 case ArrayExpression arrayExpr:
                     GenerateArrayExpression(arrayExpr);
                     break;
-                
+
                 case LambdaExpression lambdaExpr:
                     GenerateLambdaExpression(lambdaExpr);
                     break;
-                
+
                 case BlockExpression blockExpr:
                     GenerateBlockExpression(blockExpr);
                     break;
@@ -1282,7 +1282,7 @@ namespace uhigh.Net.CodeGen
                 for (int i = 0; i < lambdaExpr.Parameters.Count; i++)
                 {
                     if (i > 0) _output.Append(", ");
-                    
+
                     var param = lambdaExpr.Parameters[i];
                     if (param.Type != null)
                     {
@@ -1295,9 +1295,9 @@ namespace uhigh.Net.CodeGen
                 }
                 _output.Append(")");
             }
-            
+
             _output.Append(" => ");
-            
+
             // Generate body
             if (lambdaExpr.IsExpressionLambda && lambdaExpr.Body != null)
             {
@@ -1311,12 +1311,12 @@ namespace uhigh.Net.CodeGen
                 Indent();
                 _output.AppendLine("{");
                 _indentLevel++;
-                
+
                 foreach (var stmt in lambdaExpr.Statements)
                 {
                     GenerateStatement(stmt);
                 }
-                
+
                 _indentLevel--;
                 Indent();
                 _output.Append("}");
@@ -1357,7 +1357,7 @@ namespace uhigh.Net.CodeGen
             Indent();
             _output.AppendLine("{");
             _indentLevel++;
-            
+
             foreach (var arm in matchStmt.Arms)
             {
                 if (arm.IsDefault)
@@ -1383,9 +1383,9 @@ namespace uhigh.Net.CodeGen
                         _output.AppendLine(":");
                     }
                 }
-                
+
                 _indentLevel++;
-                
+
                 // Handle both expression and block forms
                 if (arm.Result is BlockExpression blockExpr)
                 {
@@ -1402,12 +1402,12 @@ namespace uhigh.Net.CodeGen
                     GenerateExpression(arm.Result);
                     _output.AppendLine(";");
                 }
-                
+
                 Indent();
                 _output.AppendLine("break;");
                 _indentLevel--;
             }
-            
+
             _indentLevel--;
             Indent();
             _output.AppendLine("}");
@@ -1432,7 +1432,7 @@ namespace uhigh.Net.CodeGen
             {
                 _output.Append("new[] { ");
             }
-            
+
             for (int i = 0; i < arrayExpr.Elements.Count; i++)
             {
                 if (i > 0) _output.Append(", ");
@@ -1449,7 +1449,7 @@ namespace uhigh.Net.CodeGen
         {
             // Check if any arm uses block form - if so, we need different handling
             var hasBlockArms = matchExpr.Arms.Any(arm => arm.Result is BlockExpression);
-            
+
             if (hasBlockArms)
             {
                 // Convert to immediately invoked function expression for blocks
@@ -1462,7 +1462,7 @@ namespace uhigh.Net.CodeGen
                 Indent();
                 _output.AppendLine("{");
                 _indentLevel++;
-                
+
                 foreach (var arm in matchExpr.Arms)
                 {
                     if (arm.IsDefault)
@@ -1486,9 +1486,9 @@ namespace uhigh.Net.CodeGen
                             _output.AppendLine(":");
                         }
                     }
-                    
+
                     _indentLevel++;
-                    
+
                     if (arm.Result is BlockExpression blockExpr)
                     {
                         // Generate block with return
@@ -1497,7 +1497,7 @@ namespace uhigh.Net.CodeGen
                             GenerateStatement(stmt);
                         }
                         // Ensure we have a return for the last statement if it's an expression
-                        if (blockExpr.Statements.Count > 0 && 
+                        if (blockExpr.Statements.Count > 0 &&
                             blockExpr.Statements.Last() is ExpressionStatement lastExpr)
                         {
                             Indent();
@@ -1519,10 +1519,10 @@ namespace uhigh.Net.CodeGen
                         GenerateExpression(arm.Result);
                         _output.AppendLine(";");
                     }
-                    
+
                     _indentLevel--;
                 }
-                
+
                 _indentLevel--;
                 Indent();
                 _output.AppendLine("}");
@@ -1538,11 +1538,11 @@ namespace uhigh.Net.CodeGen
                 Indent();
                 _output.AppendLine("{");
                 _indentLevel++;
-                
+
                 foreach (var arm in matchExpr.Arms)
                 {
                     Indent();
-                    
+
                     if (arm.IsDefault)
                     {
                         _output.Append("_ => ");
@@ -1564,13 +1564,13 @@ namespace uhigh.Net.CodeGen
                         {
                             GenerateExpression(arm.Patterns[0]);
                         }
-                        
+
                         _output.Append(" => ");
                         GenerateExpression(arm.Result);
                         _output.AppendLine(",");
                     }
                 }
-                
+
                 _indentLevel--;
                 Indent();
                 _output.Append("})");
@@ -1601,7 +1601,7 @@ namespace uhigh.Net.CodeGen
             {
                 _output.Append(functionName);
             }
-            
+
             _output.Append("(");
             for (int i = 0; i < arguments.Count; i++)
             {
@@ -1737,18 +1737,18 @@ namespace uhigh.Net.CodeGen
                 {
                     var baseType = genericMatch.Groups[1].Value;
                     var typeArgs = genericMatch.Groups[2].Value;
-                    
+
                     // Handle multiple type arguments (e.g., Dictionary<string, int>)
                     var typeArgsList = typeArgs.Split(',').Select(t => ConvertType(t.Trim())).ToList();
-                    
+
                     // Try to resolve the base type with reflection first
                     if (_typeResolver?.TryGetGenericTypeDefinition(baseType, out var genericTypeDef) == true)
                     {
                         try
                         {
-                            var resolvedArgs = typeArgsList.Select(arg => 
+                            var resolvedArgs = typeArgsList.Select(arg =>
                                 _typeResolver.TryResolveType(arg, out var argType) ? argType : typeof(object)).ToArray();
-                            
+
                             if (resolvedArgs.Length == genericTypeDef.GetGenericArguments().Length)
                             {
                                 var constructedType = genericTypeDef.MakeGenericType(resolvedArgs);
@@ -1760,7 +1760,7 @@ namespace uhigh.Net.CodeGen
                             _diagnostics.ReportWarning($"Failed to construct generic type {baseType}: {ex.Message}");
                         }
                     }
-                    
+
                     // Fallback to manual mapping for common types
                     var convertedBaseType = baseType switch
                     {
@@ -1773,7 +1773,7 @@ namespace uhigh.Net.CodeGen
                         "function" => typeArgsList.Count == 1 ? $"Func<{typeArgsList[0]}>" : $"Func<{string.Join(", ", typeArgsList)}>",
                         _ => $"{ConvertType(baseType)}<{string.Join(", ", typeArgsList)}>"
                     };
-                    
+
                     return convertedBaseType;
                 }
             }
@@ -1783,12 +1783,12 @@ namespace uhigh.Net.CodeGen
             {
                 return GetCSharpTypeName(simpleType);
             }
-            
+
             // Fallback to manual mapping for μHigh-specific types
             return type switch
             {
                 "int" => "int",
-                "float" => "double", 
+                "float" => "double",
                 "string" => "string",
                 "bool" => "bool",
                 "void" => "void",
@@ -1825,7 +1825,7 @@ namespace uhigh.Net.CodeGen
             {
                 var genericTypeDef = type.GetGenericTypeDefinition();
                 var typeArgs = type.GetGenericArguments();
-                
+
                 if (genericTypeDef == typeof(List<>))
                 {
                     return $"List<{GetCSharpTypeName(typeArgs[0])}>";
@@ -1834,7 +1834,7 @@ namespace uhigh.Net.CodeGen
                 {
                     return $"Dictionary<{GetCSharpTypeName(typeArgs[0])}, {GetCSharpTypeName(typeArgs[1])}>";
                 }
-                
+
                 // Generic type with multiple arguments
                 var argNames = typeArgs.Select(GetCSharpTypeName);
                 return $"{type.Name.Split('`')[0]}<{string.Join(", ", argNames)}>";

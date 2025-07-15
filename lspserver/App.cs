@@ -4,14 +4,7 @@ using LanguageServer.Parameters;
 using LanguageServer.Parameters.General;
 using LanguageServer.Parameters.TextDocument;
 using LanguageServer.Parameters.Workspace;
-using System;
-using System.Collections.Generic;
-using System.CommandLine.Parsing;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 using uhigh.Net.Lexer;
-using uhigh.Net.Parser;
 
 namespace UhighLanguageServer
 {
@@ -105,7 +98,8 @@ namespace UhighLanguageServer
                     message = "Syntax error in the document",
                     source = "parser"
                 });
-                try {
+                try
+                {
                     if (Proxy != null)
                     {
                         Proxy.TextDocument.PublishDiagnostics(new PublishDiagnosticsParams
@@ -114,7 +108,9 @@ namespace UhighLanguageServer
                             diagnostics = diagnostics.ToArray()
                         });
                     }
-                } catch (Exception ex) {
+                }
+                catch (Exception ex)
+                {
                     Logger.Instance.Error($"Failed to publish diagnostics: {ex}");
                 }
                 return;
@@ -206,23 +202,24 @@ namespace UhighLanguageServer
                 diag.range.end.character = Math.Max(0, diag.range.end.character);
             }
 
-            try {
+            try
+            {
                 if (Proxy != null)
                 {
-                    // if (diagnostics.Count == 0)
-                    // {
-                    //     diagnostics.Add(new Diagnostic
-                    //     {
-                    //         severity = DiagnosticSeverity.Information,
-                    //         range = new LanguageServer.Parameters.Range
-                    //         {
-                    //             start = new Position { line = 0, character = 0 },
-                    //             end = new Position { line = 0, character = 1 }
-                    //         },
-                    //         message = "No issues found",
-                    //         source = "parser"
-                    //     });
-                    // }
+                    if (diagnostics.Count == 0)
+                    {
+                        diagnostics.Add(new Diagnostic
+                        {
+                            severity = DiagnosticSeverity.Information,
+                            range = new LanguageServer.Parameters.Range
+                            {
+                                start = new Position { line = 0, character = 0 },
+                                end = new Position { line = 0, character = 1 }
+                            },
+                            message = "No issues found",
+                            source = "parser"
+                        });
+                    }
                     Logger.Instance.Log($"Publishing {diagnostics.Count} diagnostics for {document.uri}");
                     // Publish diagnostics to the client
                     Proxy.TextDocument.PublishDiagnostics(new PublishDiagnosticsParams
@@ -231,7 +228,9 @@ namespace UhighLanguageServer
                         diagnostics = diagnostics.ToArray()
                     });
                 }
-            } catch (Exception ex) {
+            }
+            catch (Exception ex)
+            {
                 Logger.Instance.Error($"Failed to publish diagnostics: {ex}");
             }
         }
@@ -368,6 +367,7 @@ namespace UhighLanguageServer
             Logger.Instance.Log("Language Server is about to shutdown.");
             // WORKAROUND: Language Server does not receive an exit notification.
             Task.Delay(1000).ContinueWith(_ => Environment.Exit(0));
+            // Always return a valid result object (not null)
             return VoidResult<ResponseError>.Success();
         }
     }

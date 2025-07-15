@@ -1,5 +1,5 @@
-using uhigh.Net.Lexer;
 using uhigh.Net.Diagnostics;
+using uhigh.Net.Lexer;
 
 namespace uhigh.Net.Testing
 {
@@ -158,7 +158,7 @@ namespace uhigh.Net.Testing
             // Comments should be skipped
             var tokenTypes = tokens.Select(t => t.Type).ToArray();
             Assert.DoesNotContain(tokenTypes, TokenType.Comment);
-            
+
             // Should have: var, x, =, 42, var, y, =, 10, EOF
             Assert.AreEqual(9, tokens.Count);
         }

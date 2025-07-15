@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
 namespace StdLib
 {
 
@@ -142,7 +138,7 @@ namespace StdLib
         {
             if (globalIndex < _startOffset)
                 throw new ArgumentException($"Index {globalIndex} is before start offset {_startOffset}");
-            
+
             if (globalIndex < _sourceArray.Count)
             {
                 var localIndex = globalIndex - _startOffset;
@@ -163,10 +159,10 @@ namespace StdLib
             var localIndex = globalIndex - _startOffset;
             if (localIndex >= 0 && localIndex < _localItems.Count)
                 return _localItems[localIndex];
-            
+
             if (globalIndex < _sourceArray.Count)
                 return _sourceArray[globalIndex];
-            
+
             throw new IndexOutOfRangeException($"Index {globalIndex} is out of range");
         }
 

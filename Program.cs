@@ -1,7 +1,7 @@
-using uhigh.Net;
-using uhigh.Net.CommandLine;
 using System.CommandLine;
 using System.CommandLine.Parsing;
+using uhigh.Net;
+using uhigh.Net.CommandLine;
 
 /// <summary>
 /// The entry point class
@@ -15,7 +15,7 @@ public class EntryPoint
     public static async Task<int> Main(string[] args)
     {
         // Handle the case where user provides a file directly without a verb
-        if (args.Length > 0 && !args[0].StartsWith("-") && 
+        if (args.Length > 0 && !args[0].StartsWith("-") &&
             (args[0].EndsWith(".uh") || args[0].EndsWith(".uhigh")) &&
             !IsKnownVerb(args[0]))
         {
@@ -565,10 +565,10 @@ public class EntryPoint
     /// <returns>The bool</returns>
     private static bool IsKnownVerb(string arg)
     {
-        var knownVerbs = new[] { 
-            "compile", "create", "build", "run", "info", "add-file", 
-            "add-package", "install-packages", "search-packages", 
-            "list-packages", "restore-packages", "ast", "lsp", "test", "repl" 
+        var knownVerbs = new[] {
+            "compile", "create", "build", "run", "info", "add-file",
+            "add-package", "install-packages", "search-packages",
+            "list-packages", "restore-packages", "ast", "lsp", "test", "repl"
         };
         return knownVerbs.Contains(arg.ToLower());
     }
@@ -675,7 +675,7 @@ public class EntryPoint
             {
                 success = await compiler.CompileProject(options.ProjectFile, options.OutputFile);
             }
-            
+
             return success ? 0 : 1;
         }
         catch (Exception ex)
@@ -711,7 +711,7 @@ public class EntryPoint
             {
                 success = await compiler.CompileProjectAndRun(options.ProjectFile);
             }
-            
+
             return success ? 0 : 1;
         }
         catch (Exception ex)
@@ -812,7 +812,7 @@ public class EntryPoint
         try
         {
             Console.WriteLine($"Installing packages for project: {options.ProjectFile}");
-            
+
             var project = await uhigh.Net.ProjectFile.LoadAsync(options.ProjectFile);
             if (project == null)
             {
@@ -823,7 +823,7 @@ public class EntryPoint
             var projectDir = Path.GetDirectoryName(options.ProjectFile) ?? "";
             var nugetManager = new uhigh.Net.NuGet.NuGetManager();
             var success = await nugetManager.RestorePackagesAsync(project, projectDir, force: true);
-            
+
             if (success)
             {
                 Console.WriteLine("All packages installed successfully");
@@ -852,16 +852,16 @@ public class EntryPoint
         try
         {
             Console.WriteLine($"Searching for packages: {options.SearchTerm}");
-            
+
             var nugetManager = new uhigh.Net.NuGet.NuGetManager();
             var packages = await nugetManager.SearchPackagesAsync(options.SearchTerm, options.Take);
-            
+
             if (packages.Count == 0)
             {
                 Console.WriteLine("No packages found");
                 return 0;
             }
-            
+
             Console.WriteLine($"Found {packages.Count} packages:");
             foreach (var package in packages)
             {
@@ -872,7 +872,7 @@ public class EntryPoint
                 }
                 Console.WriteLine();
             }
-            
+
             return 0;
         }
         catch (Exception ex)
@@ -897,19 +897,19 @@ public class EntryPoint
                 WriteError($"Project file '{options.ProjectFile}' not found or invalid");
                 return 1;
             }
-            
+
             if (project.Dependencies.Count == 0)
             {
                 Console.WriteLine("No packages found in project");
                 return 0;
             }
-            
+
             Console.WriteLine($"Packages in {project.Name}:");
             foreach (var dep in project.Dependencies)
             {
                 Console.WriteLine($"  {dep.Name} v{dep.Version}");
             }
-            
+
             return 0;
         }
         catch (Exception ex)
@@ -934,11 +934,11 @@ public class EntryPoint
                 WriteError($"Project file '{options.ProjectFile}' not found or invalid");
                 return 1;
             }
-            
+
             var projectDir = Path.GetDirectoryName(options.ProjectFile) ?? "";
             var nugetManager = new uhigh.Net.NuGet.NuGetManager();
             var success = await nugetManager.RestorePackagesAsync(project, projectDir, options.Force);
-            
+
             if (success)
             {
                 Console.WriteLine("Packages restored successfully");
@@ -1001,14 +1001,15 @@ public class EntryPoint
             Console.WriteLine("Running μHigh Tests...");
             Console.WriteLine();
             List<string> skip = new();
-            if (options.SkipFile != null) {
+            if (options.SkipFile != null)
+            {
                 using StreamReader reader = new(options.SkipFile);
-                while (!reader.EndOfStream) {string? line = reader.ReadLine(); if (line != null) {skip.Add(line.Trim());}}
+                while (!reader.EndOfStream) { string? line = reader.ReadLine(); if (line != null) { skip.Add(line.Trim()); } }
             }
-            
+
             var testSuites = uhigh.Net.Testing.TestRunner.RunAllTests(skip);
             uhigh.Net.Testing.TestRunner.PrintResults(testSuites);
-            
+
             var totalFailed = testSuites.Sum(s => s.Counts.Failed);
             return totalFailed == 0 ? 0 : 1;
         }
@@ -1029,12 +1030,12 @@ public class EntryPoint
         try
         {
             Console.WriteLine("Starting μHigh REPL...");
-            
+
             var repl = new uhigh.Net.Repl.ReplSession(
                 verboseMode: options.Verbose,
                 stdLibPath: options.StdLibPath,
                 saveCSharpTo: options.SaveCSharpTo);
-            
+
             await repl.StartAsync();
             return 0;
         }
@@ -1062,7 +1063,7 @@ public class EntryPoint
         {
             return 0;
         }
-        
+
         Console.WriteLine("Command line parsing failed:");
         foreach (var error in errorsList)
         {

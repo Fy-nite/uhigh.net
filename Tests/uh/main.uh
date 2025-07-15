@@ -31,7 +31,6 @@ namespace testing
             time.Add("morning", "8 AM")
             time.Add("afternoon", "12 PM")
             time.Add("evening", "6 PM")
-
             cats.Add("purr")
             cats.Add("meow")
             cats.Add("hiss")

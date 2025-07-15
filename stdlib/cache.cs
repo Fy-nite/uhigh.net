@@ -1,7 +1,4 @@
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace StdLib
 {
@@ -33,11 +30,11 @@ namespace StdLib
                     _cache.TryRemove(key, out _);
                     return default;
                 }
-                
+
                 item.LastAccessed = DateTime.UtcNow;
                 return item.Value;
             }
-            
+
             return default;
         }
 
@@ -55,7 +52,7 @@ namespace StdLib
             };
 
             _cache[key] = item;
-            
+
             // Check if we need to evict items
             if (_cache.Count > _maxSize)
             {
@@ -108,7 +105,7 @@ namespace StdLib
         {
             var items = _cache.Values.ToList();
             var expired = items.Count(i => i.IsExpired);
-            
+
             return new CacheStats
             {
                 TotalItems = items.Count,
@@ -136,7 +133,7 @@ namespace StdLib
             {
                 var itemsToEvict = _cache.Count - _maxSize + 1;
                 var oldestItems = _cache.OrderBy(kvp => kvp.Value.LastAccessed).Take(itemsToEvict);
-                
+
                 foreach (var item in oldestItems)
                 {
                     _cache.TryRemove(item.Key, out _);
@@ -160,7 +157,7 @@ namespace StdLib
         public DateTime CreatedAt { get; set; }
         public DateTime LastAccessed { get; set; }
         public DateTime ExpiresAt { get; set; }
-        
+
         public bool IsExpired => DateTime.UtcNow > ExpiresAt;
     }
 

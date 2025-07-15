@@ -31,7 +31,7 @@ namespace uhigh.Net.Parser
         /// <summary>
         /// Gets or sets the value of the class name
         /// </summary>
-        public string? ClassName { get; set; }        
+        public string? ClassName { get; set; }
         /// <summary>
         /// Gets or sets the value of the declaration location
         /// </summary>
@@ -46,28 +46,28 @@ namespace uhigh.Net.Parser
             var paramTypes = Parameters.Select(p => p.Type ?? "object").ToList();
             return $"{Name}({string.Join(", ", paramTypes)})";
         }        /// <summary>
-/// Matcheses the call using the specified name
-/// </summary>
-/// <param name="name">The name</param>
-/// <param name="arguments">The arguments</param>
-/// <returns>The bool</returns>
-public bool MatchesCall(string name, List<Expression> arguments)
+                 /// Matcheses the call using the specified name
+                 /// </summary>
+                 /// <param name="name">The name</param>
+                 /// <param name="arguments">The arguments</param>
+                 /// <returns>The bool</returns>
+        public bool MatchesCall(string name, List<Expression> arguments)
         {
             if (Name != name) return false;
-            
+
             // For built-in methods, use reflection for type checking
             if (IsBuiltIn)
             {
                 return Parameters.Count == arguments.Count;
             }
-            
+
             // For user-defined methods in μHigh, be more lenient
             // Check parameter count and allow for optional parameters
             if (Parameters.Count == arguments.Count)
             {
                 return true;
             }
-            
+
             // Check if we have fewer arguments but remaining parameters have defaults
             if (arguments.Count < Parameters.Count)
             {
@@ -75,7 +75,7 @@ public bool MatchesCall(string name, List<Expression> arguments)
                 var optionalParams = Parameters.Skip(arguments.Count).Count(HasDefaultValue);
                 return requiredParams + optionalParams == Parameters.Count;
             }
-            
+
             return false;
         }
 
@@ -90,11 +90,11 @@ public bool MatchesCall(string name, List<Expression> arguments)
             // For now, we'll consider parameters with nullable types as having defaults
             return parameter.Type != null && parameter.Type.EndsWith("?");
         }        /// <summary>
-/// Infers the argument type using the specified argument
-/// </summary>
-/// <param name="argument">The argument</param>
-/// <returns>The string</returns>
-private string InferArgumentType(Expression argument)
+                 /// Infers the argument type using the specified argument
+                 /// </summary>
+                 /// <param name="argument">The argument</param>
+                 /// <returns>The string</returns>
+        private string InferArgumentType(Expression argument)
         {
             return argument switch
             {
@@ -118,7 +118,7 @@ private string InferArgumentType(Expression argument)
             {
                 string => "string",
                 int => "number",
-                long => "number", 
+                long => "number",
                 float => "number",
                 double => "number",
                 bool => "bool",
@@ -126,42 +126,42 @@ private string InferArgumentType(Expression argument)
                 _ => "object"
             };
         }/// <summary>
-/// Ises the type compatible using the specified param type
-/// </summary>
-/// <param name="paramType">The param type</param>
-/// <param name="argType">The arg type</param>
-/// <returns>The bool</returns>
-private bool IsTypeCompatible(string? paramType, string argType)
+         /// Ises the type compatible using the specified param type
+         /// </summary>
+         /// <param name="paramType">The param type</param>
+         /// <param name="argType">The arg type</param>
+         /// <returns>The bool</returns>
+        private bool IsTypeCompatible(string? paramType, string argType)
         {
             if (paramType == null || paramType == "object") return true;
             if (paramType == argType) return true;
-            
+
             // Handle nullable types
             if (paramType.EndsWith("?"))
             {
                 var baseType = paramType.TrimEnd('?');
                 return baseType == argType || argType == "null";
             }
-            
+
             // Handle numeric conversions (more permissive for μHigh)
             var numericTypes = new[] { "int", "long", "float", "double", "number" };
             if (numericTypes.Contains(paramType) && numericTypes.Contains(argType))
             {
                 return true;
             }
-            
+
             // Handle string conversions
             if (paramType == "string" && argType != "null")
             {
                 return true; // Most types can be converted to string
             }
-            
+
             // Handle object parameters (can accept anything)
             if (paramType == "object")
             {
                 return true;
             }
-            
+
             return false;
         }
 
@@ -182,7 +182,7 @@ private bool IsTypeCompatible(string? paramType, string argType)
         /// <returns>The bool</returns>
         private bool IsComparisonOperator(TokenType op)
         {
-            return op is TokenType.Equal or TokenType.NotEqual or TokenType.Less or TokenType.Greater 
+            return op is TokenType.Equal or TokenType.NotEqual or TokenType.Less or TokenType.Greater
                 or TokenType.LessEqual or TokenType.GreaterEqual;
         }
     }
@@ -309,7 +309,7 @@ private bool IsTypeCompatible(string? paramType, string argType)
             // Special μHigh functions that need custom handling
             RegisterBuiltIn("print", new[] { "object" }, "void");
             RegisterBuiltIn("input", new string[0], "string");
-            
+
             // Type conversion functions with special naming
             RegisterBuiltIn("int", new[] { "string" }, "int");
             RegisterBuiltIn("int", new[] { "double" }, "int");
@@ -332,10 +332,10 @@ private bool IsTypeCompatible(string? paramType, string argType)
         /// <param name="returnType">The return type</param>
         private void RegisterBuiltIn(string name, string[] paramTypes, string returnType)
         {
-            var parameters = paramTypes.Select((type, index) => new Parameter 
-            { 
-                Name = $"param{index}", 
-                Type = type 
+            var parameters = paramTypes.Select((type, index) => new Parameter
+            {
+                Name = $"param{index}",
+                Type = type
             }).ToList();
 
             var signature = new MethodSignature
@@ -349,7 +349,7 @@ private bool IsTypeCompatible(string? paramType, string argType)
 
             if (!_methods.ContainsKey(name))
                 _methods[name] = new List<MethodSignature>();
-            
+
             _methods[name].Add(signature);
         }
 
@@ -422,7 +422,7 @@ private bool IsTypeCompatible(string? paramType, string argType)
             };
 
             var key = method.IsStatic ? method.Name : $"{className}.{method.Name}";
-            
+
             if (!_classMethods.ContainsKey(key))
                 _classMethods[key] = new List<MethodSignature>();
 
@@ -501,7 +501,7 @@ private bool IsTypeCompatible(string? paramType, string argType)
             }
 
             var classInfo = _classes[className];
-            
+
             // If no explicit constructors, allow parameterless constructor
             if (!classInfo.Constructors.Any())
             {
@@ -510,7 +510,7 @@ private bool IsTypeCompatible(string? paramType, string argType)
                     _diagnostics.ReportInfo($"Allowing default constructor for class '{className}'");
                     return true;
                 }
-                
+
                 _diagnostics.ReportError(
                     $"Class '{className}' has no constructor that takes {arguments.Count} parameter(s)",
                     callToken.Line, callToken.Column, "UH206");
@@ -565,19 +565,19 @@ private bool IsTypeCompatible(string? paramType, string argType)
             }
 
             var classInfo = _classes[className];
-            
+
             if (classInfo.HasField(memberName) || classInfo.HasMethod(memberName))
                 return true;
 
             _diagnostics.ReportError(
                 $"Class '{className}' does not have a member named '{memberName}'",
                 accessToken.Line, accessToken.Column, "UH209");
-            
+
             // Suggest similar members
             var allMembers = classInfo.Fields.Select(f => f.Name)
                 .Concat(classInfo.Methods.Select(m => m.Name))
                 .ToList();
-            
+
             var suggestions = allMembers
                 .Where(name => LevenshteinDistance(memberName, name) <= 2)
                 .Take(3)
@@ -592,13 +592,13 @@ private bool IsTypeCompatible(string? paramType, string argType)
 
             return false;
         }        /// <summary>
-/// Validates the call using the specified function name
-/// </summary>
-/// <param name="functionName">The function name</param>
-/// <param name="arguments">The arguments</param>
-/// <param name="location">The location</param>
-/// <returns>The bool</returns>
-public bool ValidateCall(string functionName, List<Expression> arguments, Token location)
+                 /// Validates the call using the specified function name
+                 /// </summary>
+                 /// <param name="functionName">The function name</param>
+                 /// <param name="arguments">The arguments</param>
+                 /// <param name="location">The location</param>
+                 /// <returns>The bool</returns>
+        public bool ValidateCall(string functionName, List<Expression> arguments, Token location)
         {
             // Check if this is actually a constructor call (capitalized name without dots)
             if (char.IsUpper(functionName[0]) && !functionName.Contains('.'))
@@ -658,7 +658,7 @@ public bool ValidateCall(string functionName, List<Expression> arguments, Token 
             return false;
         }
 
-       
+
 
         /// <summary>
         /// Suggests the similar methods using the specified method name
@@ -670,7 +670,7 @@ public bool ValidateCall(string functionName, List<Expression> arguments, Token 
             // Get suggestions from both user-defined and reflected methods
             var userMethods = _methods.Keys.Concat(_classMethods.Keys).ToList();
             var reflectedMethods = _typeResolver.GetSimilarMethods(methodName);
-            
+
             var allSuggestions = userMethods.Concat(reflectedMethods)
                 .Where(name => LevenshteinDistance(methodName, name) <= 2)
                 .Distinct()
@@ -705,7 +705,7 @@ public bool ValidateCall(string functionName, List<Expression> arguments, Token 
                 // Be more lenient with attribute validation for now
                 if (!attributeResolver.TryResolveAttribute(attribute.Name, out var attributeInfos))
                 {
-                    _diagnostics.ReportWarning($"Unknown attribute: {attribute.Name}. Allowing for now.", 
+                    _diagnostics.ReportWarning($"Unknown attribute: {attribute.Name}. Allowing for now.",
                         location?.Line ?? 0, location?.Column ?? 0, "UH402");
                 }
                 else
@@ -784,13 +784,13 @@ public bool ValidateCall(string functionName, List<Expression> arguments, Token 
         {
             if (_methods.ContainsKey(methodName))
                 return _methods[methodName].FirstOrDefault();
-            
+
             if (_classMethods.ContainsKey(methodName))
                 return _classMethods[methodName].FirstOrDefault();
-                
+
             return null;
         }
-        
+
         /// <summary>
         /// Gets all user-defined class names
         /// </summary>
@@ -810,11 +810,11 @@ public bool ValidateCall(string functionName, List<Expression> arguments, Token 
             // Check exact match first
             if (_classes.ContainsKey(typeName))
                 return true;
-            
+
             // Check if any registered class ends with this type name (for namespace.class scenario)
             return _classes.Keys.Any(key => key.EndsWith($".{typeName}") || key == typeName);
         }
-        
+
         /// <summary>
         /// Infers the argument type using the specified argument
         /// </summary>
@@ -844,7 +844,7 @@ public bool ValidateCall(string functionName, List<Expression> arguments, Token 
             {
                 string => "string",
                 int => "number",
-                long => "number", 
+                long => "number",
                 float => "number",
                 double => "number",
                 bool => "bool",
@@ -852,7 +852,7 @@ public bool ValidateCall(string functionName, List<Expression> arguments, Token 
                 _ => "object"
             };
         }
-        
+
         /// <summary>
         /// Ises the arithmetic operator using the specified op
         /// </summary>
@@ -870,10 +870,10 @@ public bool ValidateCall(string functionName, List<Expression> arguments, Token 
         /// <returns>The bool</returns>
         private bool IsComparisonOperator(TokenType op)
         {
-            return op is TokenType.Equal or TokenType.NotEqual or TokenType.Less or TokenType.Greater 
+            return op is TokenType.Equal or TokenType.NotEqual or TokenType.Less or TokenType.Greater
                 or TokenType.LessEqual or TokenType.GreaterEqual;
         }
-        
+
         /// <summary>
         /// Levenshteins the distance using the specified s
         /// </summary>

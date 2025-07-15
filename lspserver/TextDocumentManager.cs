@@ -1,10 +1,4 @@
-﻿using LanguageServer.Parameters;
-using LanguageServer.Parameters.TextDocument;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using LanguageServer.Parameters.TextDocument;
 
 namespace UhighLanguageServer
 {
@@ -35,7 +29,7 @@ namespace UhighLanguageServer
             {
                 return;
             }
-            foreach(var ev in changeEvents)
+            foreach (var ev in changeEvents)
             {
                 Apply(document, ev);
             }
@@ -60,32 +54,22 @@ namespace UhighLanguageServer
 
         private static int GetPosition(string text, int line, int character)
         {
-            var pos = 0;
-            for (; 0 <= line; line--)
+            // Split lines using both \r\n and \n
+            var lines = text.Replace("\r\n", "\n").Split('\n');
+            if (line < 0) line = 0;
+            if (line >= lines.Length) line = lines.Length - 1;
+            int pos = 0;
+            for (int i = 0; i < line; i++)
             {
-                var lf = text.IndexOf('\n', pos);
-                if (lf < 0)
-                {
-                    return text.Length;
-                }
-                pos = lf + 1;
+                // Add length of line + 1 for the newline character
+                pos += lines[i].Length + 1;
             }
-            var linefeed = text.IndexOf('\n', pos);
-            var max = 0;
-            if (linefeed < 0)
-            {
-                max = text.Length;
-            }
-            else if (linefeed > 0 && text[linefeed - 1] == '\r')
-            {
-                max = linefeed - 1;
-            }
-            else
-            {
-                max = linefeed;
-            }
-            pos += character;
-            return (pos < max) ? pos : max;
+            // Clamp character to line length
+            int charInLine = Math.Min(character, lines[line].Length);
+            pos += charInLine;
+            // Clamp to text length
+            if (pos > text.Length) pos = text.Length;
+            return pos;
         }
 
         public void Remove(Uri uri)

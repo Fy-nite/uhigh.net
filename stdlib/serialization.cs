@@ -1,13 +1,8 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Xml;
 using System.Xml.Serialization;
-using System.Reflection;
-using System.Threading.Tasks;
 
 namespace StdLib
 {
@@ -32,27 +27,27 @@ namespace StdLib
         /// Gets or sets whether to indent the output for readability
         /// </summary>
         public bool Indent { get; set; } = true;
-        
+
         /// <summary>
         /// Gets or sets the property naming policy for JSON
         /// </summary>
         public JsonNamingPolicy? PropertyNamingPolicy { get; set; } = JsonNamingPolicy.CamelCase;
-        
+
         /// <summary>
         /// Gets or sets whether to include null values in JSON output
         /// </summary>
         public bool IncludeNullValues { get; set; } = false;
-        
+
         /// <summary>
         /// Gets or sets the encoding for text-based formats
         /// </summary>
         public Encoding Encoding { get; set; } = Encoding.UTF8;
-        
+
         /// <summary>
         /// Gets or sets the CSV delimiter
         /// </summary>
         public string CsvDelimiter { get; set; } = ",";
-        
+
         /// <summary>
         /// Gets or sets whether to include headers in CSV output
         /// </summary>
@@ -87,7 +82,7 @@ namespace StdLib
         public static string Serialize<T>(T obj, SerializationFormat format = SerializationFormat.Json, SerializationOptions? options = null)
         {
             options ??= new SerializationOptions();
-            
+
             return format switch
             {
                 SerializationFormat.Json => SerializeToJson(obj, options),
@@ -110,7 +105,7 @@ namespace StdLib
         public static T? Deserialize<T>(string data, SerializationFormat format = SerializationFormat.Json, SerializationOptions? options = null)
         {
             options ??= new SerializationOptions();
-            
+
             return format switch
             {
                 SerializationFormat.Json => DeserializeFromJson<T>(data, options),
@@ -170,7 +165,7 @@ namespace StdLib
 
             using var stringWriter = new StringWriter();
             using var xmlWriter = XmlWriter.Create(stringWriter, settings);
-            
+
             serializer.Serialize(xmlWriter, obj);
             return stringWriter.ToString();
         }
@@ -197,7 +192,7 @@ namespace StdLib
 
             var sb = new StringBuilder();
             var items = enumerable.Cast<object>().ToList();
-            
+
             if (items.Count == 0)
                 return string.Empty;
 
@@ -213,7 +208,7 @@ namespace StdLib
             // Write data rows
             foreach (var item in items)
             {
-                var values = properties.Select(p => 
+                var values = properties.Select(p =>
                 {
                     var value = p.GetValue(item)?.ToString() ?? string.Empty;
                     // Escape CSV values containing delimiter or quotes
@@ -223,7 +218,7 @@ namespace StdLib
                     }
                     return value;
                 });
-                
+
                 sb.AppendLine(string.Join(options.CsvDelimiter, values));
             }
 
@@ -241,7 +236,7 @@ namespace StdLib
 
             // Get the type we're deserializing to
             var targetType = typeof(T);
-            
+
             // If T is a collection type, get the element type
             Type elementType;
             if (targetType.IsGenericType && targetType.GetGenericTypeDefinition() == typeof(List<>))
@@ -275,7 +270,7 @@ namespace StdLib
 
                 for (int j = 0; j < Math.Min(values.Length, properties.Length); j++)
                 {
-                    var property = headers != null && j < headers.Length 
+                    var property = headers != null && j < headers.Length
                         ? properties.FirstOrDefault(p => p.Name.Equals(headers[j], StringComparison.OrdinalIgnoreCase))
                         : properties[j];
 
@@ -370,16 +365,16 @@ namespace StdLib
 
             if (targetType == typeof(string))
                 return value;
-            
+
             if (targetType == typeof(int))
                 return int.TryParse(value, out var intVal) ? intVal : 0;
-            
+
             if (targetType == typeof(double))
                 return double.TryParse(value, out var doubleVal) ? doubleVal : 0.0;
-            
+
             if (targetType == typeof(bool))
                 return bool.TryParse(value, out var boolVal) ? boolVal : false;
-            
+
             if (targetType == typeof(DateTime))
                 return DateTime.TryParse(value, out var dateVal) ? dateVal : DateTime.MinValue;
 
@@ -474,7 +469,7 @@ namespace StdLib
             {
                 var line = lines[i];
                 var trimmed = line.Trim();
-                
+
                 if (string.IsNullOrEmpty(trimmed) || trimmed.StartsWith("#"))
                     continue;
 
@@ -518,7 +513,7 @@ namespace StdLib
         {
             format ??= GetFormatFromExtension(filePath);
             var serialized = Serialize(obj, format.Value, options);
-            
+
             var encoding = options?.Encoding ?? Encoding.UTF8;
             await File.WriteAllTextAsync(filePath, serialized, encoding);
         }
@@ -534,10 +529,10 @@ namespace StdLib
         public static async Task<T?> LoadFromFileAsync<T>(string filePath, SerializationFormat? format = null, SerializationOptions? options = null)
         {
             format ??= GetFormatFromExtension(filePath);
-            
+
             var encoding = options?.Encoding ?? Encoding.UTF8;
             var content = await File.ReadAllTextAsync(filePath, encoding);
-            
+
             return Deserialize<T>(content, format.Value, options);
         }
 
@@ -596,10 +591,10 @@ namespace StdLib
         /// </summary>
         public static string ToCsv<T>(this T obj, bool includeHeaders = true, string delimiter = ",")
         {
-            return Serializer.Serialize(obj, SerializationFormat.Csv, new SerializationOptions 
-            { 
-                CsvIncludeHeaders = includeHeaders, 
-                CsvDelimiter = delimiter 
+            return Serializer.Serialize(obj, SerializationFormat.Csv, new SerializationOptions
+            {
+                CsvIncludeHeaders = includeHeaders,
+                CsvDelimiter = delimiter
             });
         }
 

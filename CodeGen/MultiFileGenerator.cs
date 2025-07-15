@@ -1,7 +1,6 @@
-using uhigh.Net.Parser;
-using uhigh.Net.Lexer;
-using uhigh.Net.Diagnostics;
 using System.Text;
+using uhigh.Net.Diagnostics;
+using uhigh.Net.Parser;
 
 namespace uhigh.Net.CodeGen
 {
@@ -139,12 +138,12 @@ namespace uhigh.Net.CodeGen
             foreach (var statement in statements)
             {
                 string fileName = GetFileNameForStatement(statement);
-                
+
                 if (!groups.ContainsKey(fileName))
                 {
                     groups[fileName] = new List<Statement>();
                 }
-                
+
                 groups[fileName].Add(statement);
             }
 
@@ -161,7 +160,7 @@ namespace uhigh.Net.CodeGen
             return statement switch
             {
                 NamespaceDeclaration nsDecl => $"{nsDecl.Name}.cs",
-                ClassDeclaration classDecl => $"{classDecl.Name}.cs", 
+                ClassDeclaration classDecl => $"{classDecl.Name}.cs",
                 FunctionDeclaration funcDecl => "Functions.cs",
                 TypeAliasDeclaration typeAlias => "TypeAliases.cs",
                 ImportStatement => "Program.cs", // Imports go to main file
@@ -177,7 +176,7 @@ namespace uhigh.Net.CodeGen
         private void GenerateFile(string fileName, List<Statement> statements)
         {
             var output = new StringBuilder();
-            
+
             // Add using statements
             foreach (var usingDirective in _globalUsings.OrderBy(u => u))
             {
@@ -195,7 +194,7 @@ namespace uhigh.Net.CodeGen
 
             // Generate namespace or class content
             var hasNamespace = statements.Any(s => s is NamespaceDeclaration);
-            
+
             if (hasNamespace)
             {
                 // Generate namespace structure
@@ -209,8 +208,8 @@ namespace uhigh.Net.CodeGen
                 // Group by classes or create default Program class
                 var classes = statements.OfType<ClassDeclaration>().ToList();
                 var functions = statements.OfType<FunctionDeclaration>().ToList();
-                var otherStatements = statements.Where(s => !(s is ClassDeclaration) && 
-                                                           !(s is FunctionDeclaration) && 
+                var otherStatements = statements.Where(s => !(s is ClassDeclaration) &&
+                                                           !(s is FunctionDeclaration) &&
                                                            !(s is TypeAliasDeclaration) &&
                                                            !(s is ImportStatement)).ToList();
 
@@ -228,7 +227,7 @@ namespace uhigh.Net.CodeGen
                     // Create a Program class for functions and loose statements
                     output.AppendLine("public class Program");
                     output.AppendLine("{");
-                    
+
                     // Generate built-in functions
                     GenerateBuiltInFunctions(output, 1);
 
@@ -286,7 +285,7 @@ namespace uhigh.Net.CodeGen
         private void GenerateClass(StringBuilder output, ClassDeclaration classDecl, int indentLevel)
         {
             Indent(output, indentLevel);
-            
+
             if (classDecl.Modifiers.Count > 0)
             {
                 output.Append(string.Join(" ", classDecl.Modifiers) + " ");
@@ -295,15 +294,15 @@ namespace uhigh.Net.CodeGen
             {
                 output.Append("public ");
             }
-            
+
             output.Append("class ");
             output.Append(classDecl.Name);
-            
+
             if (classDecl.BaseClass != null)
             {
                 output.Append($" : {ConvertType(classDecl.BaseClass)}");
             }
-            
+
             output.AppendLine();
             Indent(output, indentLevel);
             output.AppendLine("{");
@@ -365,7 +364,7 @@ namespace uhigh.Net.CodeGen
             }
 
             Indent(output, indentLevel);
-            
+
             if (methodDecl.Modifiers.Count > 0)
             {
                 output.Append(string.Join(" ", methodDecl.Modifiers) + " ");
@@ -374,10 +373,10 @@ namespace uhigh.Net.CodeGen
             {
                 output.Append("public ");
             }
-            
+
             var returnType = methodDecl.ReturnType != null ? ConvertType(methodDecl.ReturnType) : "void";
             output.AppendLine($"{returnType} {methodDecl.Name}()");
-            
+
             Indent(output, indentLevel);
             output.AppendLine("{");
             Indent(output, indentLevel + 1);
@@ -396,7 +395,7 @@ namespace uhigh.Net.CodeGen
         private void GenerateField(StringBuilder output, FieldDeclaration fieldDecl, int indentLevel)
         {
             Indent(output, indentLevel);
-            
+
             if (fieldDecl.Modifiers.Count > 0)
             {
                 output.Append(string.Join(" ", fieldDecl.Modifiers) + " ");
@@ -405,7 +404,7 @@ namespace uhigh.Net.CodeGen
             {
                 output.Append("private ");
             }
-            
+
             var fieldType = fieldDecl.Type != null ? ConvertType(fieldDecl.Type) : "object";
             output.AppendLine($"{fieldType} {fieldDecl.Name};");
         }
@@ -437,7 +436,7 @@ namespace uhigh.Net.CodeGen
             }
 
             Indent(output, indentLevel);
-            
+
             if (funcDecl.Modifiers.Count > 0)
             {
                 output.Append(string.Join(" ", funcDecl.Modifiers) + " ");
@@ -446,10 +445,10 @@ namespace uhigh.Net.CodeGen
             {
                 output.Append("public static ");
             }
-            
+
             var returnType = funcDecl.ReturnType != null ? ConvertType(funcDecl.ReturnType) : "void";
             output.AppendLine($"{returnType} {funcDecl.Name}()");
-            
+
             Indent(output, indentLevel);
             output.AppendLine("{");
             Indent(output, indentLevel + 1);
@@ -546,7 +545,7 @@ namespace uhigh.Net.CodeGen
             {
                 return typeAnn.Name; // Already in correct format
             }
-            
+
             if (typeAnn.Name == "array" && typeAnn.TypeArguments.Count == 1)
             {
                 return $"{ConvertTypeAnnotation(typeAnn.TypeArguments[0])}[]";
@@ -570,7 +569,7 @@ namespace uhigh.Net.CodeGen
             {
                 return type; // Already in C# format
             }
-            
+
             // Handle generic types
             if (type.Contains('<') && type.Contains('>'))
             {
@@ -580,7 +579,7 @@ namespace uhigh.Net.CodeGen
                     var baseType = genericMatch.Groups[1].Value;
                     var typeArgs = genericMatch.Groups[2].Value;
                     var typeArgsList = typeArgs.Split(',').Select(t => ConvertType(t.Trim())).ToList();
-                    
+
                     return baseType switch
                     {
                         "array" => $"{typeArgsList[0]}[]",
@@ -590,11 +589,11 @@ namespace uhigh.Net.CodeGen
                     };
                 }
             }
-            
+
             return type switch
             {
                 "int" => "int",
-                "float" => "double", 
+                "float" => "double",
                 "string" => "string",
                 "bool" => "bool",
                 "void" => "void",

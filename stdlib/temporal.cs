@@ -1,8 +1,5 @@
-using System;
-using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Text.Json;
-using System.Linq;
 
 namespace StdLib
 {
@@ -23,7 +20,7 @@ namespace StdLib
         /// Gets or sets the value of the change reason
         /// </summary>
         public string? ChangeReason { get; set; }
-        
+
         /// <summary>
         /// Initializes a new instance of the <see cref="Snapshot{T}"/> class
         /// </summary>
@@ -91,7 +88,7 @@ namespace StdLib
         {
             _current = newValue;
             _snapshots.Enqueue(new Snapshot<T>(DeepClone(newValue), reason));
-            
+
             // Maintain history limit
             while (_snapshots.Count > _maxHistory)
             {
@@ -330,7 +327,7 @@ namespace StdLib
         /// Gets the value of the today
         /// </summary>
         public static DateTime Today => DateTime.Today;
-        
+
         /// <summary>
         /// Sinces the from
         /// </summary>
@@ -344,7 +341,7 @@ namespace StdLib
         /// <param name="end">The end</param>
         /// <returns>The time span</returns>
         public static TimeSpan Between(DateTime start, DateTime end) => end - start;
-        
+
         /// <summary>
         /// Formats the duration using the specified duration
         /// </summary>
@@ -360,7 +357,7 @@ namespace StdLib
                 return $"{duration.TotalMinutes:F1} minutes";
             return $"{duration.TotalSeconds:F1} seconds";
         }
-        
+
         /// <summary>
         /// Rounds the to second using the specified date time
         /// </summary>
@@ -368,10 +365,10 @@ namespace StdLib
         /// <returns>The date time</returns>
         public static DateTime RoundToSecond(DateTime dateTime)
         {
-            return new DateTime(dateTime.Year, dateTime.Month, dateTime.Day, 
+            return new DateTime(dateTime.Year, dateTime.Month, dateTime.Day,
                               dateTime.Hour, dateTime.Minute, dateTime.Second);
         }
-        
+
         /// <summary>
         /// Rounds the to minute using the specified date time
         /// </summary>
@@ -379,10 +376,10 @@ namespace StdLib
         /// <returns>The date time</returns>
         public static DateTime RoundToMinute(DateTime dateTime)
         {
-            return new DateTime(dateTime.Year, dateTime.Month, dateTime.Day, 
+            return new DateTime(dateTime.Year, dateTime.Month, dateTime.Day,
                               dateTime.Hour, dateTime.Minute, 0);
         }
-        
+
         /// <summary>
         /// Rounds the to hour using the specified date time
         /// </summary>
@@ -390,7 +387,7 @@ namespace StdLib
         /// <returns>The date time</returns>
         public static DateTime RoundToHour(DateTime dateTime)
         {
-            return new DateTime(dateTime.Year, dateTime.Month, dateTime.Day, 
+            return new DateTime(dateTime.Year, dateTime.Month, dateTime.Day,
                               dateTime.Hour, 0, 0);
         }
     }
@@ -441,7 +438,7 @@ namespace StdLib
         public bool TryExecute()
         {
             if (!CanExecute()) return false;
-            
+
             _events.Enqueue(DateTime.UtcNow);
             return true;
         }
@@ -467,11 +464,11 @@ namespace StdLib
             {
                 CleanOldEvents();
                 if (_events.Count < _maxEvents) return TimeSpan.Zero;
-                
+
                 var oldestEvent = _events.Peek();
                 var nextAvailableTime = oldestEvent + _window;
-                return nextAvailableTime > DateTime.UtcNow 
-                    ? nextAvailableTime - DateTime.UtcNow 
+                return nextAvailableTime > DateTime.UtcNow
+                    ? nextAvailableTime - DateTime.UtcNow
                     : TimeSpan.Zero;
             }
         }

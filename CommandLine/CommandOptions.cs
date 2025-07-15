@@ -1,5 +1,3 @@
-using System.CommandLine;
-
 namespace uhigh.Net.CommandLine
 {
     /// <summary>

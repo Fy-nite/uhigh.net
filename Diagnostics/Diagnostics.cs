@@ -1,5 +1,4 @@
 using uhigh.Net.Lexer;
-using System.Diagnostics;
 
 namespace uhigh.Net.Diagnostics
 {
@@ -43,7 +42,7 @@ namespace uhigh.Net.Diagnostics
         /// Gets or sets the value of the file name
         /// </summary>
         public string? FileName { get; set; }
-        
+
         /// <summary>
         /// Initializes a new instance of the <see cref="SourceLocation"/> class
         /// </summary>
@@ -245,19 +244,20 @@ namespace uhigh.Net.Diagnostics
 
             var stackTrace = new System.Diagnostics.StackTrace(true);
             var frames = stackTrace.GetFrames();
-            
+
             if (frames != null)
             {
                 var relevantFrames = frames
                     .Skip(2) // Skip this method and the immediate caller
                     .Where(f => f.GetMethod() != null)
                     .Take(10) // Limit to 10 frames
-                    .Select(f => {
+                    .Select(f =>
+                    {
                         var method = f.GetMethod();
                         var fileName = f.GetFileName();
                         var lineNumber = f.GetFileLineNumber();
                         var methodName = $"{method?.DeclaringType?.Name}.{method?.Name}";
-                        
+
                         if (!string.IsNullOrEmpty(fileName))
                         {
                             return $"{methodName} at {Path.GetFileName(fileName)}:{lineNumber}";
@@ -268,7 +268,7 @@ namespace uhigh.Net.Diagnostics
                     .ToList();
 
                 diagnostic.StackTrace = relevantFrames;
-                
+
                 if (relevantFrames.Count > 0)
                 {
                     diagnostic.CallerInfo = relevantFrames.First();
@@ -288,12 +288,12 @@ namespace uhigh.Net.Diagnostics
         {
             var location = line > 0 ? new SourceLocation(line, column, _sourceFileName) : null;
             var diagnostic = new Diagnostic(DiagnosticSeverity.Error, message, location, code, exception);
-            
+
             if (location != null && _sourceLines.ContainsKey(line))
             {
                 diagnostic.SourceLine = _sourceLines[line];
             }
-            
+
             AddCallerInfoToDiagnostic(diagnostic);
             _diagnostics.Add(diagnostic);
             PrintRustStyleDiagnostic(diagnostic);
@@ -311,12 +311,12 @@ namespace uhigh.Net.Diagnostics
         {
             var location = line > 0 ? new SourceLocation(line, column, _sourceFileName) : null;
             var diagnostic = new Diagnostic(DiagnosticSeverity.Fatal, message, location, code, exception);
-            
+
             if (location != null && _sourceLines.ContainsKey(line))
             {
                 diagnostic.SourceLine = _sourceLines[line];
             }
-            
+
             AddCallerInfoToDiagnostic(diagnostic);
             _diagnostics.Add(diagnostic);
             PrintRustStyleDiagnostic(diagnostic);
@@ -333,12 +333,12 @@ namespace uhigh.Net.Diagnostics
         {
             var location = line > 0 ? new SourceLocation(line, column, _sourceFileName) : null;
             var diagnostic = new Diagnostic(DiagnosticSeverity.Warning, message, location, code);
-            
+
             if (location != null && _sourceLines.ContainsKey(line))
             {
                 diagnostic.SourceLine = _sourceLines[line];
             }
-            
+
             AddCallerInfoToDiagnostic(diagnostic);
             _diagnostics.Add(diagnostic);
             PrintRustStyleDiagnostic(diagnostic);
@@ -357,7 +357,7 @@ namespace uhigh.Net.Diagnostics
             var diagnostic = new Diagnostic(DiagnosticSeverity.Info, message, location, code);
             AddCallerInfoToDiagnostic(diagnostic);
             _diagnostics.Add(diagnostic);
-            
+
             if (_verboseMode)
             {
                 PrintRustStyleDiagnostic(diagnostic);
@@ -371,7 +371,7 @@ namespace uhigh.Net.Diagnostics
         private void PrintRustStyleDiagnostic(Diagnostic diagnostic)
         {
             if (_suppressOutput) return; // Don't print anything if output is suppressed
-            
+
             var originalColor = Console.ForegroundColor;
             try
             {
@@ -387,13 +387,13 @@ namespace uhigh.Net.Diagnostics
 
                 Console.ForegroundColor = severityColor;
                 Console.Write(severityText);
-                
+
                 if (diagnostic.Code != null)
                 {
                     Console.ForegroundColor = ConsoleColor.White;
                     Console.Write($"[{diagnostic.Code}]");
                 }
-                
+
                 Console.ForegroundColor = ConsoleColor.White;
                 Console.Write(": ");
                 Console.WriteLine(diagnostic.Message);
@@ -434,13 +434,13 @@ namespace uhigh.Net.Diagnostics
                         var lineNumber = diagnostic.Location.Line;
                         var lineNumberWidth = lineNumber.ToString().Length;
                         var padding = new string(' ', lineNumberWidth);
-                        
+
                         Console.ForegroundColor = ConsoleColor.Blue;
                         Console.WriteLine($"{padding} |");
                         Console.Write($"{lineNumber} | ");
                         Console.ForegroundColor = ConsoleColor.White;
                         Console.WriteLine(sourceLine);
-                        
+
                         // Print caret pointer
                         if (diagnostic.Location.Column > 0)
                         {
@@ -488,7 +488,7 @@ namespace uhigh.Net.Diagnostics
         public void PrintSummary()
         {
             if (_suppressOutput) return; // Don't print anything if output is suppressed
-            
+
             if (_diagnostics.Count == 0)
             {
                 var originalColor = Console.ForegroundColor;
@@ -505,7 +505,7 @@ namespace uhigh.Net.Diagnostics
             {
                 var errorCount = ErrorCount;
                 var warningCount = WarningCount;
-                
+
                 if (errorCount > 0)
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
@@ -516,7 +516,7 @@ namespace uhigh.Net.Diagnostics
                     Console.Write(Path.GetFileNameWithoutExtension(_sourceFileName ?? "source"));
                     Console.ForegroundColor = ConsoleColor.White;
                     Console.Write("` due to ");
-                    
+
                     if (errorCount == 1)
                     {
                         Console.Write("previous error");
@@ -525,12 +525,12 @@ namespace uhigh.Net.Diagnostics
                     {
                         Console.Write($"{errorCount} previous errors");
                     }
-                    
+
                     if (warningCount > 0)
                     {
                         Console.Write($"; {warningCount} warning{(warningCount == 1 ? "" : "s")} emitted");
                     }
-                    
+
                     Console.WriteLine();
                 }
                 else if (warningCount > 0)
@@ -612,7 +612,7 @@ namespace uhigh.Net.Diagnostics
             // Get detailed stack trace for debugging
             var stackTrace = new System.Diagnostics.StackTrace(true);
             var frames = stackTrace.GetFrames();
-            
+
             var callerChain = "";
             if (frames != null && frames.Length > 2)
             {
@@ -620,12 +620,13 @@ namespace uhigh.Net.Diagnostics
                     .Skip(1) // Skip this method
                     .Take(5) // Take next 5 frames
                     .Where(f => f.GetMethod() != null)
-                    .Select(f => {
+                    .Select(f =>
+                    {
                         var method = f.GetMethod();
                         var fileName = f.GetFileName();
                         var lineNumber = f.GetFileLineNumber();
                         var methodName = $"{method?.DeclaringType?.Name}.{method?.Name}";
-                        
+
                         if (!string.IsNullOrEmpty(fileName))
                         {
                             return $"{methodName}({Path.GetFileName(fileName)}:{lineNumber})";
@@ -633,7 +634,7 @@ namespace uhigh.Net.Diagnostics
                         return methodName;
                     })
                     .Where(s => !string.IsNullOrEmpty(s));
-                
+
                 callerChain = string.Join(" -> ", relevantFrames);
             }
 
@@ -644,7 +645,7 @@ namespace uhigh.Net.Diagnostics
             }
 
             diagnostics.ReportError(message, token.Line, token.Column, "UH001");
-            
+
             // Set suggestion on the last diagnostic
             var diagnostic = diagnostics.Diagnostics.LastOrDefault();
             if (diagnostic != null)
@@ -698,12 +699,12 @@ namespace uhigh.Net.Diagnostics
         {
             diagnostics.ReportTokenError($"Parse error: {message}", token, "UH100");
         }        /// <summary>
-/// Reports the code gen warning using the specified diagnostics
-/// </summary>
-/// <param name="diagnostics">The diagnostics</param>
-/// <param name="message">The message</param>
-/// <param name="context">The context</param>
-public static void ReportCodeGenWarning(this DiagnosticsReporter diagnostics, string message, string? context = null)
+                 /// Reports the code gen warning using the specified diagnostics
+                 /// </summary>
+                 /// <param name="diagnostics">The diagnostics</param>
+                 /// <param name="message">The message</param>
+                 /// <param name="context">The context</param>
+        public static void ReportCodeGenWarning(this DiagnosticsReporter diagnostics, string message, string? context = null)
         {
             diagnostics.ReportWarning($"Code generation: {message}" + (context != null ? $" (Context: {context})" : ""), code: "UH200");
         }

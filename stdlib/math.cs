@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
 namespace StdLib
 {
     /// <summary>
@@ -31,7 +27,7 @@ namespace StdLib
         {
             if (n < 0) throw new ArgumentException("Factorial is not defined for negative numbers");
             if (n == 0 || n == 1) return 1;
-            
+
             long result = 1;
             for (int i = 2; i <= n; i++)
             {
@@ -47,7 +43,7 @@ namespace StdLib
         {
             a = Math.Abs(a);
             b = Math.Abs(b);
-            
+
             while (b != 0)
             {
                 int temp = b;
@@ -73,7 +69,7 @@ namespace StdLib
             if (n < 2) return false;
             if (n == 2) return true;
             if (n % 2 == 0) return false;
-            
+
             for (int i = 3; i * i <= n; i += 2)
             {
                 if (n % i == 0) return false;
@@ -88,15 +84,15 @@ namespace StdLib
         {
             var result = new List<long>();
             if (count <= 0) return result;
-            
+
             if (count >= 1) result.Add(0);
             if (count >= 2) result.Add(1);
-            
+
             for (int i = 2; i < count; i++)
             {
                 result.Add(result[i - 1] + result[i - 2]);
             }
-            
+
             return result;
         }
 
@@ -107,9 +103,9 @@ namespace StdLib
         {
             if (r > n || r < 0) return 0;
             if (r == 0 || r == n) return 1;
-            
+
             r = Math.Min(r, n - r); // Take advantage of symmetry
-            
+
             long result = 1;
             for (int i = 0; i < r; i++)
             {
@@ -124,7 +120,7 @@ namespace StdLib
         public static long Permutations(int n, int r)
         {
             if (r > n || r < 0) return 0;
-            
+
             long result = 1;
             for (int i = n; i > n - r; i--)
             {
@@ -318,9 +314,9 @@ namespace StdLib
         {
             var sorted = values.OrderBy(x => x).ToList();
             int count = sorted.Count;
-            
+
             if (count == 0) throw new ArgumentException("Cannot calculate median of empty collection");
-            
+
             if (count % 2 == 0)
             {
                 return (sorted[count / 2 - 1] + sorted[count / 2]) / 2.0;
@@ -369,17 +365,17 @@ namespace StdLib
         {
             var xList = x.ToList();
             var yList = y.ToList();
-            
+
             if (xList.Count != yList.Count)
                 throw new ArgumentException("X and Y must have the same number of elements");
-            
+
             var xMean = Mean(xList);
             var yMean = Mean(yList);
-            
+
             var numerator = xList.Zip(yList, (xi, yi) => (xi - xMean) * (yi - yMean)).Sum();
             var xSumSquares = xList.Sum(xi => Math.Pow(xi - xMean, 2));
             var ySumSquares = yList.Sum(yi => Math.Pow(yi - yMean, 2));
-            
+
             return numerator / Math.Sqrt(xSumSquares * ySumSquares);
         }
 
@@ -390,16 +386,16 @@ namespace StdLib
         {
             var sorted = values.OrderBy(x => x).ToList();
             if (sorted.Count == 0) throw new ArgumentException("Cannot calculate percentile of empty collection");
-            
+
             double index = (percentile / 100.0) * (sorted.Count - 1);
             int lowerIndex = (int)Math.Floor(index);
             int upperIndex = (int)Math.Ceiling(index);
-            
+
             if (lowerIndex == upperIndex)
             {
                 return sorted[lowerIndex];
             }
-            
+
             return MathUtils.Lerp(sorted[lowerIndex], sorted[upperIndex], index - lowerIndex);
         }
     }

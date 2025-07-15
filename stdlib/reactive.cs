@@ -1,13 +1,10 @@
-using System;
-using System.Collections.Generic;
 using System.Collections.Concurrent;
-using System.Linq;
 namespace StdLib
 {
     /// <summary>
     /// Observable value that can be watched for changes
     /// </summary>
-    public class Observable<T> 
+    public class Observable<T>
     {
         /// <summary>
         /// The value
@@ -176,13 +173,13 @@ namespace StdLib
         {
             var timestampedEvent = new TimestampedEvent<T>(eventData);
             _events.Enqueue(timestampedEvent);
-            
+
             // Maintain size limit
             while (_events.Count > _maxEvents)
             {
                 _events.TryDequeue(out _);
             }
-            
+
             // Notify subscribers
             foreach (var subscriber in _subscribers)
             {
