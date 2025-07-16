@@ -10,7 +10,6 @@ namespace uhigh.Net.CommandLine
         public bool RunInMemory { get; set; }
         public string? SaveCSharpTo { get; set; }
         public string Target { get; set; } = "csharp"; // Default target language
-        public bool Verbose { get; set; } = false;  
     }
 
     /// <summary>
