@@ -164,7 +164,7 @@ namespace uhigh.Net.CommandLine.Setup
     }
 
     /// <summary>
-    /// Dummy update source for demonstration (replace with real implementation)
+    /// Dummy update source for demonstration (replace with real implementation at somepoint lol)
     /// </summary>
     public class DummyUpdateSource : IUpdateSource
     {
