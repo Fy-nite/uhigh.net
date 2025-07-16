@@ -46,7 +46,7 @@ namespace MyFirstApp
 {
     public class Program 
     {
-        public static func Main(args: array<string>): void {
+        public static func Main(args: string[]): void {
             Console.WriteLine("Hello, World!")
         }
     }
@@ -107,15 +107,9 @@ Console.WriteLine("Age: " + age.ToString())  // Converting numbers to strings
 ### Input from User
 
 ```go
-public static func input(prompt: string): string {
-    if (prompt != null) {
-        Console.Write(prompt)
-    }
-    return Console.ReadLine() ?? ""
-}
-
+using StdLib
 // Usage
-var userName = input("What's your name? ")
+var userName = IO.Input("What's your name? ")
 Console.WriteLine("Hello, " + userName + "!")
 ```
 
@@ -223,7 +217,7 @@ counter--              // Decrement by 1
 ```go
 var age = 18
 
-if (age >= 18) {
+if age >= 18 {
     Console.WriteLine("You can vote!")
 } else {
     Console.WriteLine("Too young to vote.")
@@ -232,11 +226,11 @@ if (age >= 18) {
 // Multiple conditions
 var score = 85
 
-if (score >= 90) {
+if score >= 90 {
     Console.WriteLine("Grade: A")
-} else if (score >= 80) {
+} else if score >= 80 {
     Console.WriteLine("Grade: B")
-} else if (score >= 70) {
+} else if score >= 70 {
     Console.WriteLine("Grade: C")
 } else {
     Console.WriteLine("Grade: F")
@@ -248,14 +242,14 @@ if (score >= 90) {
 ```go
 // Count from 1 to 5
 var counter = 1
-while (counter <= 5) {
+while counter <= 5 {
     Console.WriteLine("Count: " + counter)
     counter++
 }
 
 // Loop until user enters "quit"
 var input = ""
-while (input != "quit") {
+while input != "quit" {
     input = input("Enter command (or 'quit' to exit): ")
     if (input != "quit") {
         Console.WriteLine("You entered: " + input)
@@ -267,13 +261,13 @@ while (input != "quit") {
 
 ```go
 // Traditional for loop
-for (var i = 0; i < 10; i++) {
+for var i = 0; i < 10; i++ {
     Console.WriteLine("Number: " + i)
 }
 
 // For-in loop (when arrays are implemented)
 var numbers = [1, 2, 3, 4, 5]
-for (num in numbers) {
+for num in numbers {
     Console.WriteLine("Value: " + num)
 }
 ```
@@ -340,7 +334,7 @@ public class Person {
     private field age: int
     
     // Constructor initializes the object
-    public func constructor(personName: string, personAge: int) {
+    public Person(personName: string, personAge: int) {
         this.name = personName
         this.age = personAge
     }
@@ -371,40 +365,6 @@ person2.greet()
 person1.haveBirthday()
 ```
 
-### Properties vs Fields
-
-```go
-public class BankAccount {
-    // Private field - internal storage
-    private field balance: float = 0
-    
-    // Public property - controlled access
-    public var Balance: float {
-        get { return this.balance }
-        set { 
-            if (value >= 0) {
-                this.balance = value
-            }
-        }
-    }
-    
-    public func deposit(amount: float): void {
-        if (amount > 0) {
-            this.balance += amount
-        }
-    }
-    
-    public func withdraw(amount: float): bool {
-        if (amount > 0 && amount <= this.balance) {
-            this.balance -= amount
-            return true
-        }
-        return false
-    }
-}
-```
-
-**Exercise:** Create a `Car` class with fields for make, model, and year, plus methods to start the engine and honk the horn.
 
 ## Namespaces
 
@@ -421,8 +381,8 @@ namespace MyCompany.Utils {
 
 namespace MyCompany.Models {
     public class User {
-        public var Name: string { get; set; }
-        public var Email: string { get; set; }
+        public field Name: string 
+        public field Email: string
     }
 }
 
@@ -443,7 +403,7 @@ namespace MyCompany.Main {
 ### Match Expressions (Pattern Matching)
 
 ```go
-var response = command match {
+match command  {
     "help" => showHelp(),
     "exit" => exitProgram(),
     "save" => saveFile(),
@@ -483,7 +443,7 @@ var area = MathUtils.circleArea(5.0)
 namespace MyApp.Models {
     public class User {
         private field id: int
-        public var Name: string { get; set; }
+        public field Name: string 
         
         public func constructor(userId: int, userName: string) {
             this.id = userId
