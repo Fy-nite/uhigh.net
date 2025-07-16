@@ -147,6 +147,27 @@ See [GitHub](https://github.com/fy-nite/uhigh.net) to get started.
 
 See [LICENSE](LICENSE) for details.
 
+## Custom Code Generation Targets
+
+μHigh's backend is modular: you can implement custom code generators for new target languages (e.g., Python, JavaScript, etc.).
+
+- Implement `ICodeGenerator` (see `CodeGen/ICodeGenerator.cs`)
+- Register your generator with the compiler
+- Select the target via CLI or API
+
+Example usage:
+```bash
+uhigh compile myfile.uh --target javascript
+uhigh compile myfile.uh --target csharp
+uhigh list-targets
+```
+
+Example API:
+```csharp
+var compiler = new Compiler(verboseMode: true, stdLibPath: null, targetLanguage: "javascript");
+var jsCode = compiler.CompileToTarget(source, "javascript");
+```
+
 ---
 
 *μHigh: Simple syntax, powerful runtime* ⚡

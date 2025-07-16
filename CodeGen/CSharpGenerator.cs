@@ -8,7 +8,7 @@ namespace uhigh.Net.CodeGen
     /// <summary>
     /// The sharp generator class
     /// </summary>
-    public class CSharpGenerator
+    public class CSharpGenerator: ICodeGenerator
     {
         /// <summary>
         /// The output
@@ -46,6 +46,64 @@ namespace uhigh.Net.CodeGen
         /// The type resolver
         /// </summary>
         private ReflectionTypeResolver _typeResolver; // Add this field
+
+        /// <summary>
+        /// The config
+        /// </summary>
+        private CodeGeneratorConfig? _config;
+
+        public CodeGeneratorInfo Info => new()
+        {
+            Name = "C# Code Generator",
+            Description = "Generates C# code from μHigh programs with full feature support",
+            Version = "2.0.0",
+            SupportedFeatures = new() { "classes", "functions", "generics", "match", "lambdas", "async", "attributes" },
+            RequiredDependencies = new() { ".NET 8.0+", "Microsoft.CodeAnalysis" }
+        };
+
+        public string TargetName => "csharp";
+
+        public string FileExtension => ".cs";
+
+        /// <summary>
+        /// Initializes the generator with configuration
+        /// </summary>
+        /// <param name="config">Generator configuration</param>
+        /// <param name="diagnostics">Diagnostics reporter</param>
+        public void Initialize(CodeGeneratorConfig config, DiagnosticsReporter diagnostics)
+        {
+            _config = config;
+            _rootNamespace = config.RootNamespace ?? "Generated";
+            _className = config.ClassName ?? "Program";
+            
+            diagnostics.ReportInfo($"Initialized C# generator with namespace: {_rootNamespace}, class: {_className}");
+        }
+
+        /// <summary>
+        /// Validates if the generator can handle the given program
+        /// </summary>
+        /// <param name="program">Program to validate</param>
+        /// <param name="diagnostics">Diagnostics reporter</param>
+        /// <returns>True if the program can be generated</returns>
+        public bool CanGenerate(Program program, DiagnosticsReporter diagnostics)
+        {
+            // Check for unsupported features
+            var unsupportedFeatures = new List<string>();
+
+            // Add validation logic here
+            // For now, C# generator supports most features
+            
+            if (unsupportedFeatures.Any())
+            {
+                foreach (var feature in unsupportedFeatures)
+                {
+                    diagnostics.ReportError($"Unsupported feature for C# target: {feature}");
+                }
+                return false;
+            }
+
+            return true;
+        }
 
         /// <summary>
         /// Generates the program

@@ -53,6 +53,7 @@ public class EntryPoint
         rootCommand.AddCommand(CreateLspCommand());
         rootCommand.AddCommand(CreateTestCommand());
         rootCommand.AddCommand(CreateReplCommand());
+        rootCommand.AddCommand(CreateListTargetsCommand());
 
         return rootCommand;
     }
@@ -68,6 +69,7 @@ public class EntryPoint
         var saveCsOption = CommonOptions.CreateSaveCSharpOption();
         var outputOption = new Option<string?>("--output", "Output executable file path");
         var runInMemoryOption = new Option<bool>("--run", "Run the compiled code in memory");
+        var targetOption = new Option<string>("--target", () => "csharp", "Code generation target (e.g. csharp, javascript)");
 
         var command = new Command("compile", "Compile a μHigh source file")
         {
@@ -76,10 +78,11 @@ public class EntryPoint
             stdLibOption,
             saveCsOption,
             outputOption,
-            runInMemoryOption
+            runInMemoryOption,
+            targetOption
         };
 
-        command.SetHandler(async (sourceFile, verbose, stdLibPath, saveCsTo, output, runInMemory) =>
+        command.SetHandler(async (sourceFile, verbose, stdLibPath, saveCsTo, output, runInMemory, target) =>
         {
             var options = new CompileOptions
             {
@@ -88,10 +91,11 @@ public class EntryPoint
                 StdLibPath = stdLibPath,
                 SaveCSharpTo = saveCsTo,
                 OutputFile = output,
-                RunInMemory = runInMemory
+                RunInMemory = runInMemory,
+                Target = target
             };
             Environment.ExitCode = await HandleCompileCommand(options);
-        }, sourceFileArg, verboseOption, stdLibOption, saveCsOption, outputOption, runInMemoryOption);
+        }, sourceFileArg, verboseOption, stdLibOption, saveCsOption, outputOption, runInMemoryOption, targetOption);
 
         return command;
     }
@@ -559,6 +563,20 @@ public class EntryPoint
     }
 
     /// <summary>
+    /// Creates the list-targets command
+    /// </summary>
+    private static Command CreateListTargetsCommand()
+    {
+        var command = new Command("list-targets", "List available code generation targets");
+        command.SetHandler(() =>
+        {
+            var compiler = new Compiler();
+            compiler.ListAvailableTargets();
+        });
+        return command;
+    }
+
+    /// <summary>
     /// Ises the known verb using the specified arg
     /// </summary>
     /// <param name="arg">The arg</param>
@@ -582,7 +600,7 @@ public class EntryPoint
     {
         try
         {
-            var compiler = new Compiler(options.Verbose, options.StdLibPath);
+            var compiler = new Compiler(options.Verbose, options.StdLibPath, options.Target);
             bool success;
 
             if (!File.Exists(options.SourceFile))
@@ -591,6 +609,28 @@ public class EntryPoint
                 return 1;
             }
 
+            // If target is not csharp, use modular backend
+            if (!string.IsNullOrEmpty(options.Target) && options.Target.ToLower() != "csharp")
+            {
+                var source = await File.ReadAllTextAsync(options.SourceFile);
+                var diagnostics = new uhigh.Net.Diagnostics.DiagnosticsReporter(options.Verbose, options.SourceFile);
+                var code = compiler.CompileToTarget(source, options.Target, diagnostics);
+
+                var outputFile = options.OutputFile;
+                if (string.IsNullOrEmpty(outputFile))
+                {
+                    var generator = uhigh.Net.CodeGen.CodeGeneratorRegistry.GetGenerator(options.Target);
+                    var ext = generator?.FileExtension ?? ".txt";
+                    outputFile = Path.ChangeExtension(options.SourceFile, ext);
+                }
+
+                await File.WriteAllTextAsync(outputFile, code);
+                Console.WriteLine($"Generated {options.Target} code: {outputFile}");
+                diagnostics.PrintSummary();
+                return diagnostics.HasErrors ? 1 : 0;
+            }
+
+            // Default: C# backend
             if (!string.IsNullOrEmpty(options.SaveCSharpTo))
             {
                 success = await compiler.SaveCSharpCode(options.SourceFile, options.SaveCSharpTo);
@@ -626,8 +666,8 @@ public class EntryPoint
     {
         try
         {
-            var compiler = new Compiler(options.Verbose, options.StdLibPath);
-            var success = await compiler.CreateProject(
+            var projectManager = new uhigh.Net.ProjectSystem.ProjectManager(options.Verbose, options.StdLibPath);
+            var success = await projectManager.CreateProject(
                 options.ProjectName,
                 options.Directory,
                 options.Description,
@@ -730,7 +770,7 @@ public class EntryPoint
     {
         try
         {
-            var compiler = new Compiler(options.Verbose, options.StdLibPath);
+            var projectManager = new uhigh.Net.ProjectSystem.ProjectManager(options.Verbose, options.StdLibPath);
 
             if (!File.Exists(options.ProjectFile))
             {
@@ -738,7 +778,7 @@ public class EntryPoint
                 return 1;
             }
 
-            var success = await compiler.ListProjectInfo(options.ProjectFile);
+            var success = await projectManager.ListProjectInfo(options.ProjectFile);
             return success ? 0 : 1;
         }
         catch (Exception ex)
@@ -757,7 +797,7 @@ public class EntryPoint
     {
         try
         {
-            var compiler = new Compiler(options.Verbose, options.StdLibPath);
+            var projectManager = new uhigh.Net.ProjectSystem.ProjectManager(options.Verbose, options.StdLibPath);
 
             if (!File.Exists(options.ProjectFile))
             {
@@ -765,7 +805,7 @@ public class EntryPoint
                 return 1;
             }
 
-            var success = await compiler.AddSourceFileToProject(options.ProjectFile, options.SourceFile, options.CreateFile);
+            var success = await projectManager.AddSourceFileToProject(options.ProjectFile, options.SourceFile, options.CreateFile);
             return success ? 0 : 1;
         }
         catch (Exception ex)
@@ -784,7 +824,7 @@ public class EntryPoint
     {
         try
         {
-            var compiler = new Compiler(options.Verbose, options.StdLibPath);
+            var projectManager = new uhigh.Net.ProjectSystem.ProjectManager(options.Verbose, options.StdLibPath);
 
             if (!File.Exists(options.ProjectFile))
             {
@@ -792,7 +832,7 @@ public class EntryPoint
                 return 1;
             }
 
-            var success = await compiler.AddPackageToProject(options.ProjectFile, options.PackageName, options.Version!);
+            var success = await projectManager.AddPackageToProject(options.ProjectFile, options.PackageName, options.Version!);
             return success ? 0 : 1;
         }
         catch (Exception ex)
@@ -958,7 +998,7 @@ public class EntryPoint
     }
 
     /// <summary>
-    /// Handles the ast command using the specified options
+    /// Creates the ast command using the specified options
     /// </summary>
     /// <param name="options">The options</param>
     /// <returns>A task containing the int</returns>
