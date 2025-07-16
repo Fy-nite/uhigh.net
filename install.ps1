@@ -38,7 +38,7 @@ function Require-DotNet {
 }
 
 function Ensure-ProjectRoot {
-    # doesnt quite work?
+    # doesn't quite work?
     # $currentDir = Get-Location
     # $projectRoot = Get-ChildItem -Path . -Recurse -Filter "uhigh.csproj" | Get-Item  | Split-Path -Parent
     # Write-Host "Current directory: $currentDir"
