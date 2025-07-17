@@ -876,7 +876,7 @@ namespace uhigh.Net.Parser
             var commonTypes = new[] {
                 "string", "int", "float", "bool", "void", "object", "double", "decimal",
                 "List", "Dictionary", "Array", "IEnumerable", "ICollection", "HashSet",
-                "TimestampedEvent", "Observable", "EventStream"
+                "TimestampedEvent", "Observable", "EventStream", "T"
             };
 
             return commonTypes.Any(ct => typeName.Contains(ct));

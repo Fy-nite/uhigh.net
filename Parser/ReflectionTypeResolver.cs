@@ -307,6 +307,7 @@ namespace uhigh.Net.Parser
                 case "object":
                     type = typeof(object);
                     return true;
+                
                 case "void":
                     type = typeof(void);
                     return true;

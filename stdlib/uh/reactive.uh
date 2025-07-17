@@ -1,0 +1,33 @@
+namespace StdLib
+{
+    
+
+    [System.Serializable]
+    public class observable<T>
+    {
+        private field value: T
+        private field _observers: List<Action<T>>
+        public constructor(initialValue: T)
+        {
+            this.value = initialValue
+            this._observers = new List<Action<T>>()
+        }
+        public func GetValue(): T
+        {
+            return this.value
+        }
+        public func Subscribe(observer: Action<T>): void
+        {
+            this._observers.Add(observer)
+        }
+
+        public func Add(newValue: T): void
+        {
+            this.value = newValue
+            for var observer in this._observers
+            {
+                observer(this.value)
+            }
+        }
+    }
+}

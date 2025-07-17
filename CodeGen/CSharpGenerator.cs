@@ -1144,62 +1144,51 @@ namespace uhigh.Net.CodeGen
         private void GenerateForStatement(ForStatement forStmt)
         {
             Indent();
+            _output.Append("for (");
 
-            if (forStmt.IsForInLoop)
+            // Initializer
+            if (forStmt.Initializer is VariableDeclaration varDecl)
             {
-                // Generate foreach loop
-                _output.Append($"foreach (var {forStmt.IteratorVariable} in ");
-
-                // Handle different iterable types
-                if (forStmt.IterableExpression is RangeExpression rangeExpr)
+                _output.Append("var ");
+                _output.Append(varDecl.Name);
+                if (varDecl.Initializer != null)
                 {
-                    GenerateRangeIterable(rangeExpr);
+                    _output.Append(" = ");
+                    GenerateExpression(varDecl.Initializer);
                 }
-                else
-                {
-                    GenerateExpression(forStmt.IterableExpression!);
-                }
-
-                _output.AppendLine(")");
             }
-            else
+            else if (forStmt.Initializer != null)
             {
-                // Traditional for loop
-                _output.Append("for (");
-
-                if (forStmt.Initializer != null)
-                {
-                    // Remove the semicolon from the initializer since we're adding it manually
-                    var initOutput = _output.ToString();
-                    var currentLength = _output.Length;
-                    GenerateStatement(forStmt.Initializer);
-                    var newContent = _output.ToString().Substring(currentLength);
-                    if (newContent.EndsWith(";\n") || newContent.EndsWith(";"))
-                    {
-                        _output.Length = _output.Length - (newContent.EndsWith(";\n") ? 2 : 1);
-                    }
-                }
-                _output.Append("; ");
-
-                if (forStmt.Condition != null)
-                    GenerateExpression(forStmt.Condition);
-                _output.Append("; ");
-
-                if (forStmt.Increment != null)
-                {
-                    // Generate increment without semicolon
-                    var currentLength = _output.Length;
-                    GenerateStatement(forStmt.Increment);
-                    var newContent = _output.ToString().Substring(currentLength);
-                    if (newContent.EndsWith(";\n") || newContent.EndsWith(";"))
-                    {
-                        _output.Length = _output.Length - (newContent.EndsWith(";\n") ? 2 : 1);
-                    }
-                }
-
-                _output.AppendLine(")");
+                // ExpressionStatement or other
+                GenerateStatement(forStmt.Initializer);
+                // Remove trailing semicolon/newline
+                if (_output.Length > 0 && _output[_output.Length - 1] == ';')
+                    _output.Length--;
             }
 
+            _output.Append("; ");
+
+            // Condition
+            if (forStmt.Condition != null)
+            {
+                GenerateExpression(forStmt.Condition);
+            }
+
+            _output.Append("; ");
+
+            // Increment
+            if (forStmt.Increment is ExpressionStatement exprStmt)
+            {
+                GenerateExpression(exprStmt.Expression);
+            }
+            else if (forStmt.Increment != null)
+            {
+                GenerateStatement(forStmt.Increment);
+                if (_output.Length > 0 && _output[_output.Length - 1] == ';')
+                    _output.Length--;
+            }
+
+            _output.AppendLine(")");
             Indent();
             _output.AppendLine("{");
             _indentLevel++;
@@ -1850,6 +1839,12 @@ namespace uhigh.Net.CodeGen
                     return convertedBaseType;
                 }
             }
+
+            // Emit generic type parameters as-is (e.g., T, U, V)
+            if (type.Length == 1 && char.IsUpper(type[0]))
+                return type;
+            if (type.StartsWith("T") && type.Length <= 10 && char.IsUpper(type[0]))
+                return type;
 
             // Try to resolve as a simple type through reflection
             if (_typeResolver?.TryResolveType(type, out var simpleType) == true)

@@ -1,0 +1,15 @@
+namespace StdLib
+{
+    public class Collections
+    {
+       public static func Range(end: int): List<int>
+       {
+           var result = new List<int>()
+           for (var i = start; i < end; i++)
+           {
+               result.Add(i)
+           }
+           return result
+       }
+    }
+}
