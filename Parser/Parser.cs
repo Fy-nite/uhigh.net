@@ -432,6 +432,7 @@ namespace uhigh.Net.Parser
                 if (Match(TokenType.Namespace)) return ParseNamespaceDeclaration();
                 if (Match(TokenType.Enum)) return ParseEnumDeclaration(modifiers);
                 if (Match(TokenType.Interface)) return ParseInterfaceDeclaration(modifiers);
+                if (Match(TokenType.Generic)) return ParseGenericClassDeclaration(modifiers, attributes);
                 if (Match(TokenType.Class)) return ParseClassDeclaration();
                 if (Match(TokenType.Const)) return ParseConstDeclaration();
                 if (Match(TokenType.Var)) return ParseVariableDeclaration();
@@ -1060,6 +1061,17 @@ namespace uhigh.Net.Parser
             var name = Consume(TokenType.Identifier, "Expected method name").Value;
             bool isConstructor = name == "constructor";
 
+            // Parse generic parameters if present (e.g., Meow<T>)
+            var genericParameters = new List<string>();
+            if (Match(TokenType.Less)) // <
+            {
+                do
+                {
+                    genericParameters.Add(Consume(TokenType.Identifier, "Expected generic parameter name").Value);
+                } while (Match(TokenType.Comma));
+                Consume(TokenType.Greater, "Expected '>' after generic parameters");
+            }
+
             Consume(TokenType.LeftParen, "Expected '(' after method name");
             var parameters = new List<Parameter>();
 
@@ -1128,7 +1140,8 @@ namespace uhigh.Net.Parser
                 Parameters = parameters,
                 Body = body,
                 ReturnType = returnType,
-                IsConstructor = isConstructor
+                IsConstructor = isConstructor,
+                GenericParameters = genericParameters // Set generic parameters
             };
         }
 
@@ -2531,6 +2544,17 @@ namespace uhigh.Net.Parser
         {
             var name = Consume(TokenType.Identifier, "Expected class name").Value;
 
+            // Parse generic parameters if present
+            var genericParameters = new List<string>();
+            if (Match(TokenType.Less)) // <
+            {
+                do
+                {
+                    genericParameters.Add(Consume(TokenType.Identifier, "Expected generic parameter name").Value);
+                } while (Match(TokenType.Comma));
+                Consume(TokenType.Greater, "Expected '>' after generic parameters");
+            }
+
             string? baseClass = null;
             if (Match(TokenType.Colon))
             {
@@ -2554,7 +2578,8 @@ namespace uhigh.Net.Parser
                 BaseClass = baseClass,
                 Members = members,
                 Modifiers = new List<string>(),
-                Attributes = new List<AttributeDeclaration>()
+                Attributes = new List<AttributeDeclaration>(),
+                GenericParameters = genericParameters // Set generic parameters
             };
         }
 
@@ -2564,120 +2589,149 @@ namespace uhigh.Net.Parser
         /// <returns>The statement</returns>
         private Statement? ParseClassMember()
         {
-            // Check for attributes first
-            var attributes = new List<AttributeDeclaration>();
-            while (Check(TokenType.LeftBracket))
+            try
             {
-                attributes.Add(ParseAttribute());
-            }
-
-            // Parse modifiers
-            var modifiers = new List<string>();
-            while (IsModifierToken(Peek()))
-            {
-                modifiers.Add(Advance().Value);
-            }
-
-            if (Match(TokenType.Func))
-            {
-                var methodDecl = ParseMethodDeclaration() as MethodDeclaration;
-                if (methodDecl != null)
+                // Parse attributes first
+                var attributes = new List<AttributeDeclaration>();
+                while (Check(TokenType.LeftBracket))
                 {
-                    methodDecl.Attributes = attributes;
-                    methodDecl.Modifiers = modifiers;
+                    attributes.Add(ParseAttribute());
                 }
-                return methodDecl;
-            }
 
-            if (Match(TokenType.Var))
-            {
-                // Could be field or property
-                var propDecl = ParsePropertyDeclaration() as PropertyDeclaration;
-                return propDecl;
-            }
-
-            if (Match(TokenType.Field))
-            {
-                var fieldDecl = ParseFieldDeclaration() as FieldDeclaration;
-                if (fieldDecl != null)
+                // Parse modifiers
+                var modifiers = new List<string>();
+                while (IsModifierToken(Peek()))
                 {
-                    fieldDecl.Modifiers = modifiers;
-                    fieldDecl.Attributes = attributes;
+                    modifiers.Add(Advance().Value);
                 }
-                return fieldDecl;
-            }
 
-            // If we have modifiers but no specific keyword, this might be a field declaration
-            if (modifiers.Count > 0 && Check(TokenType.Identifier))
-            {
-                // This is likely a field declaration without the 'field' keyword
-                // e.g., "private field name: string"
-                // Check if the next token after identifier is 'field'
-                var nameToken = Advance(); // consume identifier
-
-                if (Match(TokenType.Field))
+                // Check for constructor keyword
+                if (Check(TokenType.Constructor))
                 {
-                    // This is "private field name: string" pattern
-                    var fieldName = Consume(TokenType.Identifier, "Expected field name after 'field'").Value;
-                    string? type = null;
-                    Expression? initializer = null;
+                    return ParseConstructorDeclaration(modifiers, attributes);
+                }
+
+                if (Match(TokenType.Field)) return ParseFieldDeclaration();
+                if (Match(TokenType.Var)) return ParsePropertyDeclaration();
+                if (Match(TokenType.Func)) return ParseMethodDeclaration();
+
+                // If we have modifiers but no specific keyword, this might be a field declaration
+                if (modifiers.Count > 0 && Check(TokenType.Identifier))
+                {
+                    // This is likely a field declaration without the 'field' keyword
+                    // e.g., "private field name: string"
+                    // Check if the next token after identifier is 'field'
+                    var nameToken = Advance(); // consume identifier
+
+                    if (Match(TokenType.Field))
+                    {
+                        // This is "private field name: string" pattern
+                        var fieldName = Consume(TokenType.Identifier, "Expected field name after 'field'").Value;
+                        string? type = null;
+                        Expression? initializer = null;
+
+                        if (Match(TokenType.Colon))
+                        {
+                            type = ParseTypeName();
+                        }
+
+                        if (Match(TokenType.Assign))
+                        {
+                            initializer = ParseExpression();
+                        }
+
+                        return new FieldDeclaration
+                        {
+                            Name = fieldName,
+                            Type = type,
+                            Initializer = initializer,
+                            Modifiers = modifiers,
+                            Attributes = attributes
+                        };
+                    }
+                    else
+                    {
+                        // Put back the identifier token and parse as normal field
+                        _current--; // Back up to re-parse the identifier
+
+                        var fieldName = Consume(TokenType.Identifier, "Expected field name").Value;
+                        string? type = null;
+                        Expression? initializer = null;
+
+                        if (Match(TokenType.Colon))
+                        {
+                            type = ParseTypeName();
+                        }
+
+                        if (Match(TokenType.Assign))
+                        {
+                            initializer = ParseExpression();
+                        }
+
+                        return new FieldDeclaration
+                        {
+                            Name = fieldName,
+                            Type = type,
+                            Initializer = initializer,
+                            Modifiers = modifiers,
+                            Attributes = attributes
+                        };
+                                       }
+                }
+            }
+            catch (Exception ex)
+            {
+                _diagnostics.ReportParseError($"Error parsing class member: {ex.Message}", Peek());
+                return null;
+            }
+            return null; // If no specific member type matched, return null
+        }
+
+        private Statement ParseConstructorDeclaration(List<string> modifiers, List<AttributeDeclaration> attributes)
+        {
+            Consume(TokenType.Constructor, "Expected 'constructor'");
+            
+            Consume(TokenType.LeftParen, "Expected '(' after constructor");
+            var parameters = new List<Parameter>();
+
+            if (!Check(TokenType.RightParen))
+            {
+                do
+                {
+                    var paramName = Consume(TokenType.Identifier, "Expected parameter name").Value;
+                    string? paramType = null;
 
                     if (Match(TokenType.Colon))
                     {
-                        type = ParseTypeName();
+                        paramType = ParseTypeName();
                     }
 
-                    if (Match(TokenType.Assign))
-                    {
-                        initializer = ParseExpression();
-                    }
-
-                    return new FieldDeclaration
-                    {
-                        Name = fieldName,
-                        Type = type,
-                        Initializer = initializer,
-                        Modifiers = modifiers,
-                        Attributes = attributes
-                    };
-                }
-                else
-                {
-                    // Put back the identifier token and parse as normal field
-                    _current--; // Back up to re-parse the identifier
-
-                    var fieldName = Consume(TokenType.Identifier, "Expected field name").Value;
-                    string? type = null;
-                    Expression? initializer = null;
-
-                    if (Match(TokenType.Colon))
-                    {
-                        type = ParseTypeName();
-                    }
-
-                    if (Match(TokenType.Assign))
-                    {
-                        initializer = ParseExpression();
-                    }
-
-                    return new FieldDeclaration
-                    {
-                        Name = fieldName,
-                        Type = type,
-                        Initializer = initializer,
-                        Modifiers = modifiers,
-                        Attributes = attributes
-                    };
-                }
+                    parameters.Add(new Parameter { Name = paramName, Type = paramType });
+                } while (Match(TokenType.Comma));
             }
 
-            if (!IsAtEnd())
+            Consume(TokenType.RightParen, "Expected ')' after parameters");
+
+            Consume(TokenType.LeftBrace, "Expected '{' before constructor body");
+            var body = new List<Statement>();
+
+            while (!Check(TokenType.RightBrace) && !IsAtEnd())
             {
-                _diagnostics.ReportParseError("Expected class member", Peek());
-                Advance(); // Skip unknown token
+                var stmt = ParseStatement();
+                if (stmt != null) body.Add(stmt);
             }
 
-            return null;
+            Consume(TokenType.RightBrace, "Expected '}' after constructor body");
+
+            return new MethodDeclaration
+            {
+                Name = "constructor",
+                Parameters = parameters,
+                Body = body,
+                IsConstructor = true,
+                Modifiers = modifiers,
+                Attributes = attributes
+            };
         }
 
         /// <summary>
@@ -2715,6 +2769,51 @@ namespace uhigh.Net.Parser
             // include "filename.uh"
             var fileToken = Consume(TokenType.String, "Expected file name after include");
             return new IncludeStatement { FileName = fileToken.Value };
+        }
+
+        private Statement ParseGenericClassDeclaration(List<string> modifiers, List<AttributeDeclaration> attributes)
+        {
+            var name = Consume(TokenType.Identifier, "Expected class name").Value;
+            
+            // Parse generic parameters
+            var genericParameters = new List<string>();
+            if (Match(TokenType.Less)) // <
+            {
+                do
+                {
+                    var typeParam = Consume(TokenType.Identifier, "Expected type parameter name").Value;
+                    genericParameters.Add(typeParam);
+                } while (Match(TokenType.Comma));
+                
+                Consume(TokenType.Greater, "Expected '>' after generic type parameters");
+            }
+
+            string? baseClass = null;
+            if (Match(TokenType.Colon))
+            {
+                baseClass = ParseTypeName();
+            }
+
+            Consume(TokenType.LeftBrace, "Expected '{' before class body");
+            var members = new List<Statement>();
+
+            while (!Check(TokenType.RightBrace) && !IsAtEnd())
+            {
+                var member = ParseClassMember();
+                if (member != null) members.Add(member);
+            }
+
+            Consume(TokenType.RightBrace, "Expected '}' after class body");
+
+            return new ClassDeclaration
+            {
+                Name = name,
+                GenericParameters = genericParameters,
+                BaseClass = baseClass,
+                Members = members,
+                Modifiers = modifiers,
+                Attributes = attributes
+            };
         }
     }
 

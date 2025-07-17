@@ -527,9 +527,41 @@ namespace uhigh.Net.Parser
         /// <param name="baseTypeName">The base type name</param>
         /// <param name="genericTypeDef">The generic type def</param>
         /// <returns>The bool</returns>
-        public bool TryGetGenericTypeDefinition(string baseTypeName, out Type genericTypeDef)
+        public bool TryGetGenericTypeDefinition(string baseTypeName, out Type? genericTypeDef)
         {
-            return _genericTypeDefinitions.TryGetValue(baseTypeName, out genericTypeDef!);
+            if (_genericTypeDefinitions.TryGetValue(baseTypeName, out genericTypeDef))
+            {
+                return true;
+            }
+
+            // Try to find the generic type definition
+            var candidates = new[]
+            {
+                $"System.Collections.Generic.{baseTypeName}`1",
+                $"System.Collections.Generic.{baseTypeName}`2",
+                $"System.{baseTypeName}`1",
+                $"System.{baseTypeName}`2"
+            };
+
+            foreach (var candidate in candidates)
+            {
+                try
+                {
+                    genericTypeDef = Type.GetType(candidate);
+                    if (genericTypeDef != null && genericTypeDef.IsGenericTypeDefinition)
+                    {
+                        _genericTypeDefinitions[baseTypeName] = genericTypeDef;
+                        return true;
+                    }
+                }
+                catch
+                {
+                    // Continue searching
+                }
+            }
+
+            genericTypeDef = null;
+            return false;
         }
 
         // Add method to get all generic type definitions

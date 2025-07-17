@@ -371,5 +371,60 @@ namespace uhigh.Net.Testing
             Assert.IsNotNull(csharpInfo);
             Assert.IsTrue(csharpInfo.SupportedFeatures.Contains("classes"));
         }
+
+        /// <summary>
+        /// Tests that test generic class generation
+        /// </summary>
+        [Test]
+        public void TestGenericClassGeneration()
+        {
+            var result = GenerateCSharp(@"
+                public class Box<T> {
+                    private field value: T
+                    
+                    constructor(value: T) {
+                        this.value = value
+                    }
+                    
+                    public func GetValue(): T {
+                        return this.value
+                    }
+                }");
+
+            Assert.IsTrue(result.Contains("public class Box<T>"));
+            Assert.IsTrue(result.Contains("private T value;"));
+            Assert.IsTrue(result.Contains("public T GetValue()"));
+            Assert.IsTrue(result.Contains("T value"));
+        }
+
+        /// <summary>
+        /// Tests that test generic method generation
+        /// </summary>
+        [Test]
+        public void TestGenericMethodGeneration()
+        {
+            var result = GenerateCSharp(@"
+                public func ProcessGeneric<T>(input: T): T {
+                    return input
+                }");
+
+            Assert.IsTrue(result.Contains("public static T ProcessGeneric<T>(T input)"));
+            Assert.IsTrue(result.Contains("return input;"));
+        }
+
+        /// <summary>
+        /// Tests that test generic constructor calls
+        /// </summary>
+        [Test]
+        public void TestGenericConstructorCalls()
+        {
+            var result = GenerateCSharp(@"
+                var stringList = List<string>()
+                var intBox = Box<int>(42)
+            ");
+
+            Assert.IsTrue(result.Contains("new List<string>()"));
+            Assert.IsTrue(result.Contains("new Box<int>(42)"));
+        }
     }
 }

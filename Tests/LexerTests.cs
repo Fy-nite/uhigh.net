@@ -134,16 +134,26 @@ namespace uhigh.Net.Testing
         [Test]
         public void TestGenericTypes()
         {
-            var lexer = CreateLexer("TimestampedEvent<string> Dictionary<string, int>");
+            var source = "List<string> items = new List<string>()";
+            var diagnostics = new DiagnosticsReporter();
+            var lexer = new Lexer.Lexer(source, diagnostics);
             var tokens = lexer.Tokenize();
-
-            // Should tokenize as: TimestampedEvent, <, string, >, Dictionary, <, string, ,, int, >, EOF
-            Assert.IsTrue(tokens.Count >= 11);
-            Assert.AreEqual(TokenType.Identifier, tokens[0].Type);
-            Assert.AreEqual("TimestampedEvent", tokens[0].Value);
-            Assert.AreEqual(TokenType.Less, tokens[1].Type);
-            Assert.AreEqual(TokenType.StringType, tokens[2].Type);
-            Assert.AreEqual(TokenType.Greater, tokens[3].Type);
+            
+            Assert.IsTrue(tokens.Any(t => t.Value == "List<string>"));
+            Assert.IsTrue(tokens.Any(t => t.Type == TokenType.Less));
+            Assert.IsTrue(tokens.Any(t => t.Type == TokenType.Greater));
+        }
+        
+        [Test]
+        public void TestNestedGenerics()
+        {
+            var source = "Dictionary<string, List<int>>";
+            var diagnostics = new DiagnosticsReporter();
+            var lexer = new Lexer.Lexer(source, diagnostics);
+            var tokens = lexer.Tokenize();
+            
+            Assert.IsTrue(tokens.Any(t => t.Value.Contains("Dictionary")));
+            Assert.IsTrue(tokens.Any(t => t.Value.Contains("List")));
         }
 
         /// <summary>

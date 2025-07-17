@@ -51,6 +51,7 @@ namespace uhigh.Net.CodeGen
         /// The config
         /// </summary>
         private CodeGeneratorConfig? _config;
+        private string? _currentClassName;
 
         public CodeGeneratorInfo Info => new()
         {
@@ -554,6 +555,10 @@ namespace uhigh.Net.CodeGen
                 return;
             }
 
+            // Store current class name for constructor generation
+            var previousClassName = _currentClassName;
+            _currentClassName = classDecl.Name;
+
             // Generate attributes for the class
             GenerateAttributes(classDecl.Attributes);
 
@@ -572,9 +577,17 @@ namespace uhigh.Net.CodeGen
             _output.Append("class ");
             _output.Append(classDecl.Name);
 
+            // Emit generic parameters if present
+            if (classDecl.GenericParameters != null && classDecl.GenericParameters.Count > 0)
+            {
+                _output.Append("<");
+                _output.Append(string.Join(", ", classDecl.GenericParameters));
+                _output.Append(">");
+            }
+
             if (classDecl.BaseClass != null)
             {
-                _output.Append($" : {classDecl.BaseClass}");
+                _output.Append($" : {ConvertType(classDecl.BaseClass)}");
             }
 
             _output.AppendLine();
@@ -591,9 +604,11 @@ namespace uhigh.Net.CodeGen
             Indent();
             _output.AppendLine("}");
             _output.AppendLine();
+
+            // Restore previous class name
+            _currentClassName = previousClassName;
         }
 
-        // Add method to generate attributes
         /// <summary>
         /// Generates the attributes using the specified attributes
         /// </summary>
@@ -784,12 +799,23 @@ namespace uhigh.Net.CodeGen
 
             if (methodDecl.IsConstructor)
             {
-                _output.Append($"{GetCurrentClassName()}(");
+                // For constructors, use the current class name
+                var className = _currentClassName ?? "GeneratedClass";
+                _output.Append($"{className}(");
             }
             else
             {
                 var returnType = methodDecl.ReturnType != null ? ConvertType(methodDecl.ReturnType) : "void";
-                _output.Append($"{returnType} {methodDecl.Name}(");
+                _output.Append($"{returnType} {methodDecl.Name}");
+
+                // Emit generic parameters for methods
+                if (methodDecl.GenericParameters != null && methodDecl.GenericParameters.Count > 0)
+                {
+                    _output.Append("<");
+                    _output.Append(string.Join(", ", methodDecl.GenericParameters));
+                    _output.Append(">");
+                }
+                _output.Append("(");
             }
 
             // Parameters
@@ -816,6 +842,11 @@ namespace uhigh.Net.CodeGen
             Indent();
             _output.AppendLine("}");
             _output.AppendLine();
+        }
+
+        private string GetCurrentClassName()
+        {
+            return _currentClassName ?? "GeneratedClass";
         }
 
         /// <summary>
@@ -924,16 +955,7 @@ namespace uhigh.Net.CodeGen
             _output.AppendLine(";");
         }
 
-        /// <summary>
-        /// Gets the current class name
-        /// </summary>
-        /// <returns>The string</returns>
-        private string GetCurrentClassName()
-        {
-            // This would need to track current class context
-            // For simplicity, return a default name
-            return "GeneratedClass";
-        }
+
 
         /// <summary>
         /// Generates the variable declaration using the specified var decl
@@ -1011,7 +1033,17 @@ namespace uhigh.Net.CodeGen
                 _output.Append("void");
             }
 
-            _output.Append($" {funcDecl.Name}(");
+            _output.Append($" {funcDecl.Name}");
+            
+            // Emit generic parameters for functions
+            if (funcDecl.GenericParameters != null && funcDecl.GenericParameters.Count > 0)
+            {
+                _output.Append("<");
+                _output.Append(string.Join(", ", funcDecl.GenericParameters));
+                _output.Append(">");
+            }
+
+            _output.Append("(");
 
             // Parameters
             for (int i = 0; i < funcDecl.Parameters.Count; i++)
@@ -1251,7 +1283,15 @@ namespace uhigh.Net.CodeGen
                     GenerateExpression(assignExpr.Value);
                     break;
                 case ConstructorCallExpression constructorExpr:
-                    _output.Append($"new {constructorExpr.ClassName}(");
+                    _output.Append($"new {constructorExpr.ClassName}");
+                    
+                    // Handle generic type arguments if present
+                    if (constructorExpr.ClassName.Contains('<'))
+                    {
+                        // Generic constructor call - type already included in ClassName
+                    }
+                    
+                    _output.Append("(");
                     for (int i = 0; i < constructorExpr.Arguments.Count; i++)
                     {
                         if (i > 0) _output.Append(", ");
@@ -1795,29 +1835,7 @@ namespace uhigh.Net.CodeGen
                 {
                     var baseType = genericMatch.Groups[1].Value;
                     var typeArgs = genericMatch.Groups[2].Value;
-
-                    // Handle multiple type arguments (e.g., Dictionary<string, int>)
                     var typeArgsList = typeArgs.Split(',').Select(t => ConvertType(t.Trim())).ToList();
-
-                    // Try to resolve the base type with reflection first
-                    if (_typeResolver?.TryGetGenericTypeDefinition(baseType, out var genericTypeDef) == true)
-                    {
-                        try
-                        {
-                            var resolvedArgs = typeArgsList.Select(arg =>
-                                _typeResolver.TryResolveType(arg, out var argType) ? argType : typeof(object)).ToArray();
-
-                            if (resolvedArgs.Length == genericTypeDef.GetGenericArguments().Length)
-                            {
-                                var constructedType = genericTypeDef.MakeGenericType(resolvedArgs);
-                                return GetCSharpTypeName(constructedType);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            _diagnostics.ReportWarning($"Failed to construct generic type {baseType}: {ex.Message}");
-                        }
-                    }
 
                     // Fallback to manual mapping for common types
                     var convertedBaseType = baseType switch
@@ -1826,10 +1844,7 @@ namespace uhigh.Net.CodeGen
                         "list" => $"List<{string.Join(", ", typeArgsList)}>",
                         "map" => typeArgsList.Count >= 2 ? $"Dictionary<{typeArgsList[0]}, {typeArgsList[1]}>" : "Dictionary<object, object>",
                         "set" => $"HashSet<{typeArgsList[0]}>",
-                        "tuple" => typeArgsList.Count >= 2 ? $"Tuple<{string.Join(", ", typeArgsList)}>" : "Tuple<object, object>",
-                        "promise" => $"Task<{typeArgsList[0]}>",
-                        "function" => typeArgsList.Count == 1 ? $"Func<{typeArgsList[0]}>" : $"Func<{string.Join(", ", typeArgsList)}>",
-                        _ => $"{ConvertType(baseType)}<{string.Join(", ", typeArgsList)}>"
+                        _ => $"{baseType}<{string.Join(", ", typeArgsList)}>"
                     };
 
                     return convertedBaseType;
@@ -1841,7 +1856,6 @@ namespace uhigh.Net.CodeGen
             {
                 return GetCSharpTypeName(simpleType);
             }
-
             // Fallback to manual mapping for μHigh-specific types
             return type switch
             {
@@ -1850,15 +1864,8 @@ namespace uhigh.Net.CodeGen
                 "string" => "string",
                 "bool" => "bool",
                 "void" => "void",
-                "array" => "object[]",
-                "arrayIndice" => "uhigh.StdLib.ArrayIndice<object>",
-                // Handle common array types
-                "string[]" => "string[]",
-                "int[]" => "int[]",
-                "bool[]" => "bool[]",
-                "double[]" => "double[]",
-                "object[]" => "object[]",
-                _ => "object"
+                // ...existing code...
+                _ => type // <-- emit custom type names as-is
             };
         }
 

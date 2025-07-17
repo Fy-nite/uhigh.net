@@ -251,6 +251,13 @@ namespace uhigh.Net.CodeGen
         private void GenerateFunctionDeclaration(FunctionDeclaration funcDecl)
         {
             Indent();
+            // Emit type info as comment for custom types
+            if (funcDecl.ReturnType != null || funcDecl.Parameters.Any(p => p.Type != null))
+            {
+                var paramTypes = string.Join(", ", funcDecl.Parameters.Select(p => $"{p.Name}: {p.Type ?? "any"}"));
+                var retType = funcDecl.ReturnType ?? "any";
+                _output.AppendLine($"// function {funcDecl.Name}({paramTypes}): {retType}");
+            }
             
             if (funcDecl.Name == "main")
             {
@@ -296,6 +303,11 @@ namespace uhigh.Net.CodeGen
         private void GenerateClassDeclaration(ClassDeclaration classDecl)
         {
             Indent();
+            // Emit generic parameters as comment (JS does not support generics)
+            if (classDecl.GenericParameters != null && classDecl.GenericParameters.Count > 0)
+            {
+                _output.AppendLine($"// Generic class: {classDecl.Name}<{string.Join(", ", classDecl.GenericParameters)}>");
+            }
             _output.AppendLine($"class {classDecl.Name} {{");
             _indentLevel++;
 

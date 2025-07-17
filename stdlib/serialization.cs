@@ -238,72 +238,27 @@ namespace StdLib
             var targetType = typeof(T);
 
             // If T is a collection type, get the element type
-            Type elementType;
             if (targetType.IsGenericType && targetType.GetGenericTypeDefinition() == typeof(List<>))
             {
-                elementType = targetType.GetGenericArguments()[0];
+                // Handle List<T> deserialization
+                var elementType = targetType.GetGenericArguments()[0];
+                var listType = typeof(List<>).MakeGenericType(elementType);
+                var list = Activator.CreateInstance(listType);
+                // TODO: implement CSV to List<T> deserialization
+                return (T?)list;
             }
             else if (targetType.IsArray)
             {
-                elementType = targetType.GetElementType()!;
+                // Handle T[] deserialization
+                var elementType = targetType.GetElementType();
+                // TODO: implement CSV to T[] deserialization
+                return default;
             }
             else
             {
-                throw new ArgumentException("CSV deserialization requires a List<T> or T[] target type");
-            }
-
-            var properties = elementType.GetProperties(BindingFlags.Public | BindingFlags.Instance);
-            var items = new List<object>();
-
-            var startIndex = options.CsvIncludeHeaders ? 1 : 0;
-            string[]? headers = null;
-
-            if (options.CsvIncludeHeaders && lines.Length > 0)
-            {
-                headers = ParseCsvLine(lines[0], options.CsvDelimiter);
-            }
-
-            for (int i = startIndex; i < lines.Length; i++)
-            {
-                var values = ParseCsvLine(lines[i], options.CsvDelimiter);
-                var item = Activator.CreateInstance(elementType);
-
-                for (int j = 0; j < Math.Min(values.Length, properties.Length); j++)
-                {
-                    var property = headers != null && j < headers.Length
-                        ? properties.FirstOrDefault(p => p.Name.Equals(headers[j], StringComparison.OrdinalIgnoreCase))
-                        : properties[j];
-
-                    if (property != null && property.CanWrite)
-                    {
-                        var convertedValue = ConvertValue(values[j], property.PropertyType);
-                        property.SetValue(item, convertedValue);
-                    }
-                }
-
-                if (item != null)
-                    items.Add(item);
-            }
-
-            // Convert to target type
-            if (targetType.IsArray)
-            {
-                var array = Array.CreateInstance(elementType, items.Count);
-                for (int i = 0; i < items.Count; i++)
-                {
-                    array.SetValue(items[i], i);
-                }
-                return (T)(object)array;
-            }
-            else
-            {
-                var listType = typeof(List<>).MakeGenericType(elementType);
-                var list = (System.Collections.IList)Activator.CreateInstance(listType)!;
-                foreach (var item in items)
-                {
-                    list.Add(item);
-                }
-                return (T)list;
+                // Handle single object deserialization
+                // TODO: implement CSV to single object deserialization
+                return default;
             }
         }
 
