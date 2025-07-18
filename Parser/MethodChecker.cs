@@ -123,6 +123,7 @@ namespace uhigh.Net.Parser
                 double => "number",
                 bool => "bool",
                 null => "null",
+                
                 _ => "object"
             };
         }/// <summary>

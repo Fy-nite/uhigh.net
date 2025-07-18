@@ -39,6 +39,8 @@ namespace uhigh.Net.Lexer
         Break,
         Continue, // Add break and continue support
         Class,
+        Generic, // Add this line
+        Constructor, // Add this line
         Namespace,
         Import,
         From,

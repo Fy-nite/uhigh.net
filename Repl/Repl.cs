@@ -571,7 +571,7 @@ namespace uhigh.Net.Repl
                     .WithReferences(typeof(object).Assembly)
                     .WithReferences(typeof(Console).Assembly)
                     .WithReferences(typeof(System.Linq.Enumerable).Assembly)
-                    .WithReferences(typeof(System.Collections.Generic.List<>).Assembly)
+                    .WithReferences(typeof(List<>).Assembly)
                     .WithReferences(typeof(System.Text.StringBuilder).Assembly)
                     .WithReferences(Assembly.GetExecutingAssembly())
                     .WithImports("System", "System.Collections.Generic", "System.Linq", "System.Text", "System.IO");

@@ -1,3 +1,4 @@
+using uhigh.Net.Diagnostics;
 using uhigh.Net.Lexer;
 using uhigh.Net.Parser;
 
@@ -726,17 +727,27 @@ namespace uhigh.Net.Testing
         [Test]
         public void TestGenericConstructorCall()
         {
-            var program = ParseSource("var list = new List<string>()");
-
-            Assert.AreEqual(1, program.Statements.Count);
-            Assert.IsTrue(program.Statements[0] is VariableDeclaration);
-
-            var varDecl = (VariableDeclaration)program.Statements[0];
-            Assert.IsTrue(varDecl.Initializer is ConstructorCallExpression);
-
-            var ctorCall = (ConstructorCallExpression)varDecl.Initializer!;
-            Assert.AreEqual("List<string>", ctorCall.ClassName);
-            Assert.AreEqual(0, ctorCall.Arguments.Count);
+            var source = @"
+                var stringBox = Box<string>(""hello"")
+                var intBox = Box<int>(42)
+            ";
+            
+            var diagnostics = new DiagnosticsReporter();
+            var lexer = new Lexer.Lexer(source, diagnostics);
+            var tokens = lexer.Tokenize();
+            var parser = new Parser.Parser(tokens, diagnostics);
+            var ast = parser.Parse();
+            
+            Assert.IsNotNull(ast);
+            Assert.AreEqual(2, ast.Statements.Count);
+            
+            var firstDecl = ast.Statements[0] as VariableDeclaration;
+            Assert.IsNotNull(firstDecl);
+            Assert.AreEqual("stringBox", firstDecl.Name);
+            
+            var constructorCall = firstDecl.Initializer as ConstructorCallExpression;
+            Assert.IsNotNull(constructorCall);
+            Assert.AreEqual("Box<string>", constructorCall.ClassName);
         }
 
         /// <summary>

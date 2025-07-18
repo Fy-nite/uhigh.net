@@ -61,6 +61,8 @@ namespace uhigh.Net.Lexer
             { "bool", TokenType.Bool },
             { "void", TokenType.Void },
             { "class", TokenType.Class },
+            { "generic", TokenType.Generic },
+            { "constructor", TokenType.Constructor },
             { "namespace", TokenType.Namespace },
             { "import", TokenType.Import },
             { "using", TokenType.Using },

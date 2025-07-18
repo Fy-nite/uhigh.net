@@ -13,13 +13,20 @@ This project successfully implements a Language Server Protocol (LSP) server for
    - Generates Abstract Syntax Trees (AST)
    - Provides error reporting and diagnostics
 
-2. **LSP Server** (`/LanguageServer`)
+2. **Modular Code Generation** (`/CodeGen`)
+   - **ICodeGenerator Interface**: Pluggable code generation system
+   - **C# Generator**: Full-featured C# code generation
+   - **JavaScript Generator**: Modern ES6+ JavaScript generation
+   - **Plugin System**: Load custom generators from DLLs
+   - **Registry**: Centralized generator discovery and management
+
+3. **LSP Server** (`/LanguageServer`)
    - **Protocol Models** (`/Protocol`): LSP message types and structures
    - **Core Server** (`/Core`): Main LSP server implementation
    - **Document Management** (`/Core`): Tracks open documents and changes
    - **Language Services** (`/Services`): Provides completions, hover, diagnostics, symbols
 
-3. **VS Code Extension** (`/vscode-extension`)
+4. **VS Code Extension** (`/vscode-extension`)
    - Language configuration and syntax highlighting
    - Client-side LSP integration
    - File associations and editor features
@@ -32,35 +39,64 @@ This project successfully implements a Language Server Protocol (LSP) server for
 - ✅ **Basic Completions**: Keyword and context-aware suggestions
 - ✅ **Hover Information**: Type and documentation display
 - ✅ **LSP Protocol Compliance**: Standard LSP 3.x implementation
+- ✅ **Multi-Target Code Generation**: C#, JavaScript, and plugin support
 
 ## Usage
 
-### Running the Compiler
+### Running the Compiler with Different Targets
 
 ```bash
-# Compile and run a μHigh file
+# Compile to C# and run (default)
 dotnet run --framework net8.0 -- program.uh
 
-# Compile to executable
-dotnet run --framework net8.0 -- program.uh output.exe
+# Compile to JavaScript
+dotnet run --framework net8.0 -- compile program.uh --target javascript
 
-# Show all available commands
-dotnet run --framework net8.0
+# List available targets
+dotnet run --framework net8.0 -- list-targets
 ```
 
-### Starting the LSP Server
+### Creating Custom Code Generators
 
-```bash
-# Start LSP server (for editor integration)
-dotnet run --framework net8.0 -- --lsp
+Create a new class implementing `ICodeGenerator`:
+
+```csharp
+public class PythonGenerator : ICodeGenerator
+{
+    public CodeGeneratorInfo Info => new()
+    {
+        Name = "Python Code Generator",
+        Description = "Generates Python 3.x code",
+        Version = "1.0.0",
+        SupportedFeatures = new() { "functions", "classes" }
+    };
+
+    public string TargetName => "python";
+    public string FileExtension => ".py";
+
+    // Implement interface methods...
+}
+
+// Register the generator
+CodeGeneratorRegistry.Register("python", () => new PythonGenerator());
 ```
 
-### VS Code Extension
+### Plugin Development
 
-1. Navigate to the `vscode-extension` directory
-2. Install dependencies: `npm install`
-3. Compile TypeScript: `npm run compile`
-4. Install in VS Code: Copy folder to extensions directory or use F5 to debug
+Create a separate assembly with generators:
+
+```csharp
+// In YourPlugin.dll
+public class CustomGeneratorFactory : ICodeGeneratorFactory
+{
+    public string TargetName => "custom";
+    public CodeGeneratorInfo GeneratorInfo => new() { /* ... */ };
+    public ICodeGenerator CreateGenerator() => new CustomGenerator();
+    public bool CanHandle(CodeGeneratorConfig config) => true;
+}
+```
+
+Place the DLL in the `plugins` directory and it will be auto-loaded.
 
 ## Sample μHigh Code
 
@@ -74,78 +110,77 @@ func main() {
 }
 ```
 
+**Generated C#:**
+```csharp
+using System;
+// ... other usings
+
+namespace Generated
+{
+    public class Program
+    {
+        public static void Main(string[] args)
+        {
+            Console.WriteLine("Hello from μHigh!");
+            var x = 42;
+            var name = "World";
+            Console.WriteLine("Number: " + x.ToString());
+            Console.WriteLine("Greeting to " + name);
+        }
+    }
+}
+```
+
+**Generated JavaScript:**
+```javascript
+(function main() {
+    console.log("Hello from μHigh!");
+    let x = 42;
+    let name = "World";
+    console.log("Number: " + x.toString());
+    console.log("Greeting to " + name);
+})();
+```
+
 ## Build Status
 
 - ✅ **Compilation**: Project builds successfully with warnings only
 - ✅ **LSP Server**: Starts and accepts connections
 - ✅ **Extension**: Compiles and provides syntax highlighting
 - ✅ **Integration**: Full end-to-end functionality
+- ✅ **Multi-Target**: C# and JavaScript generation working
+- ✅ **Plugin System**: Dynamic generator loading
 
 ## Technical Details
 
-### Dependencies
-
-- .NET 8.0 framework
-- System.Text.Json for LSP serialization
-- Microsoft.CodeAnalysis for C# code generation
-
-### Project Structure
+### Code Generator Architecture
 
 ```
-uhigh.net/
-├── LanguageServer/
-│   ├── Core/
-│   │   ├── DocumentManager.cs       # Document state management
-│   │   └── UhighLanguageServer.cs   # Main LSP server logic
-│   ├── Protocol/
-│   │   ├── LSPModels.cs            # Core LSP types
-│   │   ├── Messages.cs             # Request/Response handling
-│   │   └── ExtendedLSPTypes.cs     # Additional LSP types
-│   ├── Services/
-│   │   └── LanguageService.cs      # Language features implementation
-│   └── LanguageServerHost.cs       # Entry point and message handling
-├── vscode-extension/
-│   ├── src/extension.ts            # VS Code extension entry point
-│   ├── syntaxes/uhigh.tmLanguage.json  # Syntax highlighting
-│   ├── language-configuration.json # Language configuration
-│   └── package.json                # Extension metadata
-├── Lexer/                          # Tokenization
-├── Parser/                         # AST generation
-├── CodeGen/                        # C# code generation
-└── Diagnostics/                    # Error reporting
+ICodeGenerator (Interface)
+├── CSharpGenerator (Built-in)
+├── JavaScriptGenerator (Built-in)
+└── CustomGenerator (Plugin)
+
+CodeGeneratorRegistry
+├── Factory Management
+├── Plugin Loading
+└── Target Discovery
+
+CodeGeneratorConfig
+├── Target-specific options
+├── Output configuration
+└── Feature flags
 ```
 
-### Performance Notes
+### Available Targets
 
-- LSP server runs efficiently with minimal memory usage
-- Document synchronization is incremental
-- Parsing and analysis are performed on-demand
+| Target | Description | Features | Dependencies |
+|--------|-------------|----------|--------------|
+| csharp | C# code generation | Full μHigh feature set | .NET 8.0+ |
+| javascript | Modern JavaScript | Functions, classes, async | Node.js 16+ |
+### Available Targets
 
-## Future Enhancements
-
-### Planned Features
-
-- **Advanced Completions**: IntelliSense with type information
-- **Semantic Highlighting**: Enhanced syntax coloring
-- **Refactoring**: Rename symbols, extract methods
-- **Code Actions**: Quick fixes and suggestions
-- **Debugging Support**: Integration with .NET debugger
-- **Project Support**: Multi-file project management
-
-### Security Notes
-
-- Current System.Text.Json dependency has known vulnerabilities (non-critical for development)
-- Recommend updating to latest version for production use
-
-## Testing
-
-The system has been tested with:
-- ✅ Basic μHigh compilation and execution
-- ✅ LSP server startup and protocol handling
-- ✅ VS Code extension installation and syntax highlighting
-- ✅ Document change synchronization
-- ✅ Error reporting and diagnostics
-
-## Conclusion
-
-This LSP implementation provides a solid foundation for μHigh language support in modern editors. The modular architecture allows for easy extension and enhancement while maintaining LSP protocol compliance.
+| Target | Description | Features | Dependencies |
+|--------|-------------|----------|--------------|
+| csharp | C# code generation | Full μHigh feature set | .NET 8.0+ |
+| javascript | Modern JavaScript | Functions, classes, async | Node.js 16+ |

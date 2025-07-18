@@ -200,6 +200,14 @@ namespace uhigh.Net.Testing
             Assert.AreEqual(2, ctorCall.Arguments.Count);
             Assert.AreEqual("John", ((LiteralExpression)ctorCall.Arguments[0]).Value);
             Assert.AreEqual(25, ((LiteralExpression)ctorCall.Arguments[1]).Value);
+            
+            // Test generic constructor
+            var genericCtor = new ConstructorCallExpression
+            {
+                ClassName = "List<string>",
+                Arguments = new List<Expression>()
+            };
+            Assert.AreEqual("List<string>", genericCtor.ClassName);
         }
 
         /// <summary>

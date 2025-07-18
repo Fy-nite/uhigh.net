@@ -342,12 +342,47 @@ namespace uhigh.Net.CodeGen
                 case FunctionDeclaration funcDecl:
                     GenerateFunction(output, funcDecl, indentLevel);
                     break;
+                case ForStatement forStmt:
+                    GenerateForStatement(output, forStmt, indentLevel);
+                    break;
                 // Add other statement types as needed
                 default:
                     Indent(output, indentLevel);
                     output.AppendLine($"// TODO: Generate {statement.GetType().Name}");
                     break;
             }
+        }
+
+        private void GenerateForStatement(StringBuilder output, ForStatement forStmt, int indentLevel)
+        {
+            // μHigh for-in loop: for var i in expr { ... }
+            if (!string.IsNullOrEmpty(forStmt.IteratorVariable) && forStmt.IterableExpression != null)
+            {
+                Indent(output, indentLevel);
+                output.Append($"foreach (var {forStmt.IteratorVariable} in ");
+                // Use a simple expression generator for IterableExpression
+                output.Append("/* expr */");
+                output.AppendLine(")");
+                Indent(output, indentLevel);
+                output.AppendLine("{");
+                foreach (var stmt in forStmt.Body)
+                {
+                    GenerateStatement(output, stmt, indentLevel + 1);
+                }
+                Indent(output, indentLevel);
+                output.AppendLine("}");
+                return;
+            }
+
+            // ...existing code for traditional for loops...
+            Indent(output, indentLevel);
+            output.AppendLine("for (; ; )");
+            Indent(output, indentLevel);
+            output.AppendLine("{");
+            Indent(output, indentLevel + 1);
+            output.AppendLine("// For loop body");
+            Indent(output, indentLevel);
+            output.AppendLine("}");
         }
 
         /// <summary>

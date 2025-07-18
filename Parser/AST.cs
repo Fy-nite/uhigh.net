@@ -447,6 +447,10 @@ namespace uhigh.Net.Parser
         /// Gets or sets the value of the attributes
         /// </summary>
         public List<AttributeDeclaration> Attributes { get; set; } = new(); // Add this
+        /// <summary>
+        /// Gets or sets the value of the generic parameters
+        /// </summary>
+        public List<string> GenericParameters { get; set; } = new(); // Add this
 
         /// <summary>
         /// Gets the value of the is public
@@ -540,6 +544,10 @@ namespace uhigh.Net.Parser
         /// Gets or sets the value of the modifiers
         /// </summary>
         public List<string> Modifiers { get; set; } = new(); // New: access modifiers
+        /// <summary>
+        /// Gets or sets the value of the generic parameters
+        /// </summary>
+        public List<string> GenericParameters { get; set; } = new(); // Add this
     }
 
     /// <summary>
@@ -868,6 +876,10 @@ namespace uhigh.Net.Parser
         /// Gets or sets the value of the modifiers
         /// </summary>
         public List<string> Modifiers { get; set; } = new(); // New: access modifiers
+        /// <summary>
+        /// Gets or sets the value of the generic parameters
+        /// </summary>
+        public List<string> GenericParameters { get; set; } = new(); // Add this
     }
 
     /// <summary>
@@ -1245,3 +1257,6 @@ namespace uhigh.Net.Parser
         public List<Expression> Arguments { get; set; } = new();
     }
 }
+
+// All code generators traverse these AST node classes to generate code.
+// Add your code generator classes in the appropriate project directory.

@@ -8,7 +8,7 @@ namespace uhigh.Net.CodeGen
     /// <summary>
     /// The sharp generator class
     /// </summary>
-    public class CSharpGenerator
+    public class CSharpGenerator: ICodeGenerator
     {
         /// <summary>
         /// The output
@@ -46,6 +46,65 @@ namespace uhigh.Net.CodeGen
         /// The type resolver
         /// </summary>
         private ReflectionTypeResolver _typeResolver; // Add this field
+
+        /// <summary>
+        /// The config
+        /// </summary>
+        private CodeGeneratorConfig? _config;
+        private string? _currentClassName;
+
+        public CodeGeneratorInfo Info => new()
+        {
+            Name = "C# Code Generator",
+            Description = "Generates C# code from μHigh programs with full feature support",
+            Version = "2.0.0",
+            SupportedFeatures = new() { "classes", "functions", "generics", "match", "lambdas", "async", "attributes" },
+            RequiredDependencies = new() { ".NET 8.0+", "Microsoft.CodeAnalysis" }
+        };
+
+        public string TargetName => "csharp";
+
+        public string FileExtension => ".cs";
+
+        /// <summary>
+        /// Initializes the generator with configuration
+        /// </summary>
+        /// <param name="config">Generator configuration</param>
+        /// <param name="diagnostics">Diagnostics reporter</param>
+        public void Initialize(CodeGeneratorConfig config, DiagnosticsReporter diagnostics)
+        {
+            _config = config;
+            _rootNamespace = config.RootNamespace ?? "Generated";
+            _className = config.ClassName ?? "Program";
+            
+            diagnostics.ReportInfo($"Initialized C# generator with namespace: {_rootNamespace}, class: {_className}");
+        }
+
+        /// <summary>
+        /// Validates if the generator can handle the given program
+        /// </summary>
+        /// <param name="program">Program to validate</param>
+        /// <param name="diagnostics">Diagnostics reporter</param>
+        /// <returns>True if the program can be generated</returns>
+        public bool CanGenerate(Program program, DiagnosticsReporter diagnostics)
+        {
+            // Check for unsupported features
+            var unsupportedFeatures = new List<string>();
+
+            // Add validation logic here
+            // For now, C# generator supports most features
+            
+            if (unsupportedFeatures.Any())
+            {
+                foreach (var feature in unsupportedFeatures)
+                {
+                    diagnostics.ReportError($"Unsupported feature for C# target: {feature}");
+                }
+                return false;
+            }
+
+            return true;
+        }
 
         /// <summary>
         /// Generates the program
@@ -496,6 +555,10 @@ namespace uhigh.Net.CodeGen
                 return;
             }
 
+            // Store current class name for constructor generation
+            var previousClassName = _currentClassName;
+            _currentClassName = classDecl.Name;
+
             // Generate attributes for the class
             GenerateAttributes(classDecl.Attributes);
 
@@ -514,9 +577,17 @@ namespace uhigh.Net.CodeGen
             _output.Append("class ");
             _output.Append(classDecl.Name);
 
+            // Emit generic parameters if present
+            if (classDecl.GenericParameters != null && classDecl.GenericParameters.Count > 0)
+            {
+                _output.Append("<");
+                _output.Append(string.Join(", ", classDecl.GenericParameters));
+                _output.Append(">");
+            }
+
             if (classDecl.BaseClass != null)
             {
-                _output.Append($" : {classDecl.BaseClass}");
+                _output.Append($" : {ConvertType(classDecl.BaseClass)}");
             }
 
             _output.AppendLine();
@@ -533,9 +604,11 @@ namespace uhigh.Net.CodeGen
             Indent();
             _output.AppendLine("}");
             _output.AppendLine();
+
+            // Restore previous class name
+            _currentClassName = previousClassName;
         }
 
-        // Add method to generate attributes
         /// <summary>
         /// Generates the attributes using the specified attributes
         /// </summary>
@@ -726,12 +799,23 @@ namespace uhigh.Net.CodeGen
 
             if (methodDecl.IsConstructor)
             {
-                _output.Append($"{GetCurrentClassName()}(");
+                // For constructors, use the current class name
+                var className = _currentClassName ?? "GeneratedClass";
+                _output.Append($"{className}(");
             }
             else
             {
                 var returnType = methodDecl.ReturnType != null ? ConvertType(methodDecl.ReturnType) : "void";
-                _output.Append($"{returnType} {methodDecl.Name}(");
+                _output.Append($"{returnType} {methodDecl.Name}");
+
+                // Emit generic parameters for methods
+                if (methodDecl.GenericParameters != null && methodDecl.GenericParameters.Count > 0)
+                {
+                    _output.Append("<");
+                    _output.Append(string.Join(", ", methodDecl.GenericParameters));
+                    _output.Append(">");
+                }
+                _output.Append("(");
             }
 
             // Parameters
@@ -758,6 +842,11 @@ namespace uhigh.Net.CodeGen
             Indent();
             _output.AppendLine("}");
             _output.AppendLine();
+        }
+
+        private string GetCurrentClassName()
+        {
+            return _currentClassName ?? "GeneratedClass";
         }
 
         /// <summary>
@@ -866,16 +955,7 @@ namespace uhigh.Net.CodeGen
             _output.AppendLine(";");
         }
 
-        /// <summary>
-        /// Gets the current class name
-        /// </summary>
-        /// <returns>The string</returns>
-        private string GetCurrentClassName()
-        {
-            // This would need to track current class context
-            // For simplicity, return a default name
-            return "GeneratedClass";
-        }
+
 
         /// <summary>
         /// Generates the variable declaration using the specified var decl
@@ -953,7 +1033,17 @@ namespace uhigh.Net.CodeGen
                 _output.Append("void");
             }
 
-            _output.Append($" {funcDecl.Name}(");
+            _output.Append($" {funcDecl.Name}");
+            
+            // Emit generic parameters for functions
+            if (funcDecl.GenericParameters != null && funcDecl.GenericParameters.Count > 0)
+            {
+                _output.Append("<");
+                _output.Append(string.Join(", ", funcDecl.GenericParameters));
+                _output.Append(">");
+            }
+
+            _output.Append("(");
 
             // Parameters
             for (int i = 0; i < funcDecl.Parameters.Count; i++)
@@ -1053,63 +1143,74 @@ namespace uhigh.Net.CodeGen
         /// <param name="forStmt">The for stmt</param>
         private void GenerateForStatement(ForStatement forStmt)
         {
+            // Detect μHigh for-in loop (for var i in expr { ... })
+            if (!string.IsNullOrEmpty(forStmt.IteratorVariable) && forStmt.IterableExpression != null)
+            {
+                Indent();
+                _output.Append("foreach (var ");
+                _output.Append(forStmt.IteratorVariable);
+                _output.Append(" in ");
+                GenerateExpression(forStmt.IterableExpression);
+                _output.AppendLine(")");
+                Indent();
+                _output.AppendLine("{");
+                _indentLevel++;
+
+                foreach (var stmt in forStmt.Body)
+                {
+                    GenerateStatement(stmt);
+                }
+
+                _indentLevel--;
+                Indent();
+                _output.AppendLine("}");
+                return;
+            }
+
             Indent();
+            _output.Append("for (");
 
-            if (forStmt.IsForInLoop)
+            // Initializer
+            if (forStmt.Initializer is VariableDeclaration varDecl)
             {
-                // Generate foreach loop
-                _output.Append($"foreach (var {forStmt.IteratorVariable} in ");
-
-                // Handle different iterable types
-                if (forStmt.IterableExpression is RangeExpression rangeExpr)
+                _output.Append("var ");
+                _output.Append(varDecl.Name);
+                if (varDecl.Initializer != null)
                 {
-                    GenerateRangeIterable(rangeExpr);
+                    _output.Append(" = ");
+                    GenerateExpression(varDecl.Initializer);
                 }
-                else
-                {
-                    GenerateExpression(forStmt.IterableExpression!);
-                }
-
-                _output.AppendLine(")");
             }
-            else
+            else if (forStmt.Initializer != null)
             {
-                // Traditional for loop
-                _output.Append("for (");
-
-                if (forStmt.Initializer != null)
-                {
-                    // Remove the semicolon from the initializer since we're adding it manually
-                    var initOutput = _output.ToString();
-                    var currentLength = _output.Length;
-                    GenerateStatement(forStmt.Initializer);
-                    var newContent = _output.ToString().Substring(currentLength);
-                    if (newContent.EndsWith(";\n") || newContent.EndsWith(";"))
-                    {
-                        _output.Length = _output.Length - (newContent.EndsWith(";\n") ? 2 : 1);
-                    }
-                }
-                _output.Append("; ");
-
-                if (forStmt.Condition != null)
-                    GenerateExpression(forStmt.Condition);
-                _output.Append("; ");
-
-                if (forStmt.Increment != null)
-                {
-                    // Generate increment without semicolon
-                    var currentLength = _output.Length;
-                    GenerateStatement(forStmt.Increment);
-                    var newContent = _output.ToString().Substring(currentLength);
-                    if (newContent.EndsWith(";\n") || newContent.EndsWith(";"))
-                    {
-                        _output.Length = _output.Length - (newContent.EndsWith(";\n") ? 2 : 1);
-                    }
-                }
-
-                _output.AppendLine(")");
+                GenerateStatement(forStmt.Initializer);
+                if (_output.Length > 0 && _output[_output.Length - 1] == ';')
+                    _output.Length--;
             }
 
+            _output.Append("; ");
+
+            // Condition
+            if (forStmt.Condition != null)
+            {
+                GenerateExpression(forStmt.Condition);
+            }
+
+            _output.Append("; ");
+
+            // Increment
+            if (forStmt.Increment is ExpressionStatement exprStmt)
+            {
+                GenerateExpression(exprStmt.Expression);
+            }
+            else if (forStmt.Increment != null)
+            {
+                GenerateStatement(forStmt.Increment);
+                if (_output.Length > 0 && _output[_output.Length - 1] == ';')
+                    _output.Length--;
+            }
+
+            _output.AppendLine(")");
             Indent();
             _output.AppendLine("{");
             _indentLevel++;
@@ -1193,7 +1294,15 @@ namespace uhigh.Net.CodeGen
                     GenerateExpression(assignExpr.Value);
                     break;
                 case ConstructorCallExpression constructorExpr:
-                    _output.Append($"new {constructorExpr.ClassName}(");
+                    _output.Append($"new {constructorExpr.ClassName}");
+                    
+                    // Handle generic type arguments if present
+                    if (constructorExpr.ClassName.Contains('<'))
+                    {
+                        // Generic constructor call - type already included in ClassName
+                    }
+                    
+                    _output.Append("(");
                     for (int i = 0; i < constructorExpr.Arguments.Count; i++)
                     {
                         if (i > 0) _output.Append(", ");
@@ -1737,29 +1846,7 @@ namespace uhigh.Net.CodeGen
                 {
                     var baseType = genericMatch.Groups[1].Value;
                     var typeArgs = genericMatch.Groups[2].Value;
-
-                    // Handle multiple type arguments (e.g., Dictionary<string, int>)
                     var typeArgsList = typeArgs.Split(',').Select(t => ConvertType(t.Trim())).ToList();
-
-                    // Try to resolve the base type with reflection first
-                    if (_typeResolver?.TryGetGenericTypeDefinition(baseType, out var genericTypeDef) == true)
-                    {
-                        try
-                        {
-                            var resolvedArgs = typeArgsList.Select(arg =>
-                                _typeResolver.TryResolveType(arg, out var argType) ? argType : typeof(object)).ToArray();
-
-                            if (resolvedArgs.Length == genericTypeDef.GetGenericArguments().Length)
-                            {
-                                var constructedType = genericTypeDef.MakeGenericType(resolvedArgs);
-                                return GetCSharpTypeName(constructedType);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            _diagnostics.ReportWarning($"Failed to construct generic type {baseType}: {ex.Message}");
-                        }
-                    }
 
                     // Fallback to manual mapping for common types
                     var convertedBaseType = baseType switch
@@ -1768,22 +1855,24 @@ namespace uhigh.Net.CodeGen
                         "list" => $"List<{string.Join(", ", typeArgsList)}>",
                         "map" => typeArgsList.Count >= 2 ? $"Dictionary<{typeArgsList[0]}, {typeArgsList[1]}>" : "Dictionary<object, object>",
                         "set" => $"HashSet<{typeArgsList[0]}>",
-                        "tuple" => typeArgsList.Count >= 2 ? $"Tuple<{string.Join(", ", typeArgsList)}>" : "Tuple<object, object>",
-                        "promise" => $"Task<{typeArgsList[0]}>",
-                        "function" => typeArgsList.Count == 1 ? $"Func<{typeArgsList[0]}>" : $"Func<{string.Join(", ", typeArgsList)}>",
-                        _ => $"{ConvertType(baseType)}<{string.Join(", ", typeArgsList)}>"
+                        _ => $"{baseType}<{string.Join(", ", typeArgsList)}>"
                     };
 
                     return convertedBaseType;
                 }
             }
 
+            // Emit generic type parameters as-is (e.g., T, U, V)
+            if (type.Length == 1 && char.IsUpper(type[0]))
+                return type;
+            if (type.StartsWith("T") && type.Length <= 10 && char.IsUpper(type[0]))
+                return type;
+
             // Try to resolve as a simple type through reflection
             if (_typeResolver?.TryResolveType(type, out var simpleType) == true)
             {
                 return GetCSharpTypeName(simpleType);
             }
-
             // Fallback to manual mapping for μHigh-specific types
             return type switch
             {
@@ -1792,15 +1881,8 @@ namespace uhigh.Net.CodeGen
                 "string" => "string",
                 "bool" => "bool",
                 "void" => "void",
-                "array" => "object[]",
-                "arrayIndice" => "uhigh.StdLib.ArrayIndice<object>",
-                // Handle common array types
-                "string[]" => "string[]",
-                "int[]" => "int[]",
-                "bool[]" => "bool[]",
-                "double[]" => "double[]",
-                "object[]" => "object[]",
-                _ => "object"
+                // ...existing code...
+                _ => type // <-- emit custom type names as-is
             };
         }
 

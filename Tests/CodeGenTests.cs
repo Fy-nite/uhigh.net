@@ -20,7 +20,15 @@ namespace uhigh.Net.Testing
             var tokens = lexer.Tokenize();
             var parser = new Parser.Parser(tokens, diagnostics);
             var ast = parser.Parse();
-            var generator = new CSharpGenerator();
+            
+            // Use the modular generator system
+            var generator = CodeGeneratorRegistry.GetGenerator("csharp");
+            if (generator == null)
+                throw new InvalidOperationException("C# generator not found");
+                
+            var config = new CodeGeneratorConfig();
+            generator.Initialize(config, diagnostics);
+            
             return generator.Generate(ast, diagnostics);
         }
 
@@ -315,6 +323,108 @@ namespace uhigh.Net.Testing
             Assert.IsTrue(result.Contains("_ => \"Error\""));
         }
 
+        /// <summary>
+        /// Tests that test multiple target generation
+        /// </summary>
+        [Test]
+        public void TestMultipleTargetGeneration()
+        {
+            var source = @"
+                func main() {
+                    print(""Hello, World!"")
+                    var x = 42
+                    print(x)
+                }";
 
+            // Test C# generation
+            var csharpResult = GenerateCSharp(source);
+            Assert.IsTrue(csharpResult.Contains("Console.WriteLine"));
+
+            // Test JavaScript generation (if available)
+            var jsGenerator = CodeGeneratorRegistry.GetGenerator("javascript");
+            if (jsGenerator != null)
+            {
+                var diagnostics = new DiagnosticsReporter();
+                var lexer = new Lexer.Lexer(source, diagnostics);
+                var tokens = lexer.Tokenize();
+                var parser = new Parser.Parser(tokens, diagnostics);
+                var ast = parser.Parse();
+                
+                var config = new CodeGeneratorConfig();
+                jsGenerator.Initialize(config, diagnostics);
+                
+                var jsResult = jsGenerator.Generate(ast, diagnostics);
+                Assert.IsTrue(jsResult.Contains("console.log"));
+            }
+        }
+
+        /// <summary>
+        /// Tests that test generator info retrieval
+        /// </summary>
+        [Test]
+        public void TestGeneratorInfo()
+        {
+            var generators = CodeGeneratorRegistry.GetGeneratorInfo().ToList();
+            Assert.IsTrue(generators.Count > 0);
+            
+            var csharpInfo = generators.FirstOrDefault(g => g.Name.Contains("C#"));
+            Assert.IsNotNull(csharpInfo);
+            Assert.IsTrue(csharpInfo.SupportedFeatures.Contains("classes"));
+        }
+
+        /// <summary>
+        /// Tests that test generic class generation
+        /// </summary>
+        [Test]
+        public void TestGenericClassGeneration()
+        {
+            var result = GenerateCSharp(@"
+                public class Box<T> {
+                    private field value: T
+                    
+                    constructor(value: T) {
+                        this.value = value
+                    }
+                    
+                    public func GetValue(): T {
+                        return this.value
+                    }
+                }");
+
+            Assert.IsTrue(result.Contains("public class Box<T>"));
+            Assert.IsTrue(result.Contains("private T value;"));
+            Assert.IsTrue(result.Contains("public T GetValue()"));
+            Assert.IsTrue(result.Contains("T value"));
+        }
+
+        /// <summary>
+        /// Tests that test generic method generation
+        /// </summary>
+        [Test]
+        public void TestGenericMethodGeneration()
+        {
+            var result = GenerateCSharp(@"
+                public func ProcessGeneric<T>(input: T): T {
+                    return input
+                }");
+
+            Assert.IsTrue(result.Contains("public static T ProcessGeneric<T>(T input)"));
+            Assert.IsTrue(result.Contains("return input;"));
+        }
+
+        /// <summary>
+        /// Tests that test generic constructor calls
+        /// </summary>
+        [Test]
+        public void TestGenericConstructorCalls()
+        {
+            var result = GenerateCSharp(@"
+                var stringList = List<string>()
+                var intBox = Box<int>(42)
+            ");
+
+            Assert.IsTrue(result.Contains("new List<string>()"));
+            Assert.IsTrue(result.Contains("new Box<int>(42)"));
+        }
     }
 }
