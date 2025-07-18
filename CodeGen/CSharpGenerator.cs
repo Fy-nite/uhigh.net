@@ -1143,6 +1143,30 @@ namespace uhigh.Net.CodeGen
         /// <param name="forStmt">The for stmt</param>
         private void GenerateForStatement(ForStatement forStmt)
         {
+            // Detect μHigh for-in loop (for var i in expr { ... })
+            if (!string.IsNullOrEmpty(forStmt.IteratorVariable) && forStmt.IterableExpression != null)
+            {
+                Indent();
+                _output.Append("foreach (var ");
+                _output.Append(forStmt.IteratorVariable);
+                _output.Append(" in ");
+                GenerateExpression(forStmt.IterableExpression);
+                _output.AppendLine(")");
+                Indent();
+                _output.AppendLine("{");
+                _indentLevel++;
+
+                foreach (var stmt in forStmt.Body)
+                {
+                    GenerateStatement(stmt);
+                }
+
+                _indentLevel--;
+                Indent();
+                _output.AppendLine("}");
+                return;
+            }
+
             Indent();
             _output.Append("for (");
 
@@ -1159,9 +1183,7 @@ namespace uhigh.Net.CodeGen
             }
             else if (forStmt.Initializer != null)
             {
-                // ExpressionStatement or other
                 GenerateStatement(forStmt.Initializer);
-                // Remove trailing semicolon/newline
                 if (_output.Length > 0 && _output[_output.Length - 1] == ';')
                     _output.Length--;
             }

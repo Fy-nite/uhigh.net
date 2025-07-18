@@ -184,6 +184,7 @@ namespace uhigh.Net.CodeGen
             // Register built-in generators
             Register(new CSharpGeneratorFactory());
             Register(new JavaScriptGeneratorFactory());
+            Register(new CppGeneratorFactory());
         }
 
         /// <summary>
@@ -353,6 +354,27 @@ namespace uhigh.Net.CodeGen
         };
 
         public ICodeGenerator CreateGenerator() => new JavaScriptGenerator();
+
+        public bool CanHandle(CodeGeneratorConfig config) => true;
+    }
+
+    /// <summary>
+    /// Factory for C++ code generator
+    /// </summary>
+    public class CppGeneratorFactory : ICodeGeneratorFactory
+    {
+        public string TargetName => "cpp";
+
+        public CodeGeneratorInfo GeneratorInfo => new()
+        {
+            Name = "C++ Code Generator",
+            Description = "Generates C++ code from μHigh programs",
+            Version = "1.0.0",
+            SupportedFeatures = new() { "classes", "functions" },
+            RequiredDependencies = new() { "C++17+" }
+        };
+
+        public ICodeGenerator CreateGenerator() => new CppGenerator();
 
         public bool CanHandle(CodeGeneratorConfig config) => true;
     }

@@ -1257,3 +1257,6 @@ namespace uhigh.Net.Parser
         public List<Expression> Arguments { get; set; } = new();
     }
 }
+
+// All code generators traverse these AST node classes to generate code.
+// Add your code generator classes in the appropriate project directory.

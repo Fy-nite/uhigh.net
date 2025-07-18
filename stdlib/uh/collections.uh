@@ -5,7 +5,7 @@ namespace StdLib
        public static func Range(end: int): List<int>
        {
            var result = new List<int>()
-           for (var i = start; i < end; i++)
+           for (var i = 0; i < end; i++)
            {
                result.Add(i)
            }

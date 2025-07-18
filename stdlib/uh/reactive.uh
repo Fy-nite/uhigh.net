@@ -3,7 +3,7 @@ namespace StdLib
     
 
     [System.Serializable]
-    public class observable<T>
+    public class Observable<T>
     {
         private field value: T
         private field _observers: List<Action<T>>
