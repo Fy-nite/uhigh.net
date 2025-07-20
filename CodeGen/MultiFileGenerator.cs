@@ -439,7 +439,6 @@ namespace uhigh.Net.CodeGen
                 return;
             }
 
-            // ...existing code for traditional for loops...
             Indent(output, indentLevel);
             output.AppendLine("for (; ; )");
             Indent(output, indentLevel);
@@ -465,6 +464,7 @@ namespace uhigh.Net.CodeGen
 
             Indent(output, indentLevel);
 
+            // Generate modifiers
             if (methodDecl.Modifiers.Count > 0)
             {
                 output.Append(string.Join(" ", methodDecl.Modifiers) + " ");
@@ -474,13 +474,36 @@ namespace uhigh.Net.CodeGen
                 output.Append("public ");
             }
 
-            var returnType = methodDecl.ReturnType != null ? ConvertType(methodDecl.ReturnType) : "void";
-            output.AppendLine($"{returnType} {methodDecl.Name}()");
+            // Special handling for Main method
+            if (methodDecl.Name == "Main" && methodDecl.IsStatic)
+            {
+                output.AppendLine("static void Main(string[] args)");
+            }
+            else
+            {
+                var returnType = methodDecl.ReturnType != null ? ConvertType(methodDecl.ReturnType) : "void";
+                output.Append($"{returnType} {methodDecl.Name}(");
+                
+                // Parameters
+                for (int i = 0; i < methodDecl.Parameters.Count; i++)
+                {
+                    var param = methodDecl.Parameters[i];
+                    if (i > 0) output.Append(", ");
+                    var paramType = param.Type != null ? ConvertType(param.Type) : "object";
+                    output.Append($"{paramType} {param.Name}");
+                }
+                output.AppendLine(")");
+            }
 
             Indent(output, indentLevel);
             output.AppendLine("{");
-            Indent(output, indentLevel + 1);
-            output.AppendLine("// Method body");
+            
+            // Generate method body
+            foreach (var stmt in methodDecl.Body)
+            {
+                GenerateStatement(output, stmt, indentLevel + 1);
+            }
+            
             Indent(output, indentLevel);
             output.AppendLine("}");
             output.AppendLine();

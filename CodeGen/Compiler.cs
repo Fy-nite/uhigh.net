@@ -1011,23 +1011,31 @@ namespace uhigh.Net
         /// <returns>The has namespace main</returns>
         private bool CheckForMainMethod(Program program)
         {
-            // Check for top-level main function
+            // Check for top-level main function (lowercase)
             var hasTopLevelMain = program.Statements.OfType<FunctionDeclaration>().Any(f => f.Name == "main");
             if (hasTopLevelMain) return true;
 
-            // Check for Main method in classes
+            // Check for Main method in classes (uppercase, static)
             var hasClassMain = program.Statements.OfType<ClassDeclaration>().Any(c =>
-                c.Members.OfType<MethodDeclaration>().Any(m => m.Name == "Main"));
+                c.Members.OfType<MethodDeclaration>().Any(m => m.Name == "Main" && m.IsStatic));
             if (hasClassMain) return true;
 
-            // Check for Main method in namespaces
+            // Check for Main method in namespaces (uppercase, static)
             var hasNamespaceMain = program.Statements.OfType<NamespaceDeclaration>().Any(ns =>
                 ns.Members.OfType<ClassDeclaration>().Any(c =>
-                    c.Members.OfType<MethodDeclaration>().Any(m => m.Name == "Main")));
+                    c.Members.OfType<MethodDeclaration>().Any(m => m.Name == "Main" && m.IsStatic)));
 
             return hasNamespaceMain;
         }
 
+        // Update the main method detection in CompileProject
+        private bool CheckForMainMethodInCode(string csharpCode)
+        {
+            return csharpCode.Contains("static void Main(string[] args)") || 
+                   csharpCode.Contains("static async Task Main(string[] args)") ||
+                   csharpCode.Contains("static void Main()") ||
+                   csharpCode.Contains("static async Task Main()");
+        }
         // Add helper method to compile to AST
         /// <summary>
         /// Compiles the to ast using the specified source

@@ -1,6 +1,5 @@
 namespace StdLib
 {
-    
 
     [System.Serializable]
     public class Observable<T>

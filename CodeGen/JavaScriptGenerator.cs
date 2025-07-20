@@ -230,7 +230,9 @@ namespace uhigh.Net.CodeGen
             }
             else
             {
-                _output.Append($"{methodDecl.Name}(");
+                // For Main method, use lowercase 'main' in JavaScript
+                var methodName = methodDecl.Name == "Main" ? "main" : methodDecl.Name;
+                _output.Append($"{methodName}(");
             }
             for (int i = 0; i < methodDecl.Parameters.Count; i++)
             {

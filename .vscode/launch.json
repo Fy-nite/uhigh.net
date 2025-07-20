@@ -7,8 +7,8 @@
             "request": "launch",
             "program": "${workspaceFolder}/bin/Debug/net9.0/uhigh.dll", // adjust for your output path and target framework
             "args": [
-                // Add any command-line arguments you want to test here, e.g.:
-                "Examples/test.uh",
+
+                "Tests/uh/meow.uh",
             ],
             "cwd": "${workspaceFolder}",
             "console": "integratedTerminal",

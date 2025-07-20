@@ -938,7 +938,6 @@ namespace uhigh.Net.Parser
                 initializer = ParseExpression();
             }
 
-            // Attach attributes if available from context (handled in ParseClassMember)
             return new FieldDeclaration { Name = name, Type = type, Initializer = initializer };
         }
 
@@ -2627,12 +2626,48 @@ namespace uhigh.Net.Parser
                 // Check for constructor keyword
                 if (Check(TokenType.Constructor))
                 {
-                    return ParseConstructorDeclaration(modifiers, attributes);
+                    var ctor = ParseConstructorDeclaration(modifiers, attributes) as MethodDeclaration;
+                    if (ctor != null && modifiers.Any(m => m == "static"))
+                        ctor.IsStatic = true;
+                    return ctor;
                 }
 
-                if (Match(TokenType.Field)) return ParseFieldDeclaration();
-                if (Match(TokenType.Var)) return ParsePropertyDeclaration();
-                if (Match(TokenType.Func)) return ParseMethodDeclaration();
+                if (Match(TokenType.Field))
+                {
+                    var field = ParseFieldDeclaration() as FieldDeclaration;
+                    if (field != null)
+                    {
+                        field.Modifiers = modifiers;
+                        field.Attributes = attributes;
+                        if (modifiers.Any(m => m == "static"))
+                            field.IsStatic = true;
+                    }
+                    return field;
+                }
+                if (Match(TokenType.Var))
+                {
+                    var prop = ParsePropertyDeclaration() as PropertyDeclaration;
+                    if (prop != null)
+                    {
+                        prop.Modifiers = modifiers;
+                        prop.Attributes = attributes;
+                        if (modifiers.Any(m => m == "static"))
+                            prop.IsStatic = true;
+                    }
+                    return prop;
+                }
+                if (Match(TokenType.Func))
+                {
+                    var method = ParseMethodDeclaration() as MethodDeclaration;
+                    if (method != null)
+                    {
+                        method.Modifiers = modifiers;
+                        method.Attributes = attributes;
+                        if (modifiers.Any(m => m == "static"))
+                            method.IsStatic = true;
+                    }
+                    return method;
+                }
 
                 // If we have modifiers but no specific keyword, this might be a field declaration
                 if (modifiers.Count > 0 && Check(TokenType.Identifier))
@@ -2659,7 +2694,7 @@ namespace uhigh.Net.Parser
                             initializer = ParseExpression();
                         }
 
-                        return new FieldDeclaration
+                        var field = new FieldDeclaration
                         {
                             Name = fieldName,
                             Type = type,
@@ -2667,6 +2702,9 @@ namespace uhigh.Net.Parser
                             Modifiers = modifiers,
                             Attributes = attributes
                         };
+                        if (modifiers.Any(m => m == "static"))
+                            field.IsStatic = true;
+                        return field;
                     }
                     else
                     {
@@ -2695,7 +2733,7 @@ namespace uhigh.Net.Parser
                             Modifiers = modifiers,
                             Attributes = attributes
                         };
-                                       }
+                    }
                 }
             }
             catch (Exception ex)
@@ -2742,7 +2780,7 @@ namespace uhigh.Net.Parser
 
             Consume(TokenType.RightBrace, "Expected '}' after constructor body");
 
-            return new MethodDeclaration
+            var ctor = new MethodDeclaration
             {
                 Name = "constructor",
                 Parameters = parameters,
@@ -2751,6 +2789,9 @@ namespace uhigh.Net.Parser
                 Modifiers = modifiers,
                 Attributes = attributes
             };
+            if (modifiers.Any(m => m == "static"))
+                ctor.IsStatic = true;
+            return ctor;
         }
 
         /// <summary>

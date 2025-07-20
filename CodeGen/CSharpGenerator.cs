@@ -408,27 +408,69 @@ namespace uhigh.Net.CodeGen
 
             var hasNamespace = program.Statements.Any(s => s is NamespaceDeclaration);
             var hasClass = program.Statements.Any(s => s is ClassDeclaration);
-            var hasMainFunction = program.Statements.OfType<FunctionDeclaration>().Any(f => f.Name == "main");
+            var mainFunction = program.Statements.OfType<FunctionDeclaration>().FirstOrDefault(f => f.Name == "main");
+            var hasMainFunction = mainFunction != null;
+
+            // Check for class with static Main method
+            bool hasClassWithStaticMain = program.Statements
+                .OfType<ClassDeclaration>()
+                .Any(cls => cls.Members
+                    .OfType<MethodDeclaration>()
+                    .Any(m => m.Name == "Main" && m.IsStatic));
+
+            // Check for namespace with class with static Main method
+            bool hasNamespaceWithStaticMain = program.Statements
+                .OfType<NamespaceDeclaration>()
+                .SelectMany(ns => ns.Members.OfType<ClassDeclaration>())
+                .Any(cls => cls.Members
+                    .OfType<MethodDeclaration>()
+                    .Any(m => m.Name == "Main" && m.IsStatic));
 
             // If source has its own namespace/class structure, use it as-is
             if (hasNamespace || hasClass)
             {
-                // Generate the source structure directly without wrapping
+                // If there is a top-level func main(), emit as entry point
                 foreach (var statement in program.Statements.Where(s => !(s is ImportStatement)))
                 {
-                    GenerateStatement(statement);
+                    if (statement is FunctionDeclaration funcDecl && funcDecl.Name == "main")
+                    {
+                        GenerateMainFunction(funcDecl);
+                    }
+                    else
+                    {
+                        GenerateStatement(statement);
+                    }
                 }
+                // Do NOT emit a wrapper main if a class/namespace already provides Main
+                return;
             }
-            else
+
+            // If there is a top-level func main(), emit wrapper
+            if (hasMainFunction)
             {
-                // Generate default wrapper namespace and class for loose statements/functions
                 _output.AppendLine($"namespace {_rootNamespace}");
                 _output.AppendLine("{");
                 _indentLevel++;
                 GenerateDefaultProgram(program);
                 _indentLevel--;
                 _output.AppendLine("}");
+                return;
             }
+
+            // If there is a class or namespace with static Main, do nothing extra (handled above)
+            if (hasClassWithStaticMain || hasNamespaceWithStaticMain)
+            {
+                // Already handled by class/namespace emission
+                return;
+            }
+
+            // Otherwise, emit default wrapper for loose statements/functions
+            _output.AppendLine($"namespace {_rootNamespace}");
+            _output.AppendLine("{");
+            _indentLevel++;
+            GenerateDefaultProgram(program);
+            _indentLevel--;
+            _output.AppendLine("}");
         }
 
         /// <summary>
@@ -498,6 +540,7 @@ namespace uhigh.Net.CodeGen
         private void GenerateMainMethod(List<ASTNode>? statements)
         {
             Indent();
+            // Default to string[] args for loose main method
             _output.AppendLine("public static void Main(string[] args)");
             Indent();
             _output.AppendLine("{");
@@ -524,7 +567,24 @@ namespace uhigh.Net.CodeGen
         private void GenerateMainFunction(FunctionDeclaration mainFunc)
         {
             Indent();
-            _output.AppendLine("public static void Main(string[] args)");
+            // Emit correct parameter list for main
+            _output.Append("public static void Main(");
+            if (mainFunc.Parameters.Count > 0)
+            {
+                for (int i = 0; i < mainFunc.Parameters.Count; i++)
+                {
+                    if (i > 0) _output.Append(", ");
+                    var param = mainFunc.Parameters[i];
+                    var paramType = param.Type != null ? ConvertType(param.Type) : "object";
+                    _output.Append($"{paramType} {param.Name}");
+                }
+            }
+            else
+            {
+                // Default to string[] args if no parameters
+                _output.Append("string[] args");
+            }
+            _output.AppendLine(")");
             Indent();
             _output.AppendLine("{");
             _indentLevel++;
@@ -794,6 +854,9 @@ namespace uhigh.Net.CodeGen
             }
             else
             {
+                // Add static if needed
+                if (methodDecl.IsStatic)
+                    _output.Append("static ");
                 _output.Append("public "); // Default to public
             }
 
@@ -856,6 +919,9 @@ namespace uhigh.Net.CodeGen
         private void GeneratePropertyDeclaration(PropertyDeclaration propDecl)
         {
             Indent();
+            // Add static if needed
+            if (propDecl.IsStatic)
+                _output.Append("static ");
             _output.Append("public ");
 
             var propType = propDecl.Type != null ? ConvertType(propDecl.Type) : "object";
@@ -940,6 +1006,9 @@ namespace uhigh.Net.CodeGen
             }
             else
             {
+                // Add static if needed
+                if (fieldDecl.IsStatic)
+                    _output.Append("static ");
                 _output.Append("private "); // Default to private for fields
             }
 
@@ -1954,7 +2023,8 @@ namespace uhigh.Net.CodeGen
                 "string" => "string",
                 "bool" => "bool",
                 "void" => "void",
-                // ...existing code...
+                "object" => "object",
+                "any" => "object", // 'any' in μHigh maps to object in C#
                 _ => type // <-- emit custom type names as-is
             };
         }
@@ -1981,6 +2051,7 @@ namespace uhigh.Net.CodeGen
                 var genericTypeDef = type.GetGenericTypeDefinition();
                 var typeArgs = type.GetGenericArguments();
 
+
                 if (genericTypeDef == typeof(List<>))
                 {
                     return $"List<{GetCSharpTypeName(typeArgs[0])}>";
@@ -2000,7 +2071,6 @@ namespace uhigh.Net.CodeGen
             {
                 return GetCSharpTypeName(type.GetElementType()) + "[]";
             }
-
             // Use full name for other types
             return type.FullName ?? type.Name;
         }

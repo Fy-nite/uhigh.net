@@ -604,6 +604,16 @@ namespace uhigh.Net.Parser
         /// Gets the value of the has custom accessors
         /// </summary>
         public bool HasCustomAccessors => Accessors.Any(a => a.Body != null || a.Statements.Count > 0);
+
+        // --- Add these for parser/codegen compatibility ---
+        /// <summary>
+        /// Gets or sets the value of the modifiers
+        /// </summary>
+        public List<string> Modifiers { get; set; } = new();
+        /// <summary>
+        /// Gets or sets the value of the attributes
+        /// </summary>
+        public List<AttributeDeclaration> Attributes { get; set; } = new();
     }
 
     /// <summary>
