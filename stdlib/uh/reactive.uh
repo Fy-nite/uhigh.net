@@ -9,24 +9,24 @@ namespace StdLib
         private field _observers: List<Action<T>>
         public constructor(initialValue: T)
         {
-            this.value = initialValue
-            this._observers = new List<Action<T>>()
+            value = initialValue
+            _observers = new List<Action<T>>()
         }
         public func GetValue(): T
         {
-            return this.value
+            return value
         }
         public func Subscribe(observer: Action<T>): void
         {
-            this._observers.Add(observer)
+            Add_to(_observers, observer)
         }
 
         public func Add(newValue: T): void
         {
-            this.value = newValue
-            for var observer in this._observers
+            value = newValue
+            for var observer in _observers
             {
-                observer(this.value)
+                observer(value)
             }
         }
     }

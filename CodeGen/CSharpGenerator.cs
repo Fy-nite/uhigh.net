@@ -1294,12 +1294,14 @@ namespace uhigh.Net.CodeGen
                     GenerateExpression(assignExpr.Value);
                     break;
                 case ConstructorCallExpression constructorExpr:
-                    _output.Append($"new {constructorExpr.ClassName}");
+                    // Apply constructor name mapping for special types
+                    var mappedClassName = MapConstructorName(constructorExpr.ClassName);
+                    _output.Append($"new {mappedClassName}");
                     
                     // Handle generic type arguments if present
-                    if (constructorExpr.ClassName.Contains('<'))
+                    if (mappedClassName.Contains('<'))
                     {
-                        // Generic constructor call - type already included in ClassName
+                        // Generic constructor call - type already included in mapped name
                     }
                     
                     _output.Append("(");
@@ -1317,7 +1319,16 @@ namespace uhigh.Net.CodeGen
                     if (callExpr.Function is IdentifierExpression funcIdExpr)
                     {
                         var functionName = funcIdExpr.Name;
-                        GenerateFunctionCall(functionName, callExpr.Arguments);
+                        
+                        // Handle μHigh built-in method mappings
+                        if (IsBuiltInMethod(functionName) && callExpr.Arguments.Count > 0)
+                        {
+                            GenerateMappedMethodCall(functionName, callExpr.Arguments);
+                        }
+                        else
+                        {
+                            GenerateFunctionCall(functionName, callExpr.Arguments);
+                        }
                     }
                     else if (callExpr.Function is QualifiedIdentifierExpression qualifiedFuncExpr)
                     {
@@ -1327,14 +1338,61 @@ namespace uhigh.Net.CodeGen
                     else if (callExpr.Function is MemberAccessExpression memberAccessExpr)
                     {
                         // Handle method calls like object.Method()
-                        GenerateExpression(memberAccessExpr.Object);
-                        _output.Append($".{memberAccessExpr.MemberName}(");
-                        for (int i = 0; i < callExpr.Arguments.Count; i++)
+                        if (IsUtilityMethod(memberAccessExpr.MemberName))
                         {
-                            if (i > 0) _output.Append(", ");
-                            GenerateExpression(callExpr.Arguments[i]);
+                            // For utility methods like obj.Add_to(item), map to appropriate C# method
+                            GenerateExpression(memberAccessExpr.Object);
+                            
+                            switch (memberAccessExpr.MemberName)
+                            {
+                                case "Add_to":
+                                    _output.Append(".Add(");
+                                    break;
+                                case "Remove_from":
+                                    _output.Append(".Remove(");
+                                    break;
+                                case "Length_of":
+                                    _output.Append(".Count");  // or .Length depending on type
+                                    return;
+                                case "ToUpper":
+                                    _output.Append(".ToUpper(");
+                                    break;
+                                case "ToLower":
+                                    _output.Append(".ToLower(");
+                                    break;
+                                case "Index_of":
+                                    _output.Append("[");
+                                    if (callExpr.Arguments.Count > 0)
+                                        GenerateExpression(callExpr.Arguments[0]);
+                                    _output.Append("]");
+                                    return;
+                                case "Substring_of":
+                                    _output.Append(".Substring(");
+                                    break;
+                                default:
+                                    _output.Append($".{memberAccessExpr.MemberName}(");
+                                    break;
+                            }
+                            
+                            // For methods that need arguments
+                            for (int i = 0; i < callExpr.Arguments.Count; i++)
+                            {
+                                if (i > 0) _output.Append(", ");
+                                GenerateExpression(callExpr.Arguments[i]);
+                            }
+                            _output.Append(")");
                         }
-                        _output.Append(")");
+                        else
+                        {
+                            GenerateExpression(memberAccessExpr.Object);
+                            _output.Append($".{memberAccessExpr.MemberName}(");
+                            for (int i = 0; i < callExpr.Arguments.Count; i++)
+                            {
+                                if (i > 0) _output.Append(", ");
+                                GenerateExpression(callExpr.Arguments[i]);
+                            }
+                            _output.Append(")");
+                        }
                     }
                     else
                     {
@@ -1822,11 +1880,26 @@ namespace uhigh.Net.CodeGen
                 return $"{ConvertType(elementType)}[]";
             }
 
+            // Check if this is a tracked generic type parameter
+            if (_typeResolver?.IsGenericTypeParameter(type) == true)
+            {
+                return _typeResolver.GetTypeParameterName(type) ?? type;
+            }
+
+            // Handle single letter type parameters (T, U, V, etc.) - preserve as-is
+            if (IsGenericTypeParameter(type))
+            {
+                return type;
+            }
+
             // First try reflection to see if it's a known .NET type
             if (_typeResolver?.TryResolveType(type, out var reflectedType) == true)
             {
-                // Use the actual .NET type name
-                return GetCSharpTypeName(reflectedType);
+                // Don't convert if it's a type parameter placeholder
+                if (!_typeResolver.IsGenericTypeParameter(type))
+                {
+                    return GetCSharpTypeName(reflectedType);
+                }
             }
 
             // Handle generic types with reflection
@@ -1938,6 +2011,150 @@ namespace uhigh.Net.CodeGen
         private void Indent()
         {
             _output.Append(new string('\t', _indentLevel));
+        }
+
+        /// <summary>
+        /// Determines if a type name is a generic type parameter
+        /// </summary>
+        /// <param name="typeName">The type name</param>
+        /// <returns>True if it's a generic type parameter</returns>
+        private bool IsGenericTypeParameter(string typeName)
+        {
+            // Type parameters are typically:
+            // - Single uppercase letters (T, U, V, etc.)
+            // - Start with T and are reasonably short (TKey, TValue, TResult, etc.)
+            // - Are in a known context (inside generic class/method)
+            return (typeName.Length == 1 && char.IsUpper(typeName[0])) ||
+                   (typeName.StartsWith("T") && typeName.Length <= 15 && char.IsUpper(typeName[0]) && char.IsUpper(typeName[1]));
+        }
+
+        private bool IsBuiltInMethod(string methodName)
+        {
+            return methodName.StartsWith("Add_to") || 
+                   methodName.StartsWith("Remove_from") || 
+                   methodName.StartsWith("Length_of") || 
+                   methodName.StartsWith("Index_of") || 
+                   methodName.StartsWith("Substring_of") ||
+                   methodName == "ToUpper" || 
+                   methodName == "ToLower";
+        }
+
+        private void GenerateMappedMethodCall(string methodName, List<Expression> arguments)
+        {
+            if (arguments.Count == 0) return;
+            
+            var target = arguments[0];
+            
+            switch (methodName)
+            {
+                case "Add_to":
+                    if (arguments.Count >= 2)
+                    {
+                        GenerateExpression(target);
+                        _output.Append(".Add(");
+                        GenerateExpression(arguments[1]);
+                        _output.Append(")");
+                    }
+                    break;
+                    
+                case "Remove_from":
+                    if (arguments.Count >= 2)
+                    {
+                        GenerateExpression(target);
+                        _output.Append(".Remove(");
+                        GenerateExpression(arguments[1]);
+                        _output.Append(")");
+                    }
+                    break;
+                    
+                case "Length_of":
+                    GenerateExpression(target);
+                    _output.Append(".Count"); // or .Length depending on type
+                    break;
+                    
+                case "Index_of":
+                    if (arguments.Count >= 2)
+                    {
+                        GenerateExpression(target);
+                        _output.Append("[");
+                        GenerateExpression(arguments[1]);
+                        _output.Append("]");
+                    }
+                    break;
+                    
+                case "Substring_of":
+                    if (arguments.Count >= 3)
+                    {
+                        GenerateExpression(target);
+                        _output.Append(".Substring(");
+                        GenerateExpression(arguments[1]);
+                        _output.Append(", ");
+                        GenerateExpression(arguments[2]);
+                        _output.Append(")");
+                    }
+                    break;
+                    
+                case "ToUpper":
+                    GenerateExpression(target);
+                    if (arguments.Count >= 3)
+                    {
+                        GenerateExpression(target);
+                        _output.Append(".Substring(");
+                        GenerateExpression(arguments[1]);
+                        _output.Append(", ");
+                        GenerateExpression(arguments[2]);
+                        _output.Append(")");
+                    }
+                    break;
+                    
+       
+                    
+                case "ToLower":
+                    GenerateExpression(target);
+                    _output.Append(".ToLower()");
+                    break;
+                    
+                default:
+                    // Fallback to regular function call
+                    _output.Append(methodName);
+                    _output.Append("(");
+                    for (int i = 0; i < arguments.Count; i++)
+                    {
+                        if (i > 0) _output.Append(", ");
+                        GenerateExpression(arguments[i]);
+                    }
+                    _output.Append(")");
+                    break;
+            }
+        }
+
+        // Add this helper method to identify utility methods
+        private bool IsUtilityMethod(string methodName)
+        {
+            return methodName.StartsWith("Add_to") || 
+                   methodName.StartsWith("Remove_from") || 
+                   methodName.StartsWith("Length_of") || 
+                   methodName.StartsWith("Index_of") || 
+                   methodName.StartsWith("Substring_of") ||
+                   methodName == "ToUpper" || 
+                   methodName == "ToLower";
+        }
+
+        // Add this helper method to map constructor names
+        private string MapConstructorName(string className)
+        {
+            // Special mapping for common collection types
+            return className switch
+            {
+                "Array" => "List<object>",
+                "List" => "List<object>",
+                "Dictionary" => "Dictionary<object, object>",
+                "Set" => "HashSet<object>",
+                // Handle common generic types
+                var name when name.StartsWith("Array<") => name.Replace("Array<", "List<"),
+                // For all other types, apply standard type conversion
+                _ => ConvertType(className)
+            };
         }
     }
 }

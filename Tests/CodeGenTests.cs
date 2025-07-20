@@ -426,5 +426,93 @@ namespace uhigh.Net.Testing
             Assert.IsTrue(result.Contains("new List<string>()"));
             Assert.IsTrue(result.Contains("new Box<int>(42)"));
         }
+
+        /// <summary>
+        /// Tests that test generic type preservation
+        /// </summary>
+        [Test]
+        public void TestGenericTypePreservation()
+        {
+            var result = GenerateCSharp(@"
+                generic<T> class List {
+                    func Add(item: T): void
+                }");
+
+            Assert.IsTrue(result.Contains("class List<T>"));
+            Assert.IsTrue(result.Contains("void Add(T item)"));
+            Assert.IsFalse(result.Contains("object item"));
+        }
+
+        /// <summary>
+        /// Tests that test method mapping for Add_to
+        /// </summary>
+        [Test]
+        public void TestMethodMappingAddTo()
+        {
+            var result = GenerateCSharp(@"
+                var numbers = [1, 2, 3]
+                Add_to(numbers, 4)
+            ");
+
+            Assert.IsTrue(result.Contains("numbers.Add(4)"));
+        }
+
+        /// <summary>
+        /// Tests that test method mapping for Length_of
+        /// </summary>
+        [Test]
+        public void TestMethodMappingLengthOf()
+        {
+            var result = GenerateCSharp(@"
+                var name = ""Hello""
+                var len = Length_of(name)
+            ");
+
+            Assert.IsTrue(result.Contains("name.Count") || result.Contains("name.Length"));
+        }
+
+        /// <summary>
+        /// Tests that test method mapping for ToUpper
+        /// </summary>
+        [Test]
+        public void TestMethodMappingToUpper()
+        {
+            var result = GenerateCSharp(@"
+                var name = ""hello""
+                var upper = ToUpper(name)
+            ");
+
+            Assert.IsTrue(result.Contains("name.ToUpper()"));
+        }
+
+        /// <summary>
+        /// Tests that test method mapping for JavaScript target
+        /// </summary>
+        [Test]
+        public void TestJavaScriptMethodMapping()
+        {
+            var source = @"
+                var numbers = [1, 2, 3]
+                Add_to(numbers, 4)
+                var len = Length_of(numbers)
+            ";
+
+            var jsGenerator = CodeGeneratorRegistry.GetGenerator("javascript");
+            if (jsGenerator != null)
+            {
+                var diagnostics = new DiagnosticsReporter();
+                var lexer = new Lexer.Lexer(source, diagnostics);
+                var tokens = lexer.Tokenize();
+                var parser = new Parser.Parser(tokens, diagnostics);
+                var ast = parser.Parse();
+                
+                var config = new CodeGeneratorConfig();
+                jsGenerator.Initialize(config, diagnostics);
+                
+                var jsResult = jsGenerator.Generate(ast, diagnostics);
+                Assert.IsTrue(jsResult.Contains("numbers.push(4)"));
+                Assert.IsTrue(jsResult.Contains("numbers.length"));
+            }
+        }
     }
 }

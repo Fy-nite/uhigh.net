@@ -253,10 +253,12 @@ namespace uhigh.Net.Parser
                 }
             }
 
-            // Handle type parameters (T, U, etc.) - allow them through
+            // Handle type parameters (T, U, etc.) - PRESERVE THEM AS-IS
             if (IsTypeParameter(typeName))
             {
-                type = typeof(object); // Placeholder for type parameters
+                // Return a special marker type that preserves the original name
+                type = typeof(object); // Keep as placeholder but mark it specially
+                _typeParameterNames[typeName] = typeName; // Track the original name
                 return true;
             }
 
@@ -759,5 +761,45 @@ namespace uhigh.Net.Parser
         /// Optional callback to check for user-defined types
         /// </summary>
         public Func<string, Type?>? UserTypeResolver { get; set; }
+
+        // Add field to track type parameter names
+        private readonly Dictionary<string, string> _typeParameterNames = new();
+
+        /// <summary>
+        /// Gets the original type parameter name if this is a type parameter
+        /// </summary>
+        /// <param name="typeName">The type name</param>
+        /// <returns>The original type parameter name or null</returns>
+        public string? GetTypeParameterName(string typeName)
+        {
+            return _typeParameterNames.TryGetValue(typeName, out var name) ? name : null;
+        }
+
+        /// <summary>
+        /// Checks if a type name is a generic type parameter
+        /// </summary>
+        /// <param name="typeName">The type name</param>
+        /// <returns>True if it's a type parameter</returns>
+        public bool IsGenericTypeParameter(string typeName)
+        {
+            return _typeParameterNames.ContainsKey(typeName);
+        }
+
+        /// <summary>
+        /// Registers a type parameter name for preservation
+        /// </summary>
+        /// <param name="typeParameterName">The type parameter name</param>
+        public void RegisterTypeParameter(string typeParameterName)
+        {
+            _typeParameterNames[typeParameterName] = typeParameterName;
+        }
+
+        /// <summary>
+        /// Clears all registered type parameters (call when leaving generic scope)
+        /// </summary>
+        public void ClearTypeParameters()
+        {
+            _typeParameterNames.Clear();
+        }
     }
 }

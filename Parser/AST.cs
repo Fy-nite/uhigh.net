@@ -1256,6 +1256,26 @@ namespace uhigh.Net.Parser
         /// </summary>
         public List<Expression> Arguments { get; set; } = new();
     }
+
+    /// <summary>
+    /// The template declaration class
+    /// </summary>
+    /// <seealso cref="Statement"/>
+    public class TemplateDeclaration : Statement
+    {
+        /// <summary>
+        /// Gets or sets the value of the name
+        /// </summary>
+        public string Name { get; set; } = "";
+        /// <summary>
+        /// Gets or sets the value of the generic parameters
+        /// </summary>
+        public List<string> GenericParameters { get; set; } = new();
+        /// <summary>
+        /// Gets or sets the value of the body (statements or members)
+        /// </summary>
+        public List<Statement> Body { get; set; } = new();
+    }
 }
 
 // All code generators traverse these AST node classes to generate code.

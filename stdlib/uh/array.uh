@@ -1,28 +1,13 @@
 namespace StdLib
 {
-    public class Array
+    public class array<T>
     {
-        public static func length(val: array<T>): int
+        private field _items: List<T>
+
+        public constructor()
         {
-            var count = 0
-            while true 
-            {
-                if val[count] == null
-                {
-                    break
-                }
-                else
-                {
-                    count += 1
-                }
-            }
-            return count
+            _items = new List<T>
         }
-        public static func Add(val: array<T>, vta: T): array<T>
-        {
-            var len = length(val)
-            val[len + 1] = vta
-            return val        
-        }
+        public constructor(items: )
     }
 }

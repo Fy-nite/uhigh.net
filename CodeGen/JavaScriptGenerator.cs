@@ -254,9 +254,15 @@ namespace uhigh.Net.CodeGen
             // Emit type info as comment for custom types
             if (funcDecl.ReturnType != null || funcDecl.Parameters.Any(p => p.Type != null))
             {
-                var paramTypes = string.Join(", ", funcDecl.Parameters.Select(p => $"{p.Name}: {p.Type ?? "any"}"));
-                var retType = funcDecl.ReturnType ?? "any";
+                var paramTypes = string.Join(", ", funcDecl.Parameters.Select(p => $"{p.Name}: {ConvertTypeForComment(p.Type ?? "any")}"));
+                var retType = ConvertTypeForComment(funcDecl.ReturnType ?? "any");
                 _output.AppendLine($"// function {funcDecl.Name}({paramTypes}): {retType}");
+            }
+
+            // Emit generic parameters as comment if present
+            if (funcDecl.GenericParameters != null && funcDecl.GenericParameters.Count > 0)
+            {
+                _output.AppendLine($"// Generic function: {funcDecl.Name}<{string.Join(", ", funcDecl.GenericParameters)}>");
             }
             
             if (funcDecl.Name == "main")
@@ -453,6 +459,36 @@ namespace uhigh.Net.CodeGen
             _output.AppendLine("}");
         }
 
+        // Add this helper function for method name mapping
+        private static string GetLanguageMethodName(string methodName, string objectType)
+        {
+            // Simple mapping for arrays and maps
+            if (objectType == "array" || objectType == "Array")
+            {
+                return methodName switch
+                {
+                    "Add" => "push",
+                    "Remove" => "splice", // Needs index
+                    "Clear" => "length = 0",
+                    "Count" => "length",
+                    _ => methodName
+                };
+            }
+            if (objectType == "map" || objectType == "Map")
+            {
+                return methodName switch
+                {
+                    "Add" => "set",
+                    "Remove" => "delete",
+                    "Clear" => "clear",
+                    "Count" => "size",
+                    _ => methodName
+                };
+            }
+
+            return methodName;
+        }
+
         private void GenerateExpression(ASTNode expression)
         {
             switch (expression)
@@ -471,48 +507,175 @@ namespace uhigh.Net.CodeGen
                 case CallExpression callExpr:
                     if (callExpr.Function is IdentifierExpression funcIdExpr)
                     {
-                        // Map μHigh built-ins to JavaScript equivalents
-                        var functionName = funcIdExpr.Name switch
+                        var functionName = funcIdExpr.Name;
+                        
+                        // Handle μHigh built-in method mappings
+                        if (IsBuiltInMethod(functionName) && callExpr.Arguments.Count > 0)
                         {
-                            "print" => "console.log",
-                            "println" => "console.log",
-                            _ => funcIdExpr.Name
-                        };
-                        _output.Append(functionName);
+                            GenerateMappedMethodCall(functionName, callExpr.Arguments);
+                        }
+                        else
+                        {
+                            // Map μHigh built-ins to JavaScript equivalents
+                            var mappedName = funcIdExpr.Name switch
+                            {
+                                "print" => "console.log",
+                                "println" => "console.log",
+                                _ => funcIdExpr.Name
+                            };
+                            
+                            _output.Append(mappedName);
+                            _output.Append("(");
+                            for (int i = 0; i < callExpr.Arguments.Count; i++)
+                            {
+                                if (i > 0) _output.Append(", ");
+                                GenerateExpression(callExpr.Arguments[i]);
+                            }
+                            _output.Append(")");
+                        }
+                    }
+                    else if (callExpr.Function is MemberAccessExpression memberAccessExpr)
+                    {
+                        // Handle method calls like object.Method()
+                        if (IsBuiltInMethod(memberAccessExpr.MemberName))
+                        {
+                            // For utility methods like obj.Add_to(item), map to appropriate JS method
+                            GenerateExpression(memberAccessExpr.Object);
+                            
+                            switch (memberAccessExpr.MemberName)
+                            {
+                                case "Add_to":
+                                    _output.Append(".push(");
+                                    break;
+                                case "Remove_from":
+                                    _output.Append(".splice(");
+                                    if (callExpr.Arguments.Count > 0)
+                                    {
+                                        GenerateExpression(callExpr.Arguments[0]);
+                                        _output.Append(", 1");
+                                    }
+                                    _output.Append(")");
+                                    return;
+                                case "Length_of":
+                                    _output.Append(".length");
+                                    return;
+                                case "ToUpper":
+                                    _output.Append(".toUpperCase(");
+                                    break;
+                                case "ToLower":
+                                    _output.Append(".toLowerCase(");
+                                    break;
+                                case "Index_of":
+                                    _output.Append("[");
+                                    if (callExpr.Arguments.Count > 0)
+                                        GenerateExpression(callExpr.Arguments[0]);
+                                    _output.Append("]");
+                                    return;
+                                case "Substring_of":
+                                    _output.Append(".substring(");
+                                    break;
+                                default:
+                                    _output.Append($".{memberAccessExpr.MemberName}(");
+                                    break;
+                            }
+                            
+                            // For methods that need arguments
+                            for (int i = 0; i < callExpr.Arguments.Count; i++)
+                            {
+                                if (i > 0) _output.Append(", ");
+                                GenerateExpression(callExpr.Arguments[i]);
+                            }
+                            _output.Append(")");
+                        }
+                        else
+                        {
+                            GenerateExpression(memberAccessExpr.Object);
+                            _output.Append($".{memberAccessExpr.MemberName}(");
+                            for (int i = 0; i < callExpr.Arguments.Count; i++)
+                            {
+                                if (i > 0) _output.Append(", ");
+                                GenerateExpression(callExpr.Arguments[i]);
+                            }
+                            _output.Append(")");
+                        }
                     }
                     else
                     {
-                        GenerateExpression(callExpr.Function);
+                        // Map μHigh built-ins to JavaScript equivalents
+                        var functionName = callExpr.Function is IdentifierExpression innerFuncIdExpr ? innerFuncIdExpr.Name switch
+                        {
+                            "print" => "console.log",
+                            "println" => "console.log",
+                            _ => innerFuncIdExpr.Name
+                        } : null;
+                        
+                        if (functionName != null)
+                        {
+                            _output.Append(functionName);
+                        }
+                        else
+                        {
+                            GenerateExpression(callExpr.Function);
+                        }
+                        
+                        _output.Append("(");
+                        for (int i = 0; i < callExpr.Arguments.Count; i++)
+                        {
+                            if (i > 0) _output.Append(", ");
+                            GenerateExpression(callExpr.Arguments[i]);
+                        }
+                        _output.Append(")");
                     }
-                    
-                    _output.Append("(");
-                    for (int i = 0; i < callExpr.Arguments.Count; i++)
-                    {
-                        if (i > 0) _output.Append(", ");
-                        GenerateExpression(callExpr.Arguments[i]);
-                    }
-                    _output.Append(")");
                     break;
-                case MemberAccessExpression memberExpr:
-                    GenerateExpression(memberExpr.Object);
-                    _output.Append($".{memberExpr.MemberName}");
+                case IndexExpression indexExpr:
+                    // Handle array or map indexing
+                    GenerateExpression(indexExpr.Object);
+                    _output.Append("[");
+                    GenerateExpression(indexExpr.Index);
+                    _output.Append("]");
                     break;
                 case AssignmentExpression assignExpr:
                     GenerateExpression(assignExpr.Target);
                     _output.Append($" {ConvertOperator(assignExpr.Operator)} ");
                     GenerateExpression(assignExpr.Value);
                     break;
-                case ConstructorCallExpression ctorExpr:
-                    // new ClassName(arg1, arg2, ...)
-                    _output.Append("new ");
-                    _output.Append(ctorExpr.ClassName);
-                    _output.Append("(");
-                    for (int i = 0; i < ctorExpr.Arguments.Count; i++)
+                case ConstructorCallExpression constructorExpr:
+                    // Apply constructor name mapping for special types
+                    var mappedClassName = MapConstructorName(constructorExpr.ClassName);
+                    
+                    // Handle collection initializer syntax if present
+                    if (IsCollectionType(mappedClassName) && constructorExpr.Arguments.Count == 0)
                     {
-                        if (i > 0) _output.Append(", ");
-                        GenerateExpression(ctorExpr.Arguments[i]);
+                        // For empty collections, use appropriate JS initializer
+                        switch (mappedClassName)
+                        {
+                            case "Array":
+                            case var name when name.StartsWith("Array<"):
+                                _output.Append("[]");
+                                break;
+                            case "Map":
+                            case var name when name.StartsWith("Map<"):
+                                _output.Append("new Map()");
+                                break;
+                            case "Set":
+                            case var name when name.StartsWith("Set<"):
+                                _output.Append("new Set()");
+                                break;
+                            default:
+                                _output.Append($"new {mappedClassName}()");
+                                break;
+                        }
                     }
-                    _output.Append(")");
+                    else
+                    {
+                        _output.Append($"new {mappedClassName}(");
+                        for (int i = 0; i < constructorExpr.Arguments.Count; i++)
+                        {
+                            if (i > 0) _output.Append(", ");
+                            GenerateExpression(constructorExpr.Arguments[i]);
+                        }
+                        _output.Append(")");
+                    }
                     break;
                 case QualifiedIdentifierExpression qidExpr:
                     // Just output the qualified name (e.g., Namespace.Name)
@@ -549,8 +712,129 @@ namespace uhigh.Net.CodeGen
                         _output.Append("{}");
                     }
                     break;
+                case UnaryExpression unaryExpr:
+                    if (unaryExpr.Operator == TokenType.Increment || unaryExpr.Operator == TokenType.Decrement)
+                    {
+                        // Prefix increment/decrement
+                        _output.Append(ConvertOperator(unaryExpr.Operator));
+                        GenerateExpression(unaryExpr.Operand);
+                    }
+                    else
+                    {
+                        // Other unary operators (not, minus)
+                        _output.Append(ConvertOperator(unaryExpr.Operator));
+                        if (NeedsParentheses(unaryExpr.Operand))
+                        {
+                            _output.Append("(");
+                            GenerateExpression(unaryExpr.Operand);
+                            _output.Append(")");
+                        }
+                        else
+                        {
+                            GenerateExpression(unaryExpr.Operand);
+                        }
+                    }
+                    break;
                 default:
                     _diagnostics.ReportCodeGenWarning($"Unknown expression type for JavaScript: {expression.GetType().Name}");
+                    break;
+            }
+        }
+
+        private bool NeedsParentheses(Expression expr)
+        {
+            return expr is BinaryExpression || expr is MatchExpression;
+        }
+
+        private bool IsBuiltInMethod(string methodName)
+        {
+            return methodName.StartsWith("Add_to") || 
+                   methodName.StartsWith("Remove_from") || 
+                   methodName.StartsWith("Length_of") || 
+                   methodName.StartsWith("Index_of") || 
+                   methodName.StartsWith("Substring_of") ||
+                   methodName == "ToUpper" || 
+                   methodName == "ToLower";
+        }
+
+        private void GenerateMappedMethodCall(string methodName, List<Expression> arguments)
+        {
+            if (arguments.Count == 0) return;
+    
+            var target = arguments[0];
+
+            switch (methodName)
+            {
+                case "Add_to":
+                    if (arguments.Count >= 2)
+                    {
+                        GenerateExpression(target);
+                        _output.Append(".push(");
+                        GenerateExpression(arguments[1]);
+                        _output.Append(")");
+                    }
+                    break;
+                    
+                case "Remove_from":
+                    if (arguments.Count >= 2)
+                    {
+                        // For arrays: splice(index, 1)
+                        GenerateExpression(target);
+                        _output.Append(".splice(");
+                        GenerateExpression(arguments[1]);
+                        _output.Append(", 1)");
+                    }
+                    break;
+                    
+                case "Length_of":
+                    GenerateExpression(target);
+                    _output.Append(".length");
+                    break;
+                    
+                case "Index_of":
+                    if (arguments.Count >= 2)
+                    {
+                        GenerateExpression(target);
+                        _output.Append("[");
+                        GenerateExpression(arguments[1]);
+                        _output.Append("]");
+                    }
+                    break;
+                    
+                case "Substring_of":
+                    if (arguments.Count >= 3)
+                    {
+                        GenerateExpression(target);
+                        _output.Append(".substring(");
+                        GenerateExpression(arguments[1]);
+                        _output.Append(", ");
+                        GenerateExpression(arguments[1]);
+                        _output.Append(" + ");
+                        GenerateExpression(arguments[2]);
+                        _output.Append(")");
+                    }
+                    break;
+                    
+                case "ToUpper":
+                    GenerateExpression(target);
+                    _output.Append(".toUpperCase()");
+                    break;
+                    
+                case "ToLower":
+                    GenerateExpression(target);
+                    _output.Append(".toLowerCase()");
+                    break;
+                    
+                default:
+                    // Fallback to regular function call
+                    _output.Append(methodName);
+                    _output.Append("(");
+                    for (int i = 0; i < arguments.Count; i++)
+                    {
+                        if (i > 0) _output.Append(", ");
+                        GenerateExpression(arguments[i]);
+                    }
+                    _output.Append(")");
                     break;
             }
         }
@@ -606,6 +890,70 @@ namespace uhigh.Net.CodeGen
         private void Indent()
         {
             _output.Append(new string(' ', _indentLevel * 2));
+        }
+
+        /// <summary>
+        /// Converts type to comment format, preserving generic parameters
+        /// </summary>
+        private string ConvertTypeForComment(string type)
+        {
+            // Preserve generic type parameters as-is in comments
+            if (IsGenericTypeParameter(type))
+            {
+                return type;
+            }
+            
+            // Convert other types normally
+            return type switch
+            {
+                "int" => "number",
+                "float" => "number", 
+                "double" => "number",
+                "string" => "string",
+                "bool" => "boolean",
+                "void" => "void",
+                _ => type
+            };
+        }
+
+        private bool IsGenericTypeParameter(string typeName)
+        {
+            return (typeName.Length == 1 && char.IsUpper(typeName[0])) ||
+                   (typeName.StartsWith("T") && typeName.Length <= 15 && char.IsUpper(typeName[0]));
+        }
+
+        // Add these helper methods for JavaScript-specific mappings
+        private string MapConstructorName(string className)
+        {
+            // Special mapping for common collection types
+            return className switch
+            {
+                "List" => "Array",
+                "List<string>" => "Array",
+                "List<int>" => "Array",
+                "List<float>" => "Array",
+                "List<bool>" => "Array",
+                "Dictionary" => "Map",
+                "HashSet" => "Set",
+                // Handle common generic patterns
+                var name when name.StartsWith("List<") => name.Replace("List<", "Array<"),
+                var name when name.StartsWith("Dictionary<") => name.Replace("Dictionary<", "Map<"),
+                var name when name.StartsWith("HashSet<") => name.Replace("HashSet<", "Set<"),
+                // Keep Observable as is (our custom class)
+                var name when name.StartsWith("Observable<") => name,
+                // For all other types, leave as is
+                _ => className
+            };
+        }
+
+        private bool IsCollectionType(string className)
+        {
+            return className == "Array" || 
+                   className == "Map" || 
+                   className == "Set" ||
+                   className.StartsWith("Array<") ||
+                   className.StartsWith("Map<") ||
+                   className.StartsWith("Set<");
         }
     }
 

@@ -61,6 +61,15 @@ namespace uhigh.Net.Parser
                 return Parameters.Count == arguments.Count;
             }
 
+            // Special handling for utility methods (Add_to, Remove_from, etc.) when called as methods
+            // This handles both Add_to(obj, item) and obj.Add_to(item) patterns
+            if (IsUtilityMethod(name))
+            {
+                // For method-style invocation (obj.Add_to(item)), we expect one less argument
+                // than the functional style since the object is the target
+                return Parameters.Count == arguments.Count || Parameters.Count == arguments.Count + 1;
+            }
+
             // For user-defined methods in μHigh, be more lenient
             // Check parameter count and allow for optional parameters
             if (Parameters.Count == arguments.Count)
@@ -89,11 +98,35 @@ namespace uhigh.Net.Parser
             // Check if parameter has a default value
             // For now, we'll consider parameters with nullable types as having defaults
             return parameter.Type != null && parameter.Type.EndsWith("?");
-        }        /// <summary>
-                 /// Infers the argument type using the specified argument
-                 /// </summary>
-                 /// <param name="argument">The argument</param>
-                 /// <returns>The string</returns>
+        }
+
+        /// <summary>
+        /// Determines if the method name is a utility method (like Add_to, Remove_from, etc.)
+        /// </summary>
+        /// <param name="name">The method name</param>
+        /// <returns>True if it is a utility method, otherwise false</returns>
+        private bool IsUtilityMethod(string name)
+        {
+            // List of known utility methods, can be expanded as needed
+            var utilityMethods = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "Add_to",
+                "Remove_from",
+                "Contains_in",
+                "Index_of",
+                "Clear",
+                "Count",
+                "Insert_into",
+                "Remove_at"
+            };
+            return utilityMethods.Contains(name);
+        }
+
+        /// <summary>
+        /// Infers the argument type using the specified argument
+        /// </summary>
+        /// <param name="argument">The argument</param>
+        /// <returns>The string</returns>
         private string InferArgumentType(Expression argument)
         {
             return argument switch
@@ -103,6 +136,10 @@ namespace uhigh.Net.Parser
                 CallExpression => "object", // Would need more sophisticated analysis
                 BinaryExpression binExpr when IsArithmeticOperator(binExpr.Operator) => "number",
                 BinaryExpression binExpr when IsComparisonOperator(binExpr.Operator) => "bool",
+                UnaryExpression unaryExpr when unaryExpr.Operator == TokenType.Not => "bool",
+                UnaryExpression unaryExpr when unaryExpr.Operator == TokenType.Minus => "number",
+                UnaryExpression unaryExpr when unaryExpr.Operator == TokenType.Increment => "number",
+                UnaryExpression unaryExpr when unaryExpr.Operator == TokenType.Decrement => "number",
                 _ => "object"
             };
         }
@@ -830,6 +867,10 @@ namespace uhigh.Net.Parser
                 CallExpression => "object", // Would need more sophisticated analysis
                 BinaryExpression binExpr when IsArithmeticOperator(binExpr.Operator) => "number",
                 BinaryExpression binExpr when IsComparisonOperator(binExpr.Operator) => "bool",
+                UnaryExpression unaryExpr when unaryExpr.Operator == TokenType.Not => "bool",
+                UnaryExpression unaryExpr when unaryExpr.Operator == TokenType.Minus => "number",
+                UnaryExpression unaryExpr when unaryExpr.Operator == TokenType.Increment => "number",
+                UnaryExpression unaryExpr when unaryExpr.Operator == TokenType.Decrement => "number",
                 _ => "object"
             };
         }

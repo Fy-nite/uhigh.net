@@ -1546,10 +1546,7 @@ namespace uhigh.Net
 
             try
             {
-                // Compile the project to an executable in a temp directory
-                var tempDir = Path.Combine(Path.GetTempPath(), $"uhigh_build_{Guid.NewGuid():N}");
-                Directory.CreateDirectory(tempDir);
-
+                // Load project to get output type and name
                 var project = await ProjectFile.LoadAsync(projectFile, diagnostics);
                 if (project == null)
                 {
@@ -1557,11 +1554,22 @@ namespace uhigh.Net
                     return false;
                 }
 
+                // Determine bin directory (e.g., bin/Release)
+                var projectDir = Path.GetDirectoryName(Path.GetFullPath(projectFile)) ?? "";
+                var configuration = "Release";
+                var binDir = Path.Combine(projectDir, "bin", configuration);
+
+                // Ensure bin directory exists
+                if (!Directory.Exists(binDir))
+                    Directory.CreateDirectory(binDir);
+
+                // Determine output file name
                 var exeName = project.OutputType.Equals("Library", StringComparison.OrdinalIgnoreCase)
                     ? $"{project.Name}.dll"
                     : $"{project.Name}.exe";
-                var outputPath = Path.Combine(tempDir, exeName);
+                var outputPath = Path.Combine(binDir, exeName);
 
+                // Compile the project to the bin directory
                 var success = await CompileProject(projectFile, outputPath);
                 if (!success)
                 {
@@ -1697,4 +1705,3 @@ namespace uhigh.Net
         }
     }
 }
-   

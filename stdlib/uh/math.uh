@@ -1,0 +1,99 @@
+namespace StdLib
+{
+    /// <summary>
+    /// Mathematical utilities for μHigh
+    /// </summary>
+    public static class Math
+    {
+        /// <summary>
+        /// Mathematical constant PI
+        /// </summary>
+        public static field PI: double = 3.14159265358979323846
+        
+        /// <summary>
+        /// Mathematical constant E
+        /// </summary>
+        public static field E: double = 2.7182818284590452354
+        
+        /// <summary>
+        /// Returns the absolute value of a number
+        /// </summary>
+        /// <param name="value">The input value</param>
+        /// <returns>The absolute value</returns>
+        public static func Abs(value: int): int
+        {
+            return value >= 0 ? value : -value;
+        }
+        
+        /// <summary>
+        /// Returns the absolute value of a floating point number
+        /// </summary>
+        /// <param name="value">The input value</param>
+        /// <returns>The absolute value</returns>
+        public static func Abs(value: double): double
+        {
+            return value >= 0.0 ? value : -value;
+        }
+        
+        /// <summary>
+        /// Returns the maximum of two values
+        /// </summary>
+        /// <param name="a">First value</param>
+        /// <param name="b">Second value</param>
+        /// <returns>The larger value</returns>
+        public static func Max(a: int, b: int): int
+        {
+            return a >= b ? a : b;
+        }
+        
+        /// <summary>
+        /// Returns the minimum of two values
+        /// </summary>
+        /// <param name="a">First value</param>
+        /// <param name="b">Second value</param>
+        /// <returns>The smaller value</returns>
+        public static func Min(a: int, b: int): int
+        {
+            return a <= b ? a : b;
+        }
+        
+        /// <summary>
+        /// Returns the value raised to the specified power
+        /// </summary>
+        /// <param name="x">The value</param>
+        /// <param name="y">The power</param>
+        /// <returns>x raised to the power of y</returns>
+        public static func Pow(x: double, y: double): double
+        {
+            // calculate power with math
+            var result = 1.0;
+            for (var i = 0; i < y; i++)
+            {
+                result *= x;
+            }
+            return result;
+        }
+        
+        // /// <summary>
+        // /// Returns the square root of a value
+        // /// </summary>
+        // /// <param name="x">The input value</param>
+        // /// <returns>The square root</returns>
+        // public static func Sqrt(x: double): double
+        // {
+        //     // calculate square root using Newton's method
+        //     if (x < 0)
+        //     {
+        //        Error("Cannot compute square root of negative number");
+        //     }
+        //     var tolerance = 1e-10;
+        //     var guess = x;
+        //     while (Math.Abs(guess * guess - x) > tolerance)
+        //     {
+        //         guess = (guess + x / guess) / 2;
+        //     }
+        //     return guess;
+        // }
+        
+    }
+}

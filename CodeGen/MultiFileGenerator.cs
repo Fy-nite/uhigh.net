@@ -26,6 +26,71 @@ namespace uhigh.Net.CodeGen
         /// </summary>
         private readonly Dictionary<string, string> _importMappings = new();
 
+        // μHigh type to C# type mapping table
+        private static readonly Dictionary<string, string> TypeMappings = new(StringComparer.OrdinalIgnoreCase)
+        {
+            { "int", "int" },
+            { "long", "long" },
+            { "float", "float" },
+            { "double", "double" },
+            { "decimal", "decimal" },
+            { "byte", "byte" },
+            { "sbyte", "sbyte" },
+            { "short", "short" },
+            { "ushort", "ushort" },
+            { "uint", "uint" },
+            { "ulong", "ulong" },
+            { "bool", "bool" },
+            { "string", "string" },
+            { "char", "char" },
+            { "Guid", "Guid" },
+            { "object", "object" },
+            { "array", "List<object>" },
+            { "Dictionary", "Dictionary<object, object>" },
+            { "Set", "HashSet<object>" },
+            { "Tuple", "Tuple" },
+            { "enum", "enum" },
+            { "void", "void" },
+            { "DateTime", "DateTime" },
+            { "any", "object" },
+            { "Func", "Func" },
+            { "Observable", "Observable" }
+        };
+
+        // μHigh method to C# method mapping table (partial, for demo)
+        private static readonly Dictionary<string, string> MethodMappings = new(StringComparer.OrdinalIgnoreCase)
+        {
+            { "Add_to_array", "Add" },
+            { "Add_to_set", "Add" },
+            { "Add_to_dict", "Add" },
+            { "Remove_from_array", "Remove" },
+            { "Remove_from_set", "Remove" },
+            { "Remove_from_dict", "Remove" },
+            { "Length_of_array", "Count" },
+            { "Length_of_set", "Count" },
+            { "Length_of_dict", "Count" },
+            { "Length_of_string", "Length" },
+            { "Index_of_array", "[]" },
+            { "Index_of_dict", "[]" },
+            { "Substring_of", "Substring" },
+            { "ToUpper", "ToUpper" },
+            { "ToLower", "ToLower" },
+            { "Contains_in_array", "Contains" },
+            { "Contains_in_set", "Contains" },
+            { "Contains_in_dict", "ContainsKey" },
+            { "Contains_in_string", "Contains" },
+            { "IndexOf_in_array", "IndexOf" },
+            { "IndexOf_in_string", "IndexOf" },
+            { "Join", "string.Join" },
+            { "ToString_of", "ToString" },
+            { "Sort_array", "Sort" },
+            { "Reverse_array", "Reverse" },
+            { "Slice_array", "GetRange" },
+            { "Map_array", "Select" },
+            { "Filter_array", "Where" },
+            { "Reduce_array", "Aggregate" }
+        };
+
         /// <summary>
         /// Initializes a new instance of the <see cref="MultiFileGenerator"/> class
         /// </summary>
@@ -625,6 +690,10 @@ namespace uhigh.Net.CodeGen
                 }
             }
 
+            // Use mapping table for simple types
+            if (TypeMappings.TryGetValue(type, out var mapped))
+                return mapped;
+
             return type switch
             {
                 "int" => "int",
@@ -635,6 +704,17 @@ namespace uhigh.Net.CodeGen
                 "Command" => "Command", // Keep custom types as-is
                 _ => "object"
             };
+        }
+
+        // Example: Add a method to map μHigh method calls to C# equivalents
+        private string MapMethod(string methodName, string targetType)
+        {
+            // Compose key as "Method_on_type"
+            var key = $"{methodName}_of_{targetType}".ToLowerInvariant();
+            if (MethodMappings.TryGetValue(key, out var mapped))
+                return mapped;
+            // Fallback: just use methodName
+            return methodName;
         }
 
         /// <summary>

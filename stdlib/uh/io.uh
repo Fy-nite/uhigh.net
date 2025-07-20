@@ -1,0 +1,77 @@
+namespace StdLib
+{
+    /// <summary>
+    /// Input/output utilities for μHigh
+    /// </summary>
+    public static class IO
+    {
+        /// <summary>
+        /// Prints a message to the console
+        /// </summary>
+        /// <param name="message">The message to print</param>
+        public static func Print(message: object): void
+        {
+            _print(message)
+        }
+        
+        /// <summary>
+        /// Prints multiple values to the console
+        /// </summary>
+        /// <param name="values">The values to print</param>
+        public static func Print(values: object[]): void
+        {
+            var result = "";
+            for (var i = 0; i < Length_of(values); i++)
+            {
+                if (i > 0) {result += " "}
+                result += ToString_of(values[i]);
+            }
+            Print(result);
+        }
+        
+        /// <summary>
+        /// Reads a line from the console
+        /// </summary>
+        /// <returns>The input string</returns>
+        public static func Input(): string
+        {
+            #ifdef __DOTNET__
+            return Console.ReadLine();
+            #endif
+            #ifdef __JAVASCRIPT__
+            return null // Placeholder for JavaScript input handling
+            #endif
+        }
+        
+        /// <summary>
+        /// Prompts for input with a message
+        /// </summary>
+        /// <param name="prompt">The prompt message</param>
+        /// <returns>The input string</returns>
+        public static func Input(prompt: string): string
+        {
+            Print(prompt)
+
+        }
+        
+        /// <summary>
+        /// Reads a file as text
+        /// </summary>
+        /// <param name="filePath">The path to the file</param>
+        /// <returns>The file contents</returns>
+        public static func ReadAllText(filePath: string): string
+        {
+            _ReadFile(filepath)
+        }
+        
+        /// <summary>
+        /// Writes text to a file
+        /// </summary>
+        /// <param name="filePath">The path to the file</param>
+        /// <param name="contents">The content to write</param>
+        public static func WriteAllText(filePath: string, contents: string): void
+        {
+            _WriteToFile(filePath,contents)
+        }
+    }
+}

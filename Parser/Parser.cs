@@ -1,6 +1,7 @@
 using System.Text;
 using uhigh.Net.Diagnostics;
 using uhigh.Net.Lexer;
+using uhigh.Net.Preprocessor; // Add this at the top
 
 namespace uhigh.Net.Parser
 {
@@ -30,6 +31,10 @@ namespace uhigh.Net.Parser
         /// </summary>
         private readonly ReflectionAttributeResolver _attributeResolver;
         private readonly ReflectionTypeResolver _typeResolver;
+
+        // Add fields to track generic context
+        private readonly Stack<HashSet<string>> _genericParameterStack = new();
+        private HashSet<string> _currentGenericParameters = new();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Parser"/> class
@@ -725,6 +730,13 @@ namespace uhigh.Net.Parser
                 }
 
                 typeName = Consume(TokenType.Identifier, "Expected type name").Value;
+            }
+
+            // Check if this is a known generic parameter in current context
+            if (_currentGenericParameters.Contains(typeName))
+            {
+                // Register this as a type parameter with the type resolver
+                _typeResolver?.RegisterTypeParameter(typeName);
             }
 
             // Handle generic type parameters if not already included in the identifier
@@ -1653,18 +1665,25 @@ namespace uhigh.Net.Parser
             if (Match(TokenType.Not, TokenType.Minus))
             {
                 var op = Previous().Type;
-                var right = ParseUnary();
-                return new UnaryExpression { Operator = op, Operand = right };
+                var operand = ParseUnary(); // Handle nested unary expressions
+                return new UnaryExpression { Operator = op, Operand = operand };
             }
-
-            // Handle prefix increment/decrement
             if (Match(TokenType.Increment, TokenType.Decrement))
             {
                 var op = Previous().Type;
-                var operand = ParseUnary();
-                return new UnaryExpression { Operator = op, Operand = operand };
+                var operand = ParsePrimary(); // Only allow identifiers or member access
+                
+                if (operand is IdentifierExpression || operand is MemberAccessExpression || operand is IndexExpression)
+                {
+                    return new UnaryExpression { Operator = op, Operand = operand };
+                }
+                else
+                {
+                    _diagnostics.ReportParseError($"Invalid prefix {op} target: {operand?.GetType().Name}", Previous());
+                    return new UnaryExpression { Operator = op, Operand = operand }; // Return anyway for error recovery
+                }
             }
-
+            
             return ParsePostfix();
         }
 
@@ -2771,49 +2790,67 @@ namespace uhigh.Net.Parser
             return new IncludeStatement { FileName = fileToken.Value };
         }
 
+        /// <summary>
+        /// Parses the generic class declaration using the specified modifiers
+        /// </summary>
+        /// <param name="modifiers">The modifiers</param>
+        /// <param name="attributes">The attributes</param>
+        /// <returns>The statement</returns>
         private Statement ParseGenericClassDeclaration(List<string> modifiers, List<AttributeDeclaration> attributes)
         {
-            var name = Consume(TokenType.Identifier, "Expected class name").Value;
+            // Parse 'generic' keyword already consumed
+            Consume(TokenType.Less, "Expected '<' after 'generic'");
             
-            // Parse generic parameters
-            var genericParameters = new List<string>();
-            if (Match(TokenType.Less)) // <
+            var genericParams = new List<string>();
+            do
             {
-                do
-                {
-                    var typeParam = Consume(TokenType.Identifier, "Expected type parameter name").Value;
-                    genericParameters.Add(typeParam);
-                } while (Match(TokenType.Comma));
-                
-                Consume(TokenType.Greater, "Expected '>' after generic type parameters");
+                var paramName = Consume(TokenType.Identifier, "Expected generic parameter name").Value;
+                genericParams.Add(paramName);
+            } while (Match(TokenType.Comma));
+            
+            Consume(TokenType.Greater, "Expected '>' after generic parameters");
+            
+            // Push new generic context
+            _genericParameterStack.Push(_currentGenericParameters);
+            _currentGenericParameters = new HashSet<string>(genericParams);
+            
+            // Parse the class
+            Consume(TokenType.Class, "Expected 'class' after generic parameters");
+            var classDecl = ParseClassDeclaration() as ClassDeclaration;
+            
+            if (classDecl != null)
+            {
+                classDecl.GenericParameters = genericParams;
+                classDecl.Modifiers.AddRange(modifiers);
+                classDecl.Attributes.AddRange(attributes);
             }
+            
+            // Pop generic context
+            _currentGenericParameters = _genericParameterStack.Pop();
+            
+            return classDecl ?? new ClassDeclaration();
+        }
 
-            string? baseClass = null;
-            if (Match(TokenType.Colon))
-            {
-                baseClass = ParseTypeName();
-            }
+        /// <summary>
+        /// Parses μHigh source code with preprocessing (conditional compilation).
+        /// </summary>
+        /// <param name="source">The raw source code</param>
+        /// <param name="defines">Symbols to define for #ifdef/#ifndef</param>
+        /// <param name="diagnostics">Diagnostics reporter</param>
+        /// <param name="verboseMode">Verbose mode</param>
+        /// <returns>The parsed Program AST</returns>
+        public static Program ParseWithPreprocessing(string source, IEnumerable<string>? defines = null, DiagnosticsReporter? diagnostics = null, bool verboseMode = false)
+        {
+            // Run preprocessor first
+            var preprocessor = new uhigh.Net.Preprocessor.Preprocessor(defines ?? Array.Empty<string>());
+            var processedSource = preprocessor.Process(source);
 
-            Consume(TokenType.LeftBrace, "Expected '{' before class body");
-            var members = new List<Statement>();
-
-            while (!Check(TokenType.RightBrace) && !IsAtEnd())
-            {
-                var member = ParseClassMember();
-                if (member != null) members.Add(member);
-            }
-
-            Consume(TokenType.RightBrace, "Expected '}' after class body");
-
-            return new ClassDeclaration
-            {
-                Name = name,
-                GenericParameters = genericParameters,
-                BaseClass = baseClass,
-                Members = members,
-                Modifiers = modifiers,
-                Attributes = attributes
-            };
+            // Tokenize and parse as usual
+            var diag = diagnostics ?? new DiagnosticsReporter(verboseMode);
+            var lexer = new uhigh.Net.Lexer.Lexer(processedSource, diag);
+            var tokens = lexer.Tokenize();
+            var parser = new Parser(tokens, diag, verboseMode);
+            return parser.Parse();
         }
     }
 

@@ -46,8 +46,7 @@ namespace MyFirstApp
 {
     public class Program 
     {
-        public static func Main(args: string[]): void {
-            Console.WriteLine("Hello, World!")
+        public static func Main(args: string[]): void {AW 
         }
     }
 }

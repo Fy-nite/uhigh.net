@@ -1,5 +1,6 @@
 using System.Reflection;
 using uhigh.Net.Diagnostics;
+using uhigh.Net.Lexer;
 
 namespace uhigh.Net.Parser
 {
@@ -246,9 +247,51 @@ namespace uhigh.Net.Parser
                 LiteralExpression lit => InferLiteralType(lit),
                 IdentifierExpression => typeof(object), // Unknown at compile time
                 BinaryExpression => typeof(object), // Would need more analysis
+                UnaryExpression unaryExpr => InferUnaryExpressionType(unaryExpr),
                 CallExpression => typeof(object), // Would need return type analysis
+                MatchExpression => typeof(object), // Type depends on arms
+                LambdaExpression => typeof(Delegate), // Function type
+                ArrayExpression => typeof(System.Collections.IList), // Array type
                 _ => typeof(object)
             };
+        }
+
+        /// <summary>
+        /// Infers the type of a unary expression based on its operator
+        /// </summary>
+        /// <param name="unaryExpr">The unary expression</param>
+        /// <returns>The inferred type</returns>
+        private Type InferUnaryExpressionType(UnaryExpression unaryExpr)
+        {
+            return unaryExpr.Operator switch
+            {
+                TokenType.Not => typeof(bool),
+                TokenType.Minus => InferNumericType(unaryExpr.Operand),
+                TokenType.Increment => InferNumericType(unaryExpr.Operand),
+                TokenType.Decrement => InferNumericType(unaryExpr.Operand),
+                _ => typeof(object)
+            };
+        }
+
+        /// <summary>
+        /// Infers the numeric type of an expression
+        /// </summary>
+        /// <param name="expression">The expression</param>
+        /// <returns>The numeric type</returns>
+        private Type InferNumericType(Expression expression)
+        {
+            var type = InferExpressionType(expression);
+            
+            // If we can determine it's a numeric type, return that
+            if (type == typeof(int) || type == typeof(long) || 
+                type == typeof(float) || type == typeof(double) ||
+                type == typeof(byte) || type == typeof(short))
+            {
+                return type;
+            }
+            
+            // Default to int for numeric operations
+            return typeof(int);
         }
 
         /// <summary>

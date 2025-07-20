@@ -184,7 +184,7 @@ namespace uhigh.Net.CodeGen
             // Register built-in generators
             Register(new CSharpGeneratorFactory());
             Register(new JavaScriptGeneratorFactory());
-            Register(new CppGeneratorFactory());
+            Register(new LLVMGeneratorFactory()); // Replace CppGeneratorFactory with LLVMGeneratorFactory
         }
 
         /// <summary>
@@ -359,22 +359,22 @@ namespace uhigh.Net.CodeGen
     }
 
     /// <summary>
-    /// Factory for C++ code generator
+    /// Factory for LLVM IR generator
     /// </summary>
-    public class CppGeneratorFactory : ICodeGeneratorFactory
+    public class LLVMGeneratorFactory : ICodeGeneratorFactory
     {
-        public string TargetName => "cpp";
+        public string TargetName => "llvm";
 
         public CodeGeneratorInfo GeneratorInfo => new()
         {
-            Name = "C++ Code Generator",
-            Description = "Generates C++ code from μHigh programs",
+            Name = "LLVM IR Generator",
+            Description = "Generates LLVM IR from μHigh programs for optimized native code compilation",
             Version = "1.0.0",
-            SupportedFeatures = new() { "classes", "functions" },
-            RequiredDependencies = new() { "C++17+" }
+            SupportedFeatures = new() { "classes", "functions", "generics", "performance", "native" },
+            RequiredDependencies = new() { "LLVM 14.0+", "clang" }
         };
 
-        public ICodeGenerator CreateGenerator() => new CppGenerator();
+        public ICodeGenerator CreateGenerator() => new LLVMGenerator();
 
         public bool CanHandle(CodeGeneratorConfig config) => true;
     }
