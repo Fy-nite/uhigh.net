@@ -194,6 +194,9 @@ namespace uhigh.Net.CodeGen
                 case MethodDeclaration methodDecl:
                     GenerateMethodDeclaration(methodDecl);
                     break;
+                case UsingStatement usingStmt:
+                    GenerateUsingStatement(usingStmt);
+                    break;
                 default:
                     _diagnostics.ReportCodeGenWarning($"Unknown statement type for JavaScript: {statement.GetType().Name}");
                     break;
@@ -737,6 +740,16 @@ namespace uhigh.Net.CodeGen
                         }
                     }
                     break;
+                case ArrayExpression arrayExpr:
+                    // Emit JS array literal: [] or [a, b, c]
+                    _output.Append("[");
+                    for (int i = 0; i < arrayExpr.Elements.Count; i++)
+                    {
+                        if (i > 0) _output.Append(", ");
+                        GenerateExpression(arrayExpr.Elements[i]);
+                    }
+                    _output.Append("]");
+                    break;
                 default:
                     _diagnostics.ReportCodeGenWarning($"Unknown expression type for JavaScript: {expression.GetType().Name}");
                     break;
@@ -956,6 +969,71 @@ namespace uhigh.Net.CodeGen
                    className.StartsWith("Array<") ||
                    className.StartsWith("Map<") ||
                    className.StartsWith("Set<");
+        }
+
+        /// <summary>
+        /// Generates a using statement as try-finally in JavaScript
+        /// </summary>
+        /// <param name="usingStmt">The using statement</param>
+        private void GenerateUsingStatement(UsingStatement usingStmt)
+        {
+            // JavaScript doesn't have using statements, so convert to try-finally with explicit disposal
+            
+            string? resourceVariable = null;
+            
+            if (usingStmt.ResourceDeclaration != null)
+            {
+                // Declare the resource variable
+                Indent();
+                _output.Append($"let {usingStmt.ResourceDeclaration.Name}");
+                if (usingStmt.ResourceDeclaration.Initializer != null)
+                {
+                    _output.Append(" = ");
+                    GenerateExpression(usingStmt.ResourceDeclaration.Initializer);
+                }
+                _output.AppendLine(";");
+                resourceVariable = usingStmt.ResourceDeclaration.Name;
+            }
+            
+            Indent();
+            _output.AppendLine("try {");
+            _indentLevel++;
+            
+            // If we have a resource expression (not declaration), evaluate it first
+            if (usingStmt.ResourceExpression != null && resourceVariable == null)
+            {
+                Indent();
+                _output.Append("let _resource = ");
+                GenerateExpression(usingStmt.ResourceExpression);
+                _output.AppendLine(";");
+                resourceVariable = "_resource";
+            }
+            
+            foreach (var stmt in usingStmt.Body)
+            {
+                GenerateStatement(stmt);
+            }
+            
+            _indentLevel--;
+            Indent();
+            _output.AppendLine("} finally {");
+            _indentLevel++;
+            
+            if (resourceVariable != null)
+            {
+                Indent();
+                _output.AppendLine($"if ({resourceVariable} && typeof {resourceVariable}.dispose === 'function') {{");
+                _indentLevel++;
+                Indent();
+                _output.AppendLine($"{resourceVariable}.dispose();");
+                _indentLevel--;
+                Indent();
+                _output.AppendLine("}");
+            }
+            
+            _indentLevel--;
+            Indent();
+            _output.AppendLine("}");
         }
     }
 

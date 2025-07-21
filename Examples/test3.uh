@@ -1,29 +1,18 @@
-using System
-using StdLib
-
+with System
+with StdLib
+with System.Diagnostics
+with System.IO
 namespace test
 {
-
-    public class meow {
-        
-        [Expect(10)] 
-        public static field ten: int = 0
-    }
-
-    [TestingOnly]
     public class Program
     {
-
-        [TestWith(typeof(meow))]
-        public static func tester()
-        {
-            meow.ten = 11;
-        }
-        
-         
         public static func Main(args: string[]): void
         {
-            InlineTestRunner.RunAllTests();
+            using var sw = File.CreateText("./meow.txt")
+            {
+
+                sw.WriteLine("meow")
+            }
         }
     }
 }

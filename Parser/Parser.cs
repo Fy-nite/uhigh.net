@@ -505,6 +505,9 @@ namespace uhigh.Net.Parser
             // Optional semicolon
             if (Check(TokenType.Semicolon)) Advance();
 
+
+            _methodChecker.RegisterImport(identifier);
+
             return new ImportStatement
             {
                 ClassName = identifier,
@@ -772,6 +775,12 @@ namespace uhigh.Net.Parser
                 {
                     _diagnostics.ReportWarning($"Type '{typeName}' may not be valid", Peek().Line, Peek().Column, "UH300");
                 }
+            }
+
+            // When resolving types, ensure this is not filtered out:
+            if (typeName == "System.Diagnostics.Process")
+            {
+                return "System.Diagnostics.Process";
             }
 
             return typeName;

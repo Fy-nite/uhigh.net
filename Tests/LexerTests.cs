@@ -424,5 +424,21 @@ namespace uhigh.Net.Testing
             Assert.AreEqual(TokenType.RightBracket, tokens[2].Type);
             Assert.AreEqual(TokenType.EOF, tokens[3].Type);
         }
+
+        /// <summary>
+        /// Tests that test array and object literals
+        /// </summary>
+        [Test]
+        public void TestArrayAndObjectLiterals()
+        {
+            var lexer = CreateLexer("[] [1, 2, 3] {} {a: 1, b: 2}");
+            var tokens = lexer.Tokenize();
+
+            // Should tokenize brackets/braces and contents
+            Assert.IsTrue(tokens.Any(t => t.Type == TokenType.LeftBracket));
+            Assert.IsTrue(tokens.Any(t => t.Type == TokenType.RightBracket));
+            Assert.IsTrue(tokens.Any(t => t.Type == TokenType.LeftBrace));
+            Assert.IsTrue(tokens.Any(t => t.Type == TokenType.RightBrace));
+        }
     }
 }

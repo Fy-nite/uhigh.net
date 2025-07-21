@@ -5,7 +5,6 @@ namespace StdLib
     /// </summary>
     public static class IO
     {
-
         /// <summary>
         /// Prints the line using the specified value
         /// </summary>

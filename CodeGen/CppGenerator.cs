@@ -681,10 +681,8 @@ using Set = std::set<T>;
                     }
                     _output.Append(")");
                     break;
-                // case QualifiedIdentifierExpression qualifiedExpr:
-                //     GenerateQualifiedIdentifier(qualifiedExpr);
-                //     break;
                 case ArrayExpression arrayExpr:
+                    // Emit C++ initializer list: { ... }
                     _output.Append("{ ");
                     for (int i = 0; i < arrayExpr.Elements.Count; i++)
                     {

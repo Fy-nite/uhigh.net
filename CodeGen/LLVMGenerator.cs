@@ -305,5 +305,18 @@ namespace uhigh.Net.CodeGen
             // LLVM IR doesn't have using statements
             return new HashSet<string>();
         }
+
+        private void GenerateExpression(ASTNode expression)
+        {
+            switch (expression)
+            {
+                // ...existing code...
+                case ArrayExpression arrayExpr:
+                    // LLVM IR: arrays need to be constructed via memory allocation, so emit a comment for now
+                    _output.Append("; array literal not directly supported in LLVM IR");
+                    break;
+                // ...existing code...
+            }
+        }
     }
 }

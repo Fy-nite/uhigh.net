@@ -323,6 +323,14 @@ namespace uhigh.Net.Parser
         /// The classes
         /// </summary>
         private readonly Dictionary<string, ClassInfo> _classes = new();
+        /// <summary>
+        /// The imported namespaces
+        /// </summary>
+        private readonly HashSet<string> _importedNamespaces = new();
+        /// <summary>
+        /// Add a guard to prevent recursion
+        /// </summary>
+        private readonly HashSet<string> _isResolvingType = new();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MethodChecker"/> class
@@ -845,12 +853,53 @@ namespace uhigh.Net.Parser
         /// <returns>The bool</returns>
         public bool IsUserDefinedType(string typeName)
         {
-            // Check exact match first
-            if (_classes.ContainsKey(typeName))
-                return true;
+            // Prevent infinite recursion
+            if (_isResolvingType.Contains(typeName))
+                return false;
+            _isResolvingType.Add(typeName);
 
-            // Check if any registered class ends with this type name (for namespace.class scenario)
-            return _classes.Keys.Any(key => key.EndsWith($".{typeName}") || key == typeName);
+            try
+            {
+                // Check exact match first
+                if (_classes.ContainsKey(typeName))
+                    return true;
+
+                // Check if any registered class ends with this type name (for namespace.class scenario)
+                if (_classes.Keys.Any(key => key.EndsWith($".{typeName}") || key == typeName))
+                    return true;
+
+                // --- Patch: Check imported namespaces for .NET types ---
+                foreach (var ns in _importedNamespaces)
+                {
+                    var fullTypeName = ns + "." + typeName;
+                    // Temporarily disable user type resolver to avoid recursion
+                    var prevUserTypeResolver = _typeResolver.UserTypeResolver;
+                    _typeResolver.UserTypeResolver = null;
+                    var found = _typeResolver.TryResolveType(fullTypeName, out var _);
+                    _typeResolver.UserTypeResolver = prevUserTypeResolver;
+                    if (found)
+                        return true;
+                }
+
+                // Also check common .NET namespaces for fallback
+                var commonNamespaces = new[] { "System", "System.Diagnostics", "System.Collections.Generic", "System.Linq" };
+                foreach (var ns in commonNamespaces)
+                {
+                    var fullTypeName = ns + "." + typeName;
+                    var prevUserTypeResolver = _typeResolver.UserTypeResolver;
+                    _typeResolver.UserTypeResolver = null;
+                    var found = _typeResolver.TryResolveType(fullTypeName, out var _);
+                    _typeResolver.UserTypeResolver = prevUserTypeResolver;
+                    if (found)
+                        return true;
+                }
+
+                return false;
+            }
+            finally
+            {
+                _isResolvingType.Remove(typeName);
+            }
         }
 
         /// <summary>
@@ -989,6 +1038,16 @@ namespace uhigh.Net.Parser
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Registers an imported namespace for .NET type resolution.
+        /// </summary>
+        /// <param name="ns">The namespace to register (e.g., "System.Diagnostics")</param>
+        public void RegisterImport(string ns)
+        {
+            if (!string.IsNullOrWhiteSpace(ns))
+                _importedNamespaces.Add(ns);
         }
     }
 }

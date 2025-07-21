@@ -1286,7 +1286,15 @@ namespace uhigh.Net.Parser
         /// </summary>
         public List<Statement> Body { get; set; } = new();
     }
+
+    /// <summary>
+    /// Represents a using statement
+    /// </summary>
+    public class UsingStatement : Statement
+    {
+        public VariableDeclaration? ResourceDeclaration { get; set; }
+        public Expression? ResourceExpression { get; set; }
+        public List<Statement> Body { get; set; } = new();
+    }
 }
 
-// All code generators traverse these AST node classes to generate code.
-// Add your code generator classes in the appropriate project directory.
