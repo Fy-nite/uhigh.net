@@ -867,9 +867,7 @@ namespace uhigh.Net
                                 ? sourceFileRelative
                                 : Path.Combine(projectDir, sourceFileRelative);
 
-
                             fullSourcePath = Path.GetFullPath(fullSourcePath);
-
 
                             diagnostics.ReportInfo($"Processing: {Path.GetRelativePath(projectDir, fullSourcePath)}");
 
@@ -891,11 +889,15 @@ namespace uhigh.Net
                                 var source = await File.ReadAllTextAsync(fullSourcePath);
                                 diagnostics.ReportInfo($"Read {source.Length} characters from {Path.GetFileName(fullSourcePath)}");
 
-                                // Compile to AST
-                                var ast = CompileToAST(source, diagnostics, Path.GetFileName(fullSourcePath));
+                                // Use a diagnostics reporter with the actual source file path
+                                var fileDiagnostics = new DiagnosticsReporter(_verboseMode, fullSourcePath);
 
-                                if (diagnostics.HasErrors)
+                                // Compile to AST
+                                var ast = CompileToAST(source, fileDiagnostics, Path.GetFileName(fullSourcePath));
+
+                                if (fileDiagnostics.HasErrors)
                                 {
+                                    fileDiagnostics.PrintSummary();
                                     diagnostics.ReportError($"Failed to compile {fullSourcePath}");
                                     continue;
                                 }
