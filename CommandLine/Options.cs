@@ -38,13 +38,15 @@ namespace uhigh.Net.CommandLine
         }
 
         /// <summary>
-        /// Creates a project file argument
+        /// Creates a project file argument (optional)
         /// </summary>
-        public static Argument<string> CreateProjectFileArgument()
+        public static Argument<string?> CreateProjectFileArgument()
         {
-            return new Argument<string>(
+            return new Argument<string?>(
                 name: "project-file",
-                description: "Path to the μHigh project file");
+                description: "Path to the μHigh project file (if not specified, will search current directory)",
+                getDefaultValue: () => null
+            );
         }
 
         /// <summary>
@@ -55,6 +57,20 @@ namespace uhigh.Net.CommandLine
             return new Argument<string>(
                 name: "source-file",
                 description: "Path to the source file");
+        }
+
+        /// <summary>
+        /// Finds a .uhighproj file in the specified directory
+        /// </summary>
+        public static string? FindProjectFile(string? directory = null)
+        {
+            directory ??= Environment.CurrentDirectory;
+            var files = Directory.GetFiles(directory, "*.uhighproj", SearchOption.TopDirectoryOnly);
+            if (files.Length == 1)
+                return files[0];
+            if (files.Length > 1)
+                throw new Exception($"Multiple .uhighproj files found in {directory}. Please specify one.");
+            return null;
         }
     }
 

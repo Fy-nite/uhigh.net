@@ -59,16 +59,22 @@ namespace uhigh.Net.NuGet
     {
         private readonly DiagnosticsReporter _diagnostics;
         private readonly string _globalPackagesPath;
+        private readonly string _localPackagesPath;
         private readonly string[] _defaultSources = {
             "https://api.nuget.org/v3-flatcontainer/",
             "https://api.nuget.org/v3/index.json"
         };
 
-        public NuGetManager(DiagnosticsReporter? diagnostics = null)
+        public NuGetManager(DiagnosticsReporter? diagnostics = null, string? projectDir = null)
         {
             _diagnostics = diagnostics ?? new DiagnosticsReporter();
             _globalPackagesPath = Environment.GetEnvironmentVariable("NUGET_PACKAGES")
                 ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".nuget", "packages");
+            // Use projectDir/packages as local cache
+            _localPackagesPath = projectDir != null
+                ? Path.Combine(projectDir, "packages")
+                : Path.Combine(Directory.GetCurrentDirectory(), "packages");
+            Directory.CreateDirectory(_localPackagesPath);
         }
 
         public async Task<bool> RestorePackagesAsync(uhighProject project, string projectDir, bool force = false)
@@ -133,77 +139,91 @@ namespace uhigh.Net.NuGet
             }
         }
 
-        private async Task<bool> RestorePackageAsync(PackageReference package, string projectDir, bool force)
-        {
-            try
-            {
-                var packageDir = Path.Combine(_globalPackagesPath, package.Name.ToLowerInvariant(), package.Version.ToLowerInvariant());
-
-                if (Directory.Exists(packageDir) && !force)
+                private async Task<bool> RestorePackageAsync(PackageReference package, string projectDir, bool force)
                 {
-                    _diagnostics.ReportInfo($"Package {package.Name} v{package.Version} already exists");
-                    return true;
-                }
-
-                using var dotnetTimer = new OperationTimer($"dotnet restore for {package.Name}", _diagnostics, false);
-                if (await TryDotNetRestoreAsync(package, projectDir))
-                {
-                    return true;
-                }
-
-                using var downloadTimer = new OperationTimer($"direct download for {package.Name}", _diagnostics, false);
-                return await DownloadPackageDirectlyAsync(package);
-            }
-            catch (Exception ex)
-            {
-                _diagnostics.ReportError($"Failed to restore {package.Name}: {ex.Message}");
-                return false;
-            }
-        }
-
-        private async Task<bool> TryDotNetRestoreAsync(PackageReference package, string projectDir)
-        {
-            try
-            {
-                var tempProjPath = Path.Combine(Path.GetTempPath(), $"uhigh-restore-{Guid.NewGuid()}.csproj");
-                var tempProjContent = $@"<Project Sdk=""Microsoft.NET.Sdk"">
-  <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-  </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include=""{package.Name}"" Version=""{package.Version}"" />
-  </ItemGroup>
-</Project>";
-
-                await File.WriteAllTextAsync(tempProjPath, tempProjContent);
-
-                var process = new Process
-                {
-                    StartInfo = new ProcessStartInfo
+                    try
                     {
-                        FileName = "dotnet",
-                        Arguments = $"restore \"{tempProjPath}\"",
-                        UseShellExecute = false,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        CreateNoWindow = true
+                        var packageDir = Path.Combine(_localPackagesPath, package.Name.ToLowerInvariant(), package.Version.ToLowerInvariant());
+        
+                        if (Directory.Exists(packageDir) && !force)
+                        {
+                            _diagnostics.ReportInfo($"Package {package.Name} v{package.Version} already exists in local cache");
+                            return true;
+                        }
+        
+                        // Try dotnet restore (will go to global cache, but we want local cache)
+                        using var dotnetTimer = new OperationTimer($"dotnet restore for {package.Name}", _diagnostics, false);
+                        if (await TryDotNetRestoreAsync(package, projectDir))
+                        {
+                            // Copy from global cache to local cache if not present
+                            var globalPackageDir = Path.Combine(_globalPackagesPath, package.Name.ToLowerInvariant(), package.Version.ToLowerInvariant());
+                            if (Directory.Exists(globalPackageDir))
+                            {
+                                CopyDirectory(globalPackageDir, packageDir);
+                                _diagnostics.ReportInfo($"Copied {package.Name} from global cache to local cache");
+                                return true;
+                            }
+                        }
+        
+                        using var downloadTimer = new OperationTimer($"direct download for {package.Name}", _diagnostics, false);
+                        return await DownloadPackageDirectlyAsync(package, packageDir);
                     }
-                };
+                    catch (Exception ex)
+                    {
+                        _diagnostics.ReportError($"Failed to restore {package.Name}: {ex.Message}");
+                        return false;
+                    }
+                }
+        
+                // Add missing method to fix compile error
+                private async Task<bool> TryDotNetRestoreAsync(PackageReference package, string projectDir)
+                {
+                    try
+                    {
+                        // Create a temporary .csproj file for restore
+                        var tempProjPath = Path.Combine(projectDir, $"temp_restore_{Guid.NewGuid()}.csproj");
+                        var csprojContent = $@"
+        <Project Sdk=""Microsoft.NET.Sdk"">
+          <PropertyGroup>
+            <TargetFramework>net8.0</TargetFramework>
+          </PropertyGroup>
+          <ItemGroup>
+            <PackageReference Include=""{package.Name}"" Version=""{package.Version}"" />
+          </ItemGroup>
+        </Project>";
+                        await File.WriteAllTextAsync(tempProjPath, csprojContent);
+        
+                        var psi = new ProcessStartInfo
+                        {
+                            FileName = "dotnet",
+                            Arguments = $"restore \"{tempProjPath}\"",
+                            RedirectStandardOutput = true,
+                            RedirectStandardError = true,
+                            UseShellExecute = false,
+                            CreateNoWindow = true
+                        };
+        
+                        using var process = Process.Start(psi);
+                        var output = await process.StandardOutput.ReadToEndAsync();
+                        var error = await process.StandardError.ReadToEndAsync();
+                        await process.WaitForExitAsync();
+        
+                        _diagnostics.ReportInfo($"dotnet restore output: {output}");
+                        if (!string.IsNullOrWhiteSpace(error))
+                            _diagnostics.ReportWarning($"dotnet restore error: {error}");
+        
+                        File.Delete(tempProjPath);
+        
+                        return process.ExitCode == 0;
+                    }
+                    catch (Exception ex)
+                    {
+                        _diagnostics.ReportError($"dotnet restore failed for {package.Name}: {ex.Message}");
+                        return false;
+                    }
+                }
 
-                process.Start();
-                await process.WaitForExitAsync();
-
-                try { File.Delete(tempProjPath); } catch { }
-
-                return process.ExitCode == 0;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        private async Task<bool> DownloadPackageDirectlyAsync(PackageReference package)
+        private async Task<bool> DownloadPackageDirectlyAsync(PackageReference package, string packageDir = null)
         {
             try
             {
@@ -225,7 +245,7 @@ namespace uhigh.Net.NuGet
 
                 var packageBytes = await response.Content.ReadAsByteArrayAsync();
 
-                var packageDir = Path.Combine(_globalPackagesPath, packageName, packageVersion);
+                packageDir ??= Path.Combine(_localPackagesPath, packageName, packageVersion);
                 Directory.CreateDirectory(packageDir);
 
                 using var packageStream = new MemoryStream(packageBytes);
@@ -249,7 +269,8 @@ namespace uhigh.Net.NuGet
 
             try
             {
-                var packageDir = Path.Combine(_globalPackagesPath, package.Name.ToLowerInvariant(), package.Version.ToLowerInvariant());
+                // Use local cache
+                var packageDir = Path.Combine(_localPackagesPath, package.Name.ToLowerInvariant(), package.Version.ToLowerInvariant());
 
                 if (!Directory.Exists(packageDir))
                 {
@@ -389,6 +410,22 @@ namespace uhigh.Net.NuGet
                 return new List<PackageSearchResult>();
             }
         }
+
+        // Helper method to copy directory contents
+        private void CopyDirectory(string sourceDir, string destinationDir)
+        {
+            Directory.CreateDirectory(destinationDir);
+            foreach (var file in Directory.GetFiles(sourceDir))
+            {
+                var destFile = Path.Combine(destinationDir, Path.GetFileName(file));
+                File.Copy(file, destFile, true);
+            }
+            foreach (var dir in Directory.GetDirectories(sourceDir))
+            {
+                var destSubDir = Path.Combine(destinationDir, Path.GetFileName(dir));
+                CopyDirectory(dir, destSubDir);
+            }
+        }
     }
 
     public class PackageSearchResult
@@ -419,3 +456,4 @@ namespace uhigh.Net.NuGet
         public string? ProjectUrl { get; set; }
     }
 }
+    

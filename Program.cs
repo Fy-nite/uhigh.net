@@ -167,9 +167,29 @@ public class EntryPoint
 
         command.SetHandler(async (projectFile, verbose, stdLibPath, saveCsTo, output) =>
         {
+            // If projectFile is null, try to find one in current directory
+            if (string.IsNullOrEmpty(projectFile))
+            {
+                try
+                {
+                    projectFile = CommonOptions.FindProjectFile();
+                }
+                catch (Exception ex)
+                {
+                    WriteError(ex.Message);
+                    Environment.ExitCode = 1;
+                    return;
+                }
+                if (string.IsNullOrEmpty(projectFile))
+                {
+                    WriteError("No .uhighproj file found in current directory.");
+                    Environment.ExitCode = 1;
+                    return;
+                }
+            }
             var options = new BuildOptions
             {
-                ProjectFile = projectFile,
+                ProjectFile = projectFile!,
                 Verbose = verbose,
                 StdLibPath = stdLibPath,
                 SaveCSharpTo = saveCsTo,
@@ -179,6 +199,13 @@ public class EntryPoint
         }, projectFileArg, verboseOption, stdLibOption, saveCsOption, outputOption);
 
         return command;
+    }
+
+    private static void WriteError(string message)
+    {
+        Console.ForegroundColor = ConsoleColor.Red;
+        Console.WriteLine($"Error: {message}");
+        Console.ResetColor();
     }
 
     /// <summary>
@@ -201,9 +228,28 @@ public class EntryPoint
 
         command.SetHandler(async (projectFile, verbose, stdLibPath, saveCsTo) =>
         {
+            if (string.IsNullOrEmpty(projectFile))
+            {
+                try
+                {
+                    projectFile = CommonOptions.FindProjectFile();
+                }
+                catch (Exception ex)
+                {
+                    WriteError(ex.Message);
+                    Environment.ExitCode = 1;
+                    return;
+                }
+                if (string.IsNullOrEmpty(projectFile))
+                {
+                    WriteError("No .uhighproj file found in current directory.");
+                    Environment.ExitCode = 1;
+                    return;
+                }
+            }
             var options = new RunOptions
             {
-                ProjectFile = projectFile,
+                ProjectFile = projectFile!,
                 Verbose = verbose,
                 StdLibPath = stdLibPath,
                 SaveCSharpTo = saveCsTo
@@ -1088,38 +1134,5 @@ public class EntryPoint
             }
             return 1;
         }
-    }
-
-    /// <summary>
-    /// Handles the parse error using the specified errors
-    /// </summary>
-    /// <param name="errors">The errors</param>
-    /// <returns>A task containing the int</returns>
-    private static int HandleParseError(IEnumerable<ParseError> errors)
-    {
-        var errorsList = errors.ToList();
-
-        if (!errorsList.Any())
-        {
-            return 0;
-        }
-
-        Console.WriteLine("Command line parsing failed:");
-        foreach (var error in errorsList)
-        {
-            Console.WriteLine($"  {error}");
-        }
-        return 1;
-    }
-
-    /// <summary>
-    /// Writes the error using the specified message
-    /// </summary>
-    /// <param name="message">The message</param>
-    private static void WriteError(string message)
-    {
-        Console.ForegroundColor = ConsoleColor.Red;
-        Console.WriteLine(message);
-        Console.ResetColor();
     }
 }

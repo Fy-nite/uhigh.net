@@ -94,7 +94,7 @@ namespace uhigh.Net
         }
 
         /// <summary>
-        /// Compiles the to executable using the specified source file
+        /// Compiles code to executable using the specified source file
         /// </summary>
         /// <param name="sourceFile">The source file</param>
         /// <param name="outputFile">The output file</param>
@@ -1528,7 +1528,9 @@ namespace uhigh.Net
     <Nullable>{(uhighProject.Nullable ? "enable" : "disable")}</Nullable>
     <Version>{uhighProject.Version}</Version>
   </PropertyGroup>{dependencies}
-
+      <Dependencies>
+    <Package Include=""uhigh-stdlib"" Version=""{uhighProject.StdLibVersion}"" CompileOnly=""false"" />
+  </Dependencies>
 </Project>";
 
             var projectPath = Path.Combine(outputFolder, $"{uhighProject.Name}.csproj");
@@ -1562,22 +1564,20 @@ namespace uhigh.Net
                     return false;
                 }
 
-                // Determine bin directory (e.g., bin/Release)
+                // Use root build directory instead of bin/Release
                 var projectDir = Path.GetDirectoryName(Path.GetFullPath(projectFile)) ?? "";
-                var configuration = "Release";
-                var binDir = Path.Combine(projectDir, "bin", configuration);
-
-                // Ensure bin directory exists
-                if (!Directory.Exists(binDir))
-                    Directory.CreateDirectory(binDir);
+                var buildDir = Path.Combine(projectDir, "build");
+                if (!Directory.Exists(buildDir))
+                    Directory.CreateDirectory(buildDir);
 
                 // Determine output file name
                 var exeName = project.OutputType.Equals("Library", StringComparison.OrdinalIgnoreCase)
                     ? $"{project.Name}.dll"
                     : $"{project.Name}.exe";
-                var outputPath = Path.Combine(binDir, exeName);
+                var outputPath = Path.Combine(buildDir, exeName);
+                Console.WriteLine($"Output path: {outputPath}");
 
-                // Compile the project to the bin directory
+                // Compile the project to the build directory
                 var success = await CompileProject(projectFile, outputPath);
                 if (!success)
                 {
@@ -1586,7 +1586,7 @@ namespace uhigh.Net
                 }
 
                 // Run the executable (dotnet for dll, direct for exe)
-                if (project.OutputType.Equals("Library", StringComparison.OrdinalIgnoreCase))
+                if (!project.OutputType.Equals("Library", StringComparison.OrdinalIgnoreCase))
                 {
                     var process = new Process
                     {
@@ -1595,39 +1595,21 @@ namespace uhigh.Net
                             FileName = "dotnet",
                             Arguments = $"\"{outputPath}\"",
                             UseShellExecute = false,
-                            RedirectStandardOutput = true,
-                            RedirectStandardError = true
+                            RedirectStandardInput = false,
+                            RedirectStandardOutput = false,
+                            RedirectStandardError = false
                         }
                     };
                     process.Start();
-                    string stdOut = await process.StandardOutput.ReadToEndAsync();
-                    string stdErr = await process.StandardError.ReadToEndAsync();
                     await process.WaitForExitAsync();
-                    Console.Write(stdOut);
-                    if (!string.IsNullOrWhiteSpace(stdErr))
-                        Console.Error.Write(stdErr);
                     return process.ExitCode == 0;
                 }
                 else
                 {
-                    var process = new Process
-                    {
-                        StartInfo = new ProcessStartInfo
-                        {
-                            FileName = outputPath,
-                            UseShellExecute = false,
-                            RedirectStandardOutput = true,
-                            RedirectStandardError = true
-                        }
-                    };
-                    process.Start();
-                    string stdOut = await process.StandardOutput.ReadToEndAsync();
-                    string stdErr = await process.StandardError.ReadToEndAsync();
-                    await process.WaitForExitAsync();
-                    Console.Write(stdOut);
-                    if (!string.IsNullOrWhiteSpace(stdErr))
-                        Console.Error.Write(stdErr);
-                    return process.ExitCode == 0;
+                    // For libraries, we can't run directly, so just report success
+                    Console.WriteLine($"Project compiled successfully to: {outputPath}");
+                    Console.WriteLine("Library projects cannot be run directly. Use a test project to reference this library.");
+                    return true;
                 }
             }
             catch (Exception ex)

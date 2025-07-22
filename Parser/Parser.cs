@@ -449,6 +449,12 @@ namespace uhigh.Net.Parser
                 if (Match(TokenType.Break)) return ParseBreakStatement();
                 if (Match(TokenType.Continue)) return ParseContinueStatement();
                 if (Match(TokenType.Sharp)) return ParseSharpBlock();
+
+                // Support array literal with curly braces
+                if (Check(TokenType.LeftBrace) && IsArrayLiteralStart())
+                    return new ExpressionStatement { Expression = ParseArrayLiteral() };
+
+                if (Match(TokenType.LeftBracket)) return ParseArrayDeclaration();
                 // Fix: Parse match as a statement, not an expression
                 if (Match(TokenType.Match)) return ParseMatchStatement();
 
@@ -485,6 +491,31 @@ namespace uhigh.Net.Parser
                 Synchronize();
                 return null;
             }
+        }
+
+        private Statement ParseArrayDeclaration()
+        {
+            // Assume '[' has already been matched
+            var elements = new List<Expression>();
+
+            // Handle empty array: []
+            if (!Check(TokenType.RightBracket))
+            {
+                do
+                {
+                    elements.Add(ParseExpression());
+                } while (Match(TokenType.Comma));
+            }
+
+            Consume(TokenType.RightBracket, "Expected ']' after array elements");
+
+            return new ExpressionStatement
+            {
+                Expression = new ArrayExpression
+                {
+                    Elements = elements
+                }
+            };
         }
 
         // Add method to parse using statements
@@ -2641,6 +2672,11 @@ namespace uhigh.Net.Parser
                     return ctor;
                 }
 
+
+
+
+
+
                 if (Match(TokenType.Field))
                 {
                     var field = ParseFieldDeclaration() as FieldDeclaration;
@@ -2902,6 +2938,46 @@ namespace uhigh.Net.Parser
             var parser = new Parser(tokens, diag, verboseMode);
             return parser.Parse();
         }
+
+        // Helper to check if a '{' starts an array literal
+        private bool IsArrayLiteralStart()
+        {
+            // Look ahead to see if the next token is a valid array element or '}'
+            var next = PeekAhead(1);
+            return next != null && (
+                next.Type == TokenType.RightBrace ||
+                next.Type == TokenType.Number ||
+                next.Type == TokenType.String ||
+                next.Type == TokenType.True ||
+                next.Type == TokenType.False ||
+                next.Type == TokenType.Identifier ||
+                next.Type == TokenType.LeftBrace // nested array
+            );
+        }
+
+        // Parses an array literal: { expr, expr, ... }
+        private Expression ParseArrayLiteral()
+        {
+            Consume(TokenType.LeftBrace, "Expected '{' to start array literal");
+            var elements = new List<Expression>();
+
+            // Handle empty array: {}
+            if (!Check(TokenType.RightBrace))
+            {
+                do
+                {
+                    elements.Add(ParseExpression());
+                } while (Match(TokenType.Comma));
+            }
+
+            Consume(TokenType.RightBrace, "Expected '}' after array literal");
+
+            return new ArrayExpression
+            {
+                Elements = elements
+            };
+        }
+
     }
 
 

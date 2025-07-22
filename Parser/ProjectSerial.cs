@@ -84,6 +84,12 @@ namespace uhigh.Net
         public bool Nullable { get; set; } = true;
 
         /// <summary>
+        /// Gets or sets the value of the standard library version
+        /// </summary>
+        [XmlElement("StdLibVersion")]
+        public string StdLibVersion { get; set; } = "1.0.0";
+
+        /// <summary>
         /// Creates the default using the specified project name
         /// </summary>
         /// <param name="projectName">The project name</param>

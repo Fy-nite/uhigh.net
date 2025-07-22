@@ -4,6 +4,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Collections.Concurrent;
 using System.Reflection;
 using System.Runtime.Loader;
+using uhigh.Net.NuGet; // Add this for NuGetManager and PackageReference
 
 namespace uhigh.Net.CodeGen
 {
@@ -99,7 +100,6 @@ namespace uhigh.Net.CodeGen
                 MetadataReference.CreateFromFile(typeof(System.Collections.Generic.List<>).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(System.Linq.Enumerable).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(InMemoryCompiler).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(StdLib.Temporal<>).Assembly.Location)
             });
 
             // Add μHigh compiler assembly (uhigh.dll) if present
@@ -227,9 +227,21 @@ namespace uhigh.Net.CodeGen
         /// <param name="className">The class name</param>
         /// <param name="outputType">The output type</param>
         /// <param name="additionalAssemblies">The additional assemblies</param>
+        /// <param name="nugetPackages">The NuGet packages</param>
+        /// <param name="targetFramework">The target framework</param>
         /// <returns>A task containing the bool</returns>
-        public async Task<bool> CompileAndRun(string csharpCode, string? outputPath = null, string? rootNamespace = null, string? className = null, string outputType = "Exe", List<string>? additionalAssemblies = null)
+        public async Task<bool> CompileAndRun(string csharpCode, string? outputPath = null, string? rootNamespace = null, string? className = null, string outputType = "Exe", List<string>? additionalAssemblies = null, List<PackageReference>? nugetPackages = null, string targetFramework = "net8.0")
         {
+            // Resolve NuGet assemblies if provided
+            if (nugetPackages != null && nugetPackages.Count > 0)
+            {
+                var nugetAssemblies = ResolveNuGetAssemblies(nugetPackages, targetFramework);
+                if (additionalAssemblies == null)
+                    additionalAssemblies = nugetAssemblies;
+                else
+                    additionalAssemblies.AddRange(nugetAssemblies);
+            }
+
             try
             {
                 // Create hash for caching
@@ -525,13 +537,22 @@ namespace uhigh.Net.CodeGen
         /// </summary>
         /// <param name="csharpCode">The csharp code</param>
         /// <returns>A task containing the byte array</returns>
-        public Task<byte[]?> CompileToBytes(string csharpCode)
+        public Task<byte[]?> CompileToBytes(string csharpCode, List<string>? additionalAssemblies = null, List<PackageReference>? nugetPackages = null, string targetFramework = "net8.0")
         {
+            if (nugetPackages != null && nugetPackages.Count > 0)
+            {
+                var nugetAssemblies = ResolveNuGetAssemblies(nugetPackages, targetFramework);
+                if (additionalAssemblies == null)
+                    additionalAssemblies = nugetAssemblies;
+                else
+                    additionalAssemblies.AddRange(nugetAssemblies);
+            }
+
             try
             {
                 var syntaxTree = CSharpSyntaxTree.ParseText(csharpCode);
 
-                var references = GetAssemblyReferences(_stdLibPath);
+                var references = GetAssemblyReferences(_stdLibPath, additionalAssemblies);
 
                 var compilation = CSharpCompilation.Create(
                     "dotHighAssembly",
@@ -572,9 +593,20 @@ namespace uhigh.Net.CodeGen
         /// <param name="className">The class name</param>
         /// <param name="outputType">The output type</param>
         /// <param name="additionalAssemblies">The additional assemblies</param>
+        /// <param name="nugetPackages">The NuGet packages</param>
+        /// <param name="targetFramework">The target framework</param>
         /// <returns>A task containing the bool</returns>
-        public async Task<bool> CompileToExecutable(string csharpCode, string outputPath, string? rootNamespace = null, string? className = null, string outputType = "Exe", List<string>? additionalAssemblies = null)
+        public async Task<bool> CompileToExecutable(string csharpCode, string outputPath, string? rootNamespace = null, string? className = null, string outputType = "Exe", List<string>? additionalAssemblies = null, List<PackageReference>? nugetPackages = null, string targetFramework = "net8.0")
         {
+            if (nugetPackages != null && nugetPackages.Count > 0)
+            {
+                var nugetAssemblies = ResolveNuGetAssemblies(nugetPackages, targetFramework);
+                if (additionalAssemblies == null)
+                    additionalAssemblies = nugetAssemblies;
+                else
+                    additionalAssemblies.AddRange(nugetAssemblies);
+            }
+
             try
             {
                 var syntaxTree = CSharpSyntaxTree.ParseText(csharpCode);
@@ -689,18 +721,18 @@ namespace uhigh.Net.CodeGen
                     }
                 }
             }
-
-            // Copy μHigh compiler assembly (uhigh.dll) to build directory if present
-            var uhighDllPath = Path.Combine(AppContext.BaseDirectory, "uhigh.dll");
-            if (File.Exists(uhighDllPath))
-            {
-                var destPath = Path.Combine(buildDir, "uhigh.dll");
-                if (!File.Exists(destPath))
-                {
-                    File.Copy(uhighDllPath, destPath);
-                    Console.WriteLine("Copied μHigh compiler assembly: uhigh.dll");
-                }
-            }
+            // dont do this, not needed since stdlib is now a nuget package
+            // // Copy μHigh compiler assembly (uhigh.dll) to build directory if present
+            // var uhighDllPath = Path.Combine(AppContext.BaseDirectory, "uhigh.dll");
+            // if (File.Exists(uhighDllPath))
+            // {
+            //     var destPath = Path.Combine(buildDir, "uhigh.dll");
+            //     if (!File.Exists(destPath))
+            //     {
+            //         File.Copy(uhighDllPath, destPath);
+            //         Console.WriteLine("Copied μHigh compiler assembly: uhigh.dll");
+            //     }
+            // }
 
             // Copy NuGet package assemblies to build directory
             if (additionalAssemblies != null)
@@ -794,6 +826,26 @@ namespace uhigh.Net.CodeGen
 
             await File.WriteAllTextAsync(runtimeConfigPath, json);
             Console.WriteLine($"Runtime config created: {runtimeConfigPath}");
+        }
+
+        /// <summary>
+        /// Resolves NuGet assemblies for the given package references and target framework.
+        /// </summary>
+        /// <param name="packages">The package references</param>
+        /// <param name="targetFramework">The target framework</param>
+        /// <returns>List of assembly paths</returns>
+        public static List<string> ResolveNuGetAssemblies(List<PackageReference>? packages, string targetFramework = "net8.0")
+        {
+            var assemblies = new List<string>();
+            if (packages == null || packages.Count == 0)
+                return assemblies;
+
+            var nugetManager = new NuGetManager();
+            foreach (var pkg in packages)
+            {
+                assemblies.AddRange(nugetManager.GetPackageAssemblies(pkg, targetFramework));
+            }
+            return assemblies;
         }
     }
 }

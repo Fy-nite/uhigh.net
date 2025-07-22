@@ -1655,7 +1655,7 @@ namespace uhigh.Net.CodeGen
         /// <param name="arrayExpr">The array expr</param>
         private void GenerateArrayExpression(ArrayExpression arrayExpr)
         {
-            // Check if we have an explicit array type
+            // Always emit a valid C# array initializer
             if (!string.IsNullOrEmpty(arrayExpr.ArrayType))
             {
                 _output.Append($"new {arrayExpr.ArrayType} {{ ");
@@ -1664,9 +1664,36 @@ namespace uhigh.Net.CodeGen
             {
                 _output.Append($"new {ConvertType(arrayExpr.ElementType)}[] {{ ");
             }
+            else if (arrayExpr.Elements.Count > 0)
+            {
+                // Try to infer type from first element
+                var firstElem = arrayExpr.Elements[0];
+                string inferredType = null;
+                if (firstElem is LiteralExpression lit)
+                {
+                    inferredType = lit.Value switch
+                    {
+                        int => "int",
+                        double => "double",
+                        float => "float",
+                        string => "string",
+                        bool => "bool",
+                        _ => null
+                    };
+                }
+                if (inferredType != null)
+                {
+                    _output.Append($"new {inferredType}[] {{ ");
+                }
+                else
+                {
+                    _output.Append("new[] { ");
+                }
+            }
             else
             {
-                _output.Append("new[] { ");
+                _output.Append("new object[0]");
+                return;
             }
 
             for (int i = 0; i < arrayExpr.Elements.Count; i++)
