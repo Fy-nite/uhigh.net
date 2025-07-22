@@ -355,7 +355,18 @@ namespace uhigh.Net.CodeGen
                     Console.WriteLine("Compilation failed:");
                     foreach (var diagnostic in emitResult.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error))
                     {
-                        Console.WriteLine($"  Error: {diagnostic.GetMessage()}");
+                        var location = diagnostic.Location;
+                        if (location.IsInSource)
+                        {
+                            var lineSpan = location.GetLineSpan();
+                            var line = lineSpan.StartLinePosition.Line + 1;
+                            var col = lineSpan.StartLinePosition.Character + 1;
+                            Console.WriteLine($"  Error (line {line}, col {col}): {diagnostic.GetMessage()}");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"  Error: {diagnostic.GetMessage()}");
+                        }
                     }
                     return null;
                 }
