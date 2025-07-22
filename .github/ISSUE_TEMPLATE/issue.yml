@@ -4,7 +4,6 @@ name: Bug Report
 description: A bug report
 title: bug
 labels: bug
-assignees:
 body:
   # INPUT:
   - type: input
