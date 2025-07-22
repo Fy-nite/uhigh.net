@@ -195,18 +195,9 @@ namespace uhigh.Net
                     diagnostics.ReportInfo("Starting μHigh compilation pipeline");
                 }
 
-                // Tokenize
-                var lexer = new Lexer.Lexer(source, diagnostics, _verboseMode);
-                var tokens = lexer.Tokenize();
-
-                if (diagnostics.HasErrors)
-                {
-                    throw new Exception("Tokenization failed");
-                }
-
-                // Parse
-                var parser = new Parser.Parser(tokens, diagnostics, _verboseMode);
-                var ast = parser.Parse();
+                // Preprocess and parse with target language as define
+                var defines = new[] { _targetLanguage };
+                var ast = uhigh.Net.Parser.Parser.ParseWithPreprocessing(source, defines, diagnostics, _verboseMode);
 
                 // Handle include statements before code generation
                 ast = ProcessIncludes(ast, diagnostics, new HashSet<string>());
@@ -253,18 +244,9 @@ namespace uhigh.Net
                     diagnostics.ReportInfo("Starting μHigh AST compilation");
                 }
 
-                // Tokenize
-                var lexer = new Lexer.Lexer(source, diagnostics, _verboseMode);
-                var tokens = lexer.Tokenize();
-
-                if (diagnostics.HasErrors)
-                {
-                    throw new Exception("Tokenization failed");
-                }
-
-                // Parse
-                var parser = new Parser.Parser(tokens, diagnostics, _verboseMode);
-                var ast = parser.Parse();
+                // Preprocess and parse with target language as define
+                var defines = new[] { _targetLanguage };
+                var ast = uhigh.Net.Parser.Parser.ParseWithPreprocessing(source, defines, diagnostics, _verboseMode);
 
                 // Handle include statements
                 ast = ProcessIncludes(ast, diagnostics, new HashSet<string>());
@@ -1058,23 +1040,9 @@ namespace uhigh.Net
                     diagnostics.ReportInfo($"Compiling {fileName} to AST");
                 }
 
-                // Tokenize
-                var lexer = new Lexer.Lexer(source, diagnostics, _verboseMode);
-                var tokens = lexer.Tokenize();
-
-                if (diagnostics.HasErrors)
-                {
-                    throw new Exception($"Tokenization failed for {fileName}");
-                }
-
-                if (_verboseMode)
-                {
-                    diagnostics.ReportInfo($"Generated {tokens.Count} tokens for {fileName}");
-                }
-
-                // Parse
-                var parser = new Parser.Parser(tokens, diagnostics, _verboseMode);
-                var ast = parser.Parse();
+                // Preprocess and parse with target language as define
+                var defines = new[] { _targetLanguage };
+                var ast = uhigh.Net.Parser.Parser.ParseWithPreprocessing(source, defines, diagnostics, _verboseMode);
 
                 if (diagnostics.HasErrors)
                 {
@@ -1344,7 +1312,9 @@ namespace uhigh.Net
             };
             generator.Initialize(config, diagnostics);
 
-            var ast = CompileToAST(source, diagnostics);
+            // Preprocess and parse with target language as define
+            var defines = new[] { targetLanguage };
+            var ast = uhigh.Net.Parser.Parser.ParseWithPreprocessing(source, defines, diagnostics, _verboseMode);
 
             if (!generator.CanGenerate(ast, diagnostics))
                 throw new Exception($"Target {targetLanguage} cannot generate code for this program");
@@ -1380,10 +1350,9 @@ namespace uhigh.Net
                     }
                     includedFiles.Add(filePath);
                     var includedSource = File.ReadAllText(filePath);
-                    var lexer = new Lexer.Lexer(includedSource, diagnostics);
-                    var tokens = lexer.Tokenize();
-                    var parser = new Parser.Parser(tokens, diagnostics);
-                    var includedAst = parser.Parse();
+                    // Preprocess and parse with target language as define
+                    var defines = new[] { _targetLanguage };
+                    var includedAst = uhigh.Net.Parser.Parser.ParseWithPreprocessing(includedSource, defines, diagnostics, _verboseMode);
                     var processedAst = ProcessIncludes(includedAst, diagnostics, includedFiles);
                     newStatements.AddRange(processedAst.Statements);
                 }
@@ -1696,4 +1665,5 @@ namespace uhigh.Net
             }
         }
     }
+
 }
