@@ -1,0 +1,60 @@
+---
+
+name: Bug Report
+description: A bug report
+title: bug: 
+labels: bug
+assignees:
+body:
+  # INPUT:
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: "What version of uhigh does this occur"
+      placeholder: "1.0.0"
+    validations:
+      required: true
+
+  - type: input
+    id: platform
+    attributes:
+      label: OS
+      description: "What operating system and version are you one"
+      placeholder: "Linux 6.15.7"
+    validations:
+      required: true
+
+  - type: textarea
+    id: describe
+    attributes:
+      label: Describe The Bug
+      description: "A clear and concise description of what the bug is."
+    validations:
+      required: true
+      
+  - type: textarea
+    id: steps
+    attributes:
+      label: To Reproduce
+      description: "Steps to reproduce the behavior:"
+    validations:
+      required: true
+      
+  - type: textarea
+    id: code
+    attributes:
+      label: Code
+      description: The code that is related to the bug
+      render: java
+    validations:
+      required: false
+      
+  - type: textarea
+    id: expect
+    attributes:
+      label: Expected Behavour
+      description: "A clear and concise description of what you expected to happen."
+    validations:
+      required: true
+...
