@@ -2,7 +2,6 @@
 
 name: Bug Report
 description: A bug report
-title: bug
 labels: bug
 body:
   # INPUT:
