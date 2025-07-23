@@ -427,9 +427,11 @@ namespace uhigh.Net.CodeGen
         /// </summary>
         private void GenerateBuiltInFunctions()
         {
-            // don't generate built-in functions since we have the standard library
-            _output.AppendLine("// Built-in functions are now part of the standard library");
-            _output.AppendLine("// You can use them directly without generating here\n");
+            // Generate common built-in functions that are commonly used
+            _output.AppendLine("    // Built-in functions");
+            _output.AppendLine("    public static void print(object value) => Console.WriteLine(value);");
+            _output.AppendLine("    public static string input() => Console.ReadLine() ?? \"\";");
+            _output.AppendLine();
         }
 
         /// <summary>
@@ -1178,8 +1180,18 @@ namespace uhigh.Net.CodeGen
                     GenerateExpression(binExpr.Right);
                     break;
                 case UnaryExpression unaryExpr:
-                    _output.Append(ConvertOperator(unaryExpr.Operator));
-                    GenerateExpression(unaryExpr.Operand);
+                    if (unaryExpr.IsPostfix)
+                    {
+                        // Postfix operators (i++, i--)
+                        GenerateExpression(unaryExpr.Operand);
+                        _output.Append(ConvertOperator(unaryExpr.Operator));
+                    }
+                    else
+                    {
+                        // Prefix operators (++i, --i, !expr, -expr)
+                        _output.Append(ConvertOperator(unaryExpr.Operator));
+                        GenerateExpression(unaryExpr.Operand);
+                    }
                     break;
                 case LiteralExpression litExpr:
                     GenerateLiteral(litExpr);

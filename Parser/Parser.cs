@@ -1667,7 +1667,7 @@ namespace uhigh.Net.Parser
             if (Match(TokenType.Increment, TokenType.Decrement))
             {
                 var op = Previous().Type;
-                return new UnaryExpression { Operator = op, Operand = expr };
+                return new UnaryExpression { Operator = op, Operand = expr, IsPostfix = true };
             }
 
             // Handle match expressions as postfix operators: expr match { ... }
@@ -2134,6 +2134,18 @@ namespace uhigh.Net.Parser
             }
             
             Consume(TokenType.RightParen, "Expected ')' after arguments");
+            
+            // Check if this should be a constructor call (identifier starting with capital letter)
+            if (callee is IdentifierExpression idExpr && 
+                !string.IsNullOrEmpty(idExpr.Name) && 
+                char.IsUpper(idExpr.Name[0]))
+            {
+                return new ConstructorCallExpression 
+                { 
+                    ClassName = idExpr.Name, 
+                    Arguments = arguments 
+                };
+            }
             
             return new CallExpression { Function = callee, Arguments = arguments };
         }
