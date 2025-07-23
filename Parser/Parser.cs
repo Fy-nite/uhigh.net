@@ -2144,16 +2144,29 @@ namespace uhigh.Net.Parser
             
             Consume(TokenType.RightParen, "Expected ')' after arguments");
             
-            // Check if this should be a constructor call (identifier starting with capital letter)
-            if (callee is IdentifierExpression idExpr && 
-                !string.IsNullOrEmpty(idExpr.Name) && 
-                char.IsUpper(idExpr.Name[0]))
+            // Check if this is a special function call that should create specific expression types
+            if (callee is IdentifierExpression idExpr)
             {
-                return new ConstructorCallExpression 
-                { 
-                    ClassName = idExpr.Name, 
-                    Arguments = arguments 
-                };
+                // Handle range function calls: range(10) -> RangeExpression
+                if (string.Equals(idExpr.Name, "range", StringComparison.OrdinalIgnoreCase) && arguments.Count == 1)
+                {
+                    return new RangeExpression
+                    {
+                        Start = new LiteralExpression { Value = 0, Type = TokenType.Number },
+                        End = arguments[0],
+                        IsExclusive = false
+                    };
+                }
+                
+                // Check if this should be a constructor call (identifier starting with capital letter)
+                if (!string.IsNullOrEmpty(idExpr.Name) && char.IsUpper(idExpr.Name[0]))
+                {
+                    return new ConstructorCallExpression 
+                    { 
+                        ClassName = idExpr.Name, 
+                        Arguments = arguments 
+                    };
+                }
             }
             
             return new CallExpression { Function = callee, Arguments = arguments };
