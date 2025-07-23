@@ -1,14 +1,14 @@
-using uhigh.Net.Parser;
-using uhigh.Net.Lexer;
-using uhigh.Net.Diagnostics;
 using System.Text;
+using uhigh.Net.Diagnostics;
+using uhigh.Net.Lexer;
+using uhigh.Net.Parser;
 
 namespace uhigh.Net.CodeGen
 {
     /// <summary>
     /// The sharp generator class
     /// </summary>
-    public class CSharpGenerator
+    public class CSharpGenerator: ICodeGenerator
     {
         /// <summary>
         /// The output
@@ -46,6 +46,65 @@ namespace uhigh.Net.CodeGen
         /// The type resolver
         /// </summary>
         private ReflectionTypeResolver _typeResolver; // Add this field
+
+        /// <summary>
+        /// The config
+        /// </summary>
+        private CodeGeneratorConfig? _config;
+        private string? _currentClassName;
+
+        public CodeGeneratorInfo Info => new()
+        {
+            Name = "C# Code Generator",
+            Description = "Generates C# code from μHigh programs with full feature support",
+            Version = "2.0.0",
+            SupportedFeatures = new() { "classes", "functions", "generics", "match", "lambdas", "async", "attributes" },
+            RequiredDependencies = new() { ".NET 8.0+", "Microsoft.CodeAnalysis" }
+        };
+
+        public string TargetName => "csharp";
+
+        public string FileExtension => ".cs";
+
+        /// <summary>
+        /// Initializes the generator with configuration
+        /// </summary>
+        /// <param name="config">Generator configuration</param>
+        /// <param name="diagnostics">Diagnostics reporter</param>
+        public void Initialize(CodeGeneratorConfig config, DiagnosticsReporter diagnostics)
+        {
+            _config = config;
+            _rootNamespace = config.RootNamespace ?? "Generated";
+            _className = config.ClassName ?? "Program";
+            
+            diagnostics.ReportInfo($"Initialized C# generator with namespace: {_rootNamespace}, class: {_className}");
+        }
+
+        /// <summary>
+        /// Validates if the generator can handle the given program
+        /// </summary>
+        /// <param name="program">Program to validate</param>
+        /// <param name="diagnostics">Diagnostics reporter</param>
+        /// <returns>True if the program can be generated</returns>
+        public bool CanGenerate(Program program, DiagnosticsReporter diagnostics)
+        {
+            // Check for unsupported features
+            var unsupportedFeatures = new List<string>();
+
+            // Add validation logic here
+            // For now, C# generator supports most features
+            
+            if (unsupportedFeatures.Any())
+            {
+                foreach (var feature in unsupportedFeatures)
+                {
+                    diagnostics.ReportError($"Unsupported feature for C# target: {feature}");
+                }
+                return false;
+            }
+
+            return true;
+        }
 
         /// <summary>
         /// Generates the program
@@ -239,7 +298,7 @@ namespace uhigh.Net.CodeGen
                 _output.AppendLine($"namespace {_rootNamespace}");
                 _output.AppendLine("{");
                 _indentLevel++;
-                
+
                 _output.AppendLine($"public class {_className}");
                 _output.AppendLine("{");
                 _indentLevel++;
@@ -290,7 +349,7 @@ namespace uhigh.Net.CodeGen
 
             var hasNamespace = program.Statements.Any(s => s is NamespaceDeclaration);
             var hasClass = program.Statements.Any(s => s is ClassDeclaration);
-            
+
             // Generate the source structure directly without wrapping or using statements
             foreach (var statement in program.Statements.Where(s => !(s is ImportStatement)))
             {
@@ -349,27 +408,69 @@ namespace uhigh.Net.CodeGen
 
             var hasNamespace = program.Statements.Any(s => s is NamespaceDeclaration);
             var hasClass = program.Statements.Any(s => s is ClassDeclaration);
-            var hasMainFunction = program.Statements.OfType<FunctionDeclaration>().Any(f => f.Name == "main");
-            
+            var mainFunction = program.Statements.OfType<FunctionDeclaration>().FirstOrDefault(f => f.Name == "main");
+            var hasMainFunction = mainFunction != null;
+
+            // Check for class with static Main method
+            bool hasClassWithStaticMain = program.Statements
+                .OfType<ClassDeclaration>()
+                .Any(cls => cls.Members
+                    .OfType<MethodDeclaration>()
+                    .Any(m => m.Name == "Main" && m.IsStatic));
+
+            // Check for namespace with class with static Main method
+            bool hasNamespaceWithStaticMain = program.Statements
+                .OfType<NamespaceDeclaration>()
+                .SelectMany(ns => ns.Members.OfType<ClassDeclaration>())
+                .Any(cls => cls.Members
+                    .OfType<MethodDeclaration>()
+                    .Any(m => m.Name == "Main" && m.IsStatic));
+
             // If source has its own namespace/class structure, use it as-is
             if (hasNamespace || hasClass)
             {
-                // Generate the source structure directly without wrapping
+                // If there is a top-level func main(), emit as entry point
                 foreach (var statement in program.Statements.Where(s => !(s is ImportStatement)))
                 {
-                    GenerateStatement(statement);
+                    if (statement is FunctionDeclaration funcDecl && funcDecl.Name == "main")
+                    {
+                        GenerateMainFunction(funcDecl);
+                    }
+                    else
+                    {
+                        GenerateStatement(statement);
+                    }
                 }
+                // Do NOT emit a wrapper main if a class/namespace already provides Main
+                return;
             }
-            else
+
+            // If there is a top-level func main(), emit wrapper
+            if (hasMainFunction)
             {
-                // Generate default wrapper namespace and class for loose statements/functions
                 _output.AppendLine($"namespace {_rootNamespace}");
                 _output.AppendLine("{");
                 _indentLevel++;
                 GenerateDefaultProgram(program);
                 _indentLevel--;
                 _output.AppendLine("}");
+                return;
             }
+
+            // If there is a class or namespace with static Main, do nothing extra (handled above)
+            if (hasClassWithStaticMain || hasNamespaceWithStaticMain)
+            {
+                // Already handled by class/namespace emission
+                return;
+            }
+
+            // Otherwise, emit default wrapper for loose statements/functions
+            _output.AppendLine($"namespace {_rootNamespace}");
+            _output.AppendLine("{");
+            _indentLevel++;
+            GenerateDefaultProgram(program);
+            _indentLevel--;
+            _output.AppendLine("}");
         }
 
         /// <summary>
@@ -439,6 +540,7 @@ namespace uhigh.Net.CodeGen
         private void GenerateMainMethod(List<ASTNode>? statements)
         {
             Indent();
+            // Default to string[] args for loose main method
             _output.AppendLine("public static void Main(string[] args)");
             Indent();
             _output.AppendLine("{");
@@ -457,7 +559,6 @@ namespace uhigh.Net.CodeGen
             _output.AppendLine("}");
             _output.AppendLine();
         }
-
         /// <summary>
         /// Generates the main function using the specified main func
         /// </summary>
@@ -465,7 +566,24 @@ namespace uhigh.Net.CodeGen
         private void GenerateMainFunction(FunctionDeclaration mainFunc)
         {
             Indent();
-            _output.AppendLine("public static void Main(string[] args)");
+            // Emit correct parameter list for main
+            _output.Append("public static void Main(");
+            if (mainFunc.Parameters.Count > 0)
+            {
+                for (int i = 0; i < mainFunc.Parameters.Count; i++)
+                {
+                    if (i > 0) _output.Append(", ");
+                    var param = mainFunc.Parameters[i];
+                    var paramType = param.Type != null ? ConvertType(param.Type) : "object";
+                    _output.Append($"{paramType} {param.Name}");
+                }
+            }
+            else
+            {
+                // Default to string[] args if no parameters
+                _output.Append("string[] args");
+            }
+            _output.AppendLine(")");
             Indent();
             _output.AppendLine("{");
             _indentLevel++;
@@ -496,11 +614,15 @@ namespace uhigh.Net.CodeGen
                 return;
             }
 
+            // Store current class name for constructor generation
+            var previousClassName = _currentClassName;
+            _currentClassName = classDecl.Name;
+
             // Generate attributes for the class
             GenerateAttributes(classDecl.Attributes);
 
             Indent();
-            
+
             // Generate modifiers
             if (classDecl.Modifiers.Count > 0)
             {
@@ -510,15 +632,23 @@ namespace uhigh.Net.CodeGen
             {
                 _output.Append("public "); // Default to public
             }
-            
+
             _output.Append("class ");
             _output.Append(classDecl.Name);
-            
+
+            // Emit generic parameters if present
+            if (classDecl.GenericParameters != null && classDecl.GenericParameters.Count > 0)
+            {
+                _output.Append("<");
+                _output.Append(string.Join(", ", classDecl.GenericParameters));
+                _output.Append(">");
+            }
+
             if (classDecl.BaseClass != null)
             {
-                _output.Append($" : {classDecl.BaseClass}");
+                _output.Append($" : {ConvertType(classDecl.BaseClass)}");
             }
-            
+
             _output.AppendLine();
             Indent();
             _output.AppendLine("{");
@@ -533,9 +663,11 @@ namespace uhigh.Net.CodeGen
             Indent();
             _output.AppendLine("}");
             _output.AppendLine();
+
+            // Restore previous class name
+            _currentClassName = previousClassName;
         }
 
-        // Add method to generate attributes
         /// <summary>
         /// Generates the attributes using the specified attributes
         /// </summary>
@@ -550,7 +682,7 @@ namespace uhigh.Net.CodeGen
 
                 Indent();
                 _output.Append($"[{attribute.Name}");
-                
+
                 if (attribute.Arguments.Count > 0)
                 {
                     _output.Append("(");
@@ -561,7 +693,7 @@ namespace uhigh.Net.CodeGen
                     }
                     _output.Append(")");
                 }
-                
+
                 _output.AppendLine("]");
             }
         }
@@ -583,7 +715,7 @@ namespace uhigh.Net.CodeGen
                 case NamespaceDeclaration nsDecl:
                     GenerateNamespaceDeclaration(nsDecl);
                     break;
-                
+
                 case ClassDeclaration classDecl:
                     GenerateClassDeclaration(classDecl);
                     break;
@@ -638,7 +770,7 @@ namespace uhigh.Net.CodeGen
                 case ExpressionStatement exprStmt:
                     Indent();
                     // check if it's a using statement
- 
+
                     GenerateExpression(exprStmt.Expression);
                     _output.AppendLine(";");
                     break;
@@ -659,7 +791,7 @@ namespace uhigh.Net.CodeGen
                 _diagnostics.ReportCodeGenWarning("Empty sharp block found");
                 return;
             }
-            
+
             // Split the code into lines and indent each line properly
             var lines = sharpBlock.Code.Split('\n');
             foreach (var line in lines)
@@ -713,7 +845,7 @@ namespace uhigh.Net.CodeGen
             GenerateAttributes(methodDecl.Attributes);
 
             Indent();
-            
+
             // Generate modifiers
             if (methodDecl.Modifiers.Count > 0)
             {
@@ -721,29 +853,43 @@ namespace uhigh.Net.CodeGen
             }
             else
             {
+                // Add static if needed
+                if (methodDecl.IsStatic)
+                    _output.Append("static ");
                 _output.Append("public "); // Default to public
             }
-            
+
             if (methodDecl.IsConstructor)
             {
-                _output.Append($"{GetCurrentClassName()}(");
+                // For constructors, use the current class name
+                var className = _currentClassName ?? "GeneratedClass";
+                _output.Append($"{className}(");
             }
             else
             {
                 var returnType = methodDecl.ReturnType != null ? ConvertType(methodDecl.ReturnType) : "void";
-                _output.Append($"{returnType} {methodDecl.Name}(");
+                _output.Append($"{returnType} {methodDecl.Name}");
+
+                // Emit generic parameters for methods
+                if (methodDecl.GenericParameters != null && methodDecl.GenericParameters.Count > 0)
+                {
+                    _output.Append("<");
+                    _output.Append(string.Join(", ", methodDecl.GenericParameters));
+                    _output.Append(">");
+                }
+                _output.Append("(");
             }
-            
+
             // Parameters
             for (int i = 0; i < methodDecl.Parameters.Count; i++)
             {
                 var param = methodDecl.Parameters[i];
                 if (i > 0) _output.Append(", ");
-                
+
                 var paramType = param.Type != null ? ConvertType(param.Type) : "object";
                 _output.Append($"{paramType} {param.Name}");
             }
-            
+
             _output.AppendLine(")");
             Indent();
             _output.AppendLine("{");
@@ -760,6 +906,11 @@ namespace uhigh.Net.CodeGen
             _output.AppendLine();
         }
 
+        private string GetCurrentClassName()
+        {
+            return _currentClassName ?? "GeneratedClass";
+        }
+
         /// <summary>
         /// Generates the property declaration using the specified prop decl
         /// </summary>
@@ -767,23 +918,26 @@ namespace uhigh.Net.CodeGen
         private void GeneratePropertyDeclaration(PropertyDeclaration propDecl)
         {
             Indent();
+            // Add static if needed
+            if (propDecl.IsStatic)
+                _output.Append("static ");
             _output.Append("public ");
-            
+
             var propType = propDecl.Type != null ? ConvertType(propDecl.Type) : "object";
             _output.Append($"{propType} {propDecl.Name}");
-            
+
             if (propDecl.Accessors.Count > 0)
             {
                 _output.AppendLine();
                 Indent();
                 _output.AppendLine("{");
                 _indentLevel++;
-                
+
                 foreach (var accessor in propDecl.Accessors)
                 {
                     Indent();
                     _output.Append(accessor.Type);
-                    
+
                     if (accessor.Body != null)
                     {
                         // Expression-bodied accessor: get => expression;
@@ -798,12 +952,12 @@ namespace uhigh.Net.CodeGen
                         Indent();
                         _output.AppendLine("{");
                         _indentLevel++;
-                        
+
                         foreach (var stmt in accessor.Statements)
                         {
                             GenerateStatement(stmt);
                         }
-                        
+
                         _indentLevel--;
                         Indent();
                         _output.AppendLine("}");
@@ -814,7 +968,7 @@ namespace uhigh.Net.CodeGen
                         _output.AppendLine(";");
                     }
                 }
-                
+
                 _indentLevel--;
                 Indent();
                 _output.AppendLine("}");
@@ -843,7 +997,7 @@ namespace uhigh.Net.CodeGen
             GenerateAttributes(fieldDecl.Attributes);
 
             Indent();
-            
+
             // Generate modifiers
             if (fieldDecl.Modifiers.Count > 0)
             {
@@ -851,31 +1005,25 @@ namespace uhigh.Net.CodeGen
             }
             else
             {
+                // Add static if needed
+                if (fieldDecl.IsStatic)
+                    _output.Append("static ");
                 _output.Append("private "); // Default to private for fields
             }
-            
+
             var fieldType = fieldDecl.Type != null ? ConvertType(fieldDecl.Type) : "object";
             _output.Append($"{fieldType} {fieldDecl.Name}");
-            
+
             if (fieldDecl.Initializer != null)
             {
                 _output.Append(" = ");
                 GenerateExpression(fieldDecl.Initializer);
             }
-            
+
             _output.AppendLine(";");
         }
 
-        /// <summary>
-        /// Gets the current class name
-        /// </summary>
-        /// <returns>The string</returns>
-        private string GetCurrentClassName()
-        {
-            // This would need to track current class context
-            // For simplicity, return a default name
-            return "GeneratedClass";
-        }
+
 
         /// <summary>
         /// Generates the variable declaration using the specified var decl
@@ -884,7 +1032,7 @@ namespace uhigh.Net.CodeGen
         private void GenerateVariableDeclaration(VariableDeclaration varDecl)
         {
             Indent();
-            
+
             if (varDecl.IsConstant)
             {
                 _output.Append("const ");
@@ -893,15 +1041,15 @@ namespace uhigh.Net.CodeGen
             {
                 _output.Append("var ");
             }
-            
+
             _output.Append(varDecl.Name);
-            
+
             if (varDecl.Initializer != null)
             {
                 _output.Append(" = ");
                 GenerateExpression(varDecl.Initializer);
             }
-            
+
             _output.AppendLine(";");
         }
 
@@ -932,7 +1080,7 @@ namespace uhigh.Net.CodeGen
             GenerateAttributes(funcDecl.Attributes);
 
             Indent();
-            
+
             // Generate modifiers
             if (funcDecl.Modifiers.Count > 0)
             {
@@ -942,7 +1090,7 @@ namespace uhigh.Net.CodeGen
             {
                 _output.Append("public static "); // Default to public static for functions
             }
-            
+
             // Return type
             if (funcDecl.ReturnType != null)
             {
@@ -952,19 +1100,29 @@ namespace uhigh.Net.CodeGen
             {
                 _output.Append("void");
             }
+
+            _output.Append($" {funcDecl.Name}");
             
-            _output.Append($" {funcDecl.Name}(");
-            
+            // Emit generic parameters for functions
+            if (funcDecl.GenericParameters != null && funcDecl.GenericParameters.Count > 0)
+            {
+                _output.Append("<");
+                _output.Append(string.Join(", ", funcDecl.GenericParameters));
+                _output.Append(">");
+            }
+
+            _output.Append("(");
+
             // Parameters
             for (int i = 0; i < funcDecl.Parameters.Count; i++)
             {
                 var param = funcDecl.Parameters[i];
                 if (i > 0) _output.Append(", ");
-                
+
                 var paramType = param.Type != null ? ConvertType(param.Type) : "object";
                 _output.Append($"{paramType} {param.Name}");
             }
-            
+
             _output.AppendLine(")");
             Indent();
             _output.AppendLine("{");
@@ -1053,63 +1211,74 @@ namespace uhigh.Net.CodeGen
         /// <param name="forStmt">The for stmt</param>
         private void GenerateForStatement(ForStatement forStmt)
         {
+            // Detect μHigh for-in loop (for var i in expr { ... })
+            if (!string.IsNullOrEmpty(forStmt.IteratorVariable) && forStmt.IterableExpression != null)
+            {
+                Indent();
+                _output.Append("foreach (var ");
+                _output.Append(forStmt.IteratorVariable);
+                _output.Append(" in ");
+                GenerateExpression(forStmt.IterableExpression);
+                _output.AppendLine(")");
+                Indent();
+                _output.AppendLine("{");
+                _indentLevel++;
+
+                foreach (var stmt in forStmt.Body)
+                {
+                    GenerateStatement(stmt);
+                }
+
+                _indentLevel--;
+                Indent();
+                _output.AppendLine("}");
+                return;
+            }
+
             Indent();
-            
-            if (forStmt.IsForInLoop)
+            _output.Append("for (");
+
+            // Initializer
+            if (forStmt.Initializer is VariableDeclaration varDecl)
             {
-                // Generate foreach loop
-                _output.Append($"foreach (var {forStmt.IteratorVariable} in ");
-                
-                // Handle different iterable types
-                if (forStmt.IterableExpression is RangeExpression rangeExpr)
+                _output.Append("var ");
+                _output.Append(varDecl.Name);
+                if (varDecl.Initializer != null)
                 {
-                    GenerateRangeIterable(rangeExpr);
+                    _output.Append(" = ");
+                    GenerateExpression(varDecl.Initializer);
                 }
-                else
-                {
-                    GenerateExpression(forStmt.IterableExpression!);
-                }
-                
-                _output.AppendLine(")");
             }
-            else
+            else if (forStmt.Initializer != null)
             {
-                // Traditional for loop
-                _output.Append("for (");
-                
-                if (forStmt.Initializer != null)
-                {
-                    // Remove the semicolon from the initializer since we're adding it manually
-                    var initOutput = _output.ToString();
-                    var currentLength = _output.Length;
-                    GenerateStatement(forStmt.Initializer);
-                    var newContent = _output.ToString().Substring(currentLength);
-                    if (newContent.EndsWith(";\n") || newContent.EndsWith(";"))
-                    {
-                        _output.Length = _output.Length - (newContent.EndsWith(";\n") ? 2 : 1);
-                    }
-                }
-                _output.Append("; ");
-                
-                if (forStmt.Condition != null)
-                    GenerateExpression(forStmt.Condition);
-                _output.Append("; ");
-                
-                if (forStmt.Increment != null)
-                {
-                    // Generate increment without semicolon
-                    var currentLength = _output.Length;
-                    GenerateStatement(forStmt.Increment);
-                    var newContent = _output.ToString().Substring(currentLength);
-                    if (newContent.EndsWith(";\n") || newContent.EndsWith(";"))
-                    {
-                        _output.Length = _output.Length - (newContent.EndsWith(";\n") ? 2 : 1);
-                    }
-                }
-                
-                _output.AppendLine(")");
+                GenerateStatement(forStmt.Initializer);
+                if (_output.Length > 0 && _output[_output.Length - 1] == ';')
+                    _output.Length--;
             }
-            
+
+            _output.Append("; ");
+
+            // Condition
+            if (forStmt.Condition != null)
+            {
+                GenerateExpression(forStmt.Condition);
+            }
+
+            _output.Append("; ");
+
+            // Increment
+            if (forStmt.Increment is ExpressionStatement exprStmt)
+            {
+                GenerateExpression(exprStmt.Expression);
+            }
+            else if (forStmt.Increment != null)
+            {
+                GenerateStatement(forStmt.Increment);
+                if (_output.Length > 0 && _output[_output.Length - 1] == ';')
+                    _output.Length--;
+            }
+
+            _output.AppendLine(")");
             Indent();
             _output.AppendLine("{");
             _indentLevel++;
@@ -1193,7 +1362,17 @@ namespace uhigh.Net.CodeGen
                     GenerateExpression(assignExpr.Value);
                     break;
                 case ConstructorCallExpression constructorExpr:
-                    _output.Append($"new {constructorExpr.ClassName}(");
+                    // Apply constructor name mapping for special types
+                    var mappedClassName = MapConstructorName(constructorExpr.ClassName);
+                    _output.Append($"new {mappedClassName}");
+                    
+                    // Handle generic type arguments if present
+                    if (mappedClassName.Contains('<'))
+                    {
+                        // Generic constructor call - type already included in mapped name
+                    }
+                    
+                    _output.Append("(");
                     for (int i = 0; i < constructorExpr.Arguments.Count; i++)
                     {
                         if (i > 0) _output.Append(", ");
@@ -1208,7 +1387,16 @@ namespace uhigh.Net.CodeGen
                     if (callExpr.Function is IdentifierExpression funcIdExpr)
                     {
                         var functionName = funcIdExpr.Name;
-                        GenerateFunctionCall(functionName, callExpr.Arguments);
+                        
+                        // Handle μHigh built-in method mappings
+                        if (IsBuiltInMethod(functionName) && callExpr.Arguments.Count > 0)
+                        {
+                            GenerateMappedMethodCall(functionName, callExpr.Arguments);
+                        }
+                        else
+                        {
+                            GenerateFunctionCall(functionName, callExpr.Arguments);
+                        }
                     }
                     else if (callExpr.Function is QualifiedIdentifierExpression qualifiedFuncExpr)
                     {
@@ -1218,14 +1406,61 @@ namespace uhigh.Net.CodeGen
                     else if (callExpr.Function is MemberAccessExpression memberAccessExpr)
                     {
                         // Handle method calls like object.Method()
-                        GenerateExpression(memberAccessExpr.Object);
-                        _output.Append($".{memberAccessExpr.MemberName}(");
-                        for (int i = 0; i < callExpr.Arguments.Count; i++)
+                        if (IsUtilityMethod(memberAccessExpr.MemberName))
                         {
-                            if (i > 0) _output.Append(", ");
-                            GenerateExpression(callExpr.Arguments[i]);
+                            // For utility methods like obj.Add_to(item), map to appropriate C# method
+                            GenerateExpression(memberAccessExpr.Object);
+                            
+                            switch (memberAccessExpr.MemberName)
+                            {
+                                case "Add_to":
+                                    _output.Append(".Add(");
+                                    break;
+                                case "Remove_from":
+                                    _output.Append(".Remove(");
+                                    break;
+                                case "Length_of":
+                                    _output.Append(".Count");  // or .Length depending on type
+                                    return;
+                                case "ToUpper":
+                                    _output.Append(".ToUpper(");
+                                    break;
+                                case "ToLower":
+                                    _output.Append(".ToLower(");
+                                    break;
+                                case "Index_of":
+                                    _output.Append("[");
+                                    if (callExpr.Arguments.Count > 0)
+                                        GenerateExpression(callExpr.Arguments[0]);
+                                    _output.Append("]");
+                                    return;
+                                case "Substring_of":
+                                    _output.Append(".Substring(");
+                                    break;
+                                default:
+                                    _output.Append($".{memberAccessExpr.MemberName}(");
+                                    break;
+                            }
+                            
+                            // For methods that need arguments
+                            for (int i = 0; i < callExpr.Arguments.Count; i++)
+                            {
+                                if (i > 0) _output.Append(", ");
+                                GenerateExpression(callExpr.Arguments[i]);
+                            }
+                            _output.Append(")");
                         }
-                        _output.Append(")");
+                        else
+                        {
+                            GenerateExpression(memberAccessExpr.Object);
+                            _output.Append($".{memberAccessExpr.MemberName}(");
+                            for (int i = 0; i < callExpr.Arguments.Count; i++)
+                            {
+                                if (i > 0) _output.Append(", ");
+                                GenerateExpression(callExpr.Arguments[i]);
+                            }
+                            _output.Append(")");
+                        }
                     }
                     else
                     {
@@ -1239,15 +1474,15 @@ namespace uhigh.Net.CodeGen
                         _output.Append(")");
                     }
                     break;
-                
+
                 case ArrayExpression arrayExpr:
                     GenerateArrayExpression(arrayExpr);
                     break;
-                
+
                 case LambdaExpression lambdaExpr:
                     GenerateLambdaExpression(lambdaExpr);
                     break;
-                
+
                 case BlockExpression blockExpr:
                     GenerateBlockExpression(blockExpr);
                     break;
@@ -1282,7 +1517,7 @@ namespace uhigh.Net.CodeGen
                 for (int i = 0; i < lambdaExpr.Parameters.Count; i++)
                 {
                     if (i > 0) _output.Append(", ");
-                    
+
                     var param = lambdaExpr.Parameters[i];
                     if (param.Type != null)
                     {
@@ -1295,9 +1530,9 @@ namespace uhigh.Net.CodeGen
                 }
                 _output.Append(")");
             }
-            
+
             _output.Append(" => ");
-            
+
             // Generate body
             if (lambdaExpr.IsExpressionLambda && lambdaExpr.Body != null)
             {
@@ -1311,12 +1546,12 @@ namespace uhigh.Net.CodeGen
                 Indent();
                 _output.AppendLine("{");
                 _indentLevel++;
-                
+
                 foreach (var stmt in lambdaExpr.Statements)
                 {
                     GenerateStatement(stmt);
                 }
-                
+
                 _indentLevel--;
                 Indent();
                 _output.Append("}");
@@ -1357,7 +1592,7 @@ namespace uhigh.Net.CodeGen
             Indent();
             _output.AppendLine("{");
             _indentLevel++;
-            
+
             foreach (var arm in matchStmt.Arms)
             {
                 if (arm.IsDefault)
@@ -1383,9 +1618,9 @@ namespace uhigh.Net.CodeGen
                         _output.AppendLine(":");
                     }
                 }
-                
+
                 _indentLevel++;
-                
+
                 // Handle both expression and block forms
                 if (arm.Result is BlockExpression blockExpr)
                 {
@@ -1402,12 +1637,12 @@ namespace uhigh.Net.CodeGen
                     GenerateExpression(arm.Result);
                     _output.AppendLine(";");
                 }
-                
+
                 Indent();
                 _output.AppendLine("break;");
                 _indentLevel--;
             }
-            
+
             _indentLevel--;
             Indent();
             _output.AppendLine("}");
@@ -1419,7 +1654,7 @@ namespace uhigh.Net.CodeGen
         /// <param name="arrayExpr">The array expr</param>
         private void GenerateArrayExpression(ArrayExpression arrayExpr)
         {
-            // Check if we have an explicit array type
+            // Always emit a valid C# array initializer
             if (!string.IsNullOrEmpty(arrayExpr.ArrayType))
             {
                 _output.Append($"new {arrayExpr.ArrayType} {{ ");
@@ -1428,11 +1663,38 @@ namespace uhigh.Net.CodeGen
             {
                 _output.Append($"new {ConvertType(arrayExpr.ElementType)}[] {{ ");
             }
+            else if (arrayExpr.Elements.Count > 0)
+            {
+                // Try to infer type from first element
+                var firstElem = arrayExpr.Elements[0];
+                string inferredType = null;
+                if (firstElem is LiteralExpression lit)
+                {
+                    inferredType = lit.Value switch
+                    {
+                        int => "int",
+                        double => "double",
+                        float => "float",
+                        string => "string",
+                        bool => "bool",
+                        _ => null
+                    };
+                }
+                if (inferredType != null)
+                {
+                    _output.Append($"new {inferredType}[] {{ ");
+                }
+                else
+                {
+                    _output.Append("new[] { ");
+                }
+            }
             else
             {
-                _output.Append("new[] { ");
+                _output.Append("new object[0]");
+                return;
             }
-            
+
             for (int i = 0; i < arrayExpr.Elements.Count; i++)
             {
                 if (i > 0) _output.Append(", ");
@@ -1449,7 +1711,7 @@ namespace uhigh.Net.CodeGen
         {
             // Check if any arm uses block form - if so, we need different handling
             var hasBlockArms = matchExpr.Arms.Any(arm => arm.Result is BlockExpression);
-            
+
             if (hasBlockArms)
             {
                 // Convert to immediately invoked function expression for blocks
@@ -1462,7 +1724,7 @@ namespace uhigh.Net.CodeGen
                 Indent();
                 _output.AppendLine("{");
                 _indentLevel++;
-                
+
                 foreach (var arm in matchExpr.Arms)
                 {
                     if (arm.IsDefault)
@@ -1486,9 +1748,9 @@ namespace uhigh.Net.CodeGen
                             _output.AppendLine(":");
                         }
                     }
-                    
+
                     _indentLevel++;
-                    
+
                     if (arm.Result is BlockExpression blockExpr)
                     {
                         // Generate block with return
@@ -1497,7 +1759,7 @@ namespace uhigh.Net.CodeGen
                             GenerateStatement(stmt);
                         }
                         // Ensure we have a return for the last statement if it's an expression
-                        if (blockExpr.Statements.Count > 0 && 
+                        if (blockExpr.Statements.Count > 0 &&
                             blockExpr.Statements.Last() is ExpressionStatement lastExpr)
                         {
                             Indent();
@@ -1519,10 +1781,10 @@ namespace uhigh.Net.CodeGen
                         GenerateExpression(arm.Result);
                         _output.AppendLine(";");
                     }
-                    
+
                     _indentLevel--;
                 }
-                
+
                 _indentLevel--;
                 Indent();
                 _output.AppendLine("}");
@@ -1538,11 +1800,11 @@ namespace uhigh.Net.CodeGen
                 Indent();
                 _output.AppendLine("{");
                 _indentLevel++;
-                
+
                 foreach (var arm in matchExpr.Arms)
                 {
                     Indent();
-                    
+
                     if (arm.IsDefault)
                     {
                         _output.Append("_ => ");
@@ -1564,13 +1826,13 @@ namespace uhigh.Net.CodeGen
                         {
                             GenerateExpression(arm.Patterns[0]);
                         }
-                        
+
                         _output.Append(" => ");
                         GenerateExpression(arm.Result);
                         _output.AppendLine(",");
                     }
                 }
-                
+
                 _indentLevel--;
                 Indent();
                 _output.Append("})");
@@ -1601,7 +1863,7 @@ namespace uhigh.Net.CodeGen
             {
                 _output.Append(functionName);
             }
-            
+
             _output.Append("(");
             for (int i = 0; i < arguments.Count; i++)
             {
@@ -1713,11 +1975,26 @@ namespace uhigh.Net.CodeGen
                 return $"{ConvertType(elementType)}[]";
             }
 
+            // Check if this is a tracked generic type parameter
+            if (_typeResolver?.IsGenericTypeParameter(type) == true)
+            {
+                return _typeResolver.GetTypeParameterName(type) ?? type;
+            }
+
+            // Handle single letter type parameters (T, U, V, etc.) - preserve as-is
+            if (IsGenericTypeParameter(type))
+            {
+                return type;
+            }
+
             // First try reflection to see if it's a known .NET type
             if (_typeResolver?.TryResolveType(type, out var reflectedType) == true)
             {
-                // Use the actual .NET type name
-                return GetCSharpTypeName(reflectedType);
+                // Don't convert if it's a type parameter placeholder
+                if (!_typeResolver.IsGenericTypeParameter(type))
+                {
+                    return GetCSharpTypeName(reflectedType);
+                }
             }
 
             // Handle generic types with reflection
@@ -1737,30 +2014,8 @@ namespace uhigh.Net.CodeGen
                 {
                     var baseType = genericMatch.Groups[1].Value;
                     var typeArgs = genericMatch.Groups[2].Value;
-                    
-                    // Handle multiple type arguments (e.g., Dictionary<string, int>)
                     var typeArgsList = typeArgs.Split(',').Select(t => ConvertType(t.Trim())).ToList();
-                    
-                    // Try to resolve the base type with reflection first
-                    if (_typeResolver?.TryGetGenericTypeDefinition(baseType, out var genericTypeDef) == true)
-                    {
-                        try
-                        {
-                            var resolvedArgs = typeArgsList.Select(arg => 
-                                _typeResolver.TryResolveType(arg, out var argType) ? argType : typeof(object)).ToArray();
-                            
-                            if (resolvedArgs.Length == genericTypeDef.GetGenericArguments().Length)
-                            {
-                                var constructedType = genericTypeDef.MakeGenericType(resolvedArgs);
-                                return GetCSharpTypeName(constructedType);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            _diagnostics.ReportWarning($"Failed to construct generic type {baseType}: {ex.Message}");
-                        }
-                    }
-                    
+
                     // Fallback to manual mapping for common types
                     var convertedBaseType = baseType switch
                     {
@@ -1768,39 +2023,35 @@ namespace uhigh.Net.CodeGen
                         "list" => $"List<{string.Join(", ", typeArgsList)}>",
                         "map" => typeArgsList.Count >= 2 ? $"Dictionary<{typeArgsList[0]}, {typeArgsList[1]}>" : "Dictionary<object, object>",
                         "set" => $"HashSet<{typeArgsList[0]}>",
-                        "tuple" => typeArgsList.Count >= 2 ? $"Tuple<{string.Join(", ", typeArgsList)}>" : "Tuple<object, object>",
-                        "promise" => $"Task<{typeArgsList[0]}>",
-                        "function" => typeArgsList.Count == 1 ? $"Func<{typeArgsList[0]}>" : $"Func<{string.Join(", ", typeArgsList)}>",
-                        _ => $"{ConvertType(baseType)}<{string.Join(", ", typeArgsList)}>"
+                        _ => $"{baseType}<{string.Join(", ", typeArgsList)}>"
                     };
-                    
+
                     return convertedBaseType;
                 }
             }
+
+            // Emit generic type parameters as-is (e.g., T, U, V)
+            if (type.Length == 1 && char.IsUpper(type[0]))
+                return type;
+            if (type.StartsWith("T") && type.Length <= 10 && char.IsUpper(type[0]))
+                return type;
 
             // Try to resolve as a simple type through reflection
             if (_typeResolver?.TryResolveType(type, out var simpleType) == true)
             {
                 return GetCSharpTypeName(simpleType);
             }
-            
             // Fallback to manual mapping for μHigh-specific types
             return type switch
             {
                 "int" => "int",
-                "float" => "double", 
+                "float" => "double",
                 "string" => "string",
                 "bool" => "bool",
                 "void" => "void",
-                "array" => "object[]",
-                "arrayIndice" => "uhigh.StdLib.ArrayIndice<object>",
-                // Handle common array types
-                "string[]" => "string[]",
-                "int[]" => "int[]",
-                "bool[]" => "bool[]",
-                "double[]" => "double[]",
-                "object[]" => "object[]",
-                _ => "object"
+                "object" => "object",
+                "any" => "object", // 'any' in μHigh maps to object in C#
+                _ => type // <-- emit custom type names as-is
             };
         }
 
@@ -1825,7 +2076,8 @@ namespace uhigh.Net.CodeGen
             {
                 var genericTypeDef = type.GetGenericTypeDefinition();
                 var typeArgs = type.GetGenericArguments();
-                
+
+
                 if (genericTypeDef == typeof(List<>))
                 {
                     return $"List<{GetCSharpTypeName(typeArgs[0])}>";
@@ -1834,7 +2086,7 @@ namespace uhigh.Net.CodeGen
                 {
                     return $"Dictionary<{GetCSharpTypeName(typeArgs[0])}, {GetCSharpTypeName(typeArgs[1])}>";
                 }
-                
+
                 // Generic type with multiple arguments
                 var argNames = typeArgs.Select(GetCSharpTypeName);
                 return $"{type.Name.Split('`')[0]}<{string.Join(", ", argNames)}>";
@@ -1845,7 +2097,6 @@ namespace uhigh.Net.CodeGen
             {
                 return GetCSharpTypeName(type.GetElementType()) + "[]";
             }
-
             // Use full name for other types
             return type.FullName ?? type.Name;
         }
@@ -1856,6 +2107,150 @@ namespace uhigh.Net.CodeGen
         private void Indent()
         {
             _output.Append(new string('\t', _indentLevel));
+        }
+
+        /// <summary>
+        /// Determines if a type name is a generic type parameter
+        /// </summary>
+        /// <param name="typeName">The type name</param>
+        /// <returns>True if it's a generic type parameter</returns>
+        private bool IsGenericTypeParameter(string typeName)
+        {
+            // Type parameters are typically:
+            // - Single uppercase letters (T, U, V, etc.)
+            // - Start with T and are reasonably short (TKey, TValue, TResult, etc.)
+            // - Are in a known context (inside generic class/method)
+            return (typeName.Length == 1 && char.IsUpper(typeName[0])) ||
+                   (typeName.StartsWith("T") && typeName.Length <= 15 && char.IsUpper(typeName[0]) && char.IsUpper(typeName[1]));
+        }
+
+        private bool IsBuiltInMethod(string methodName)
+        {
+            return methodName.StartsWith("Add_to") || 
+                   methodName.StartsWith("Remove_from") || 
+                   methodName.StartsWith("Length_of") || 
+                   methodName.StartsWith("Index_of") || 
+                   methodName.StartsWith("Substring_of") ||
+                   methodName == "ToUpper" || 
+                   methodName == "ToLower";
+        }
+
+        private void GenerateMappedMethodCall(string methodName, List<Expression> arguments)
+        {
+            if (arguments.Count == 0) return;
+            
+            var target = arguments[0];
+            
+            switch (methodName)
+            {
+                case "Add_to":
+                    if (arguments.Count >= 2)
+                    {
+                        GenerateExpression(target);
+                        _output.Append(".Add(");
+                        GenerateExpression(arguments[1]);
+                        _output.Append(")");
+                    }
+                    break;
+                    
+                case "Remove_from":
+                    if (arguments.Count >= 2)
+                    {
+                        GenerateExpression(target);
+                        _output.Append(".Remove(");
+                        GenerateExpression(arguments[1]);
+                        _output.Append(")");
+                    }
+                    break;
+                    
+                case "Length_of":
+                    GenerateExpression(target);
+                    _output.Append(".Count"); // or .Length depending on type
+                    break;
+                    
+                case "Index_of":
+                    if (arguments.Count >= 2)
+                    {
+                        GenerateExpression(target);
+                        _output.Append("[");
+                        GenerateExpression(arguments[1]);
+                        _output.Append("]");
+                    }
+                    break;
+                    
+                case "Substring_of":
+                    if (arguments.Count >= 3)
+                    {
+                        GenerateExpression(target);
+                        _output.Append(".Substring(");
+                        GenerateExpression(arguments[1]);
+                        _output.Append(", ");
+                        GenerateExpression(arguments[2]);
+                        _output.Append(")");
+                    }
+                    break;
+                    
+                case "ToUpper":
+                    GenerateExpression(target);
+                    if (arguments.Count >= 3)
+                    {
+                        GenerateExpression(target);
+                        _output.Append(".Substring(");
+                        GenerateExpression(arguments[1]);
+                        _output.Append(", ");
+                        GenerateExpression(arguments[2]);
+                        _output.Append(")");
+                    }
+                    break;
+                    
+       
+                    
+                case "ToLower":
+                    GenerateExpression(target);
+                    _output.Append(".ToLower()");
+                    break;
+                    
+                default:
+                    // Fallback to regular function call
+                    _output.Append(methodName);
+                    _output.Append("(");
+                    for (int i = 0; i < arguments.Count; i++)
+                    {
+                        if (i > 0) _output.Append(", ");
+                        GenerateExpression(arguments[i]);
+                    }
+                    _output.Append(")");
+                    break;
+            }
+        }
+
+        // Add this helper method to identify utility methods
+        private bool IsUtilityMethod(string methodName)
+        {
+            return methodName.StartsWith("Add_to") || 
+                   methodName.StartsWith("Remove_from") || 
+                   methodName.StartsWith("Length_of") || 
+                   methodName.StartsWith("Index_of") || 
+                   methodName.StartsWith("Substring_of") ||
+                   methodName == "ToUpper" || 
+                   methodName == "ToLower";
+        }
+
+        // Add this helper method to map constructor names
+        private string MapConstructorName(string className)
+        {
+            // Special mapping for common collection types
+            return className switch
+            {
+                "Array" => "List<object>",
+                "List" => "List<object>",
+                "Dictionary" => "Dictionary<object, object>",
+                "Set" => "HashSet<object>",
+                // Handle common generic types
+                var name when name.StartsWith("Array<") => name.Replace("Array<", "List<"),
+                // For all other types, apply standard type conversion
+                _ => ConvertType(className)
+            };
         }
     }
 }

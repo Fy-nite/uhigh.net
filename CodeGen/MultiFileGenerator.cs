@@ -1,7 +1,6 @@
-using uhigh.Net.Parser;
-using uhigh.Net.Lexer;
-using uhigh.Net.Diagnostics;
 using System.Text;
+using uhigh.Net.Diagnostics;
+using uhigh.Net.Parser;
 
 namespace uhigh.Net.CodeGen
 {
@@ -26,6 +25,71 @@ namespace uhigh.Net.CodeGen
         /// The import mappings
         /// </summary>
         private readonly Dictionary<string, string> _importMappings = new();
+
+        // μHigh type to C# type mapping table
+        private static readonly Dictionary<string, string> TypeMappings = new(StringComparer.OrdinalIgnoreCase)
+        {
+            { "int", "int" },
+            { "long", "long" },
+            { "float", "float" },
+            { "double", "double" },
+            { "decimal", "decimal" },
+            { "byte", "byte" },
+            { "sbyte", "sbyte" },
+            { "short", "short" },
+            { "ushort", "ushort" },
+            { "uint", "uint" },
+            { "ulong", "ulong" },
+            { "bool", "bool" },
+            { "string", "string" },
+            { "char", "char" },
+            { "Guid", "Guid" },
+            { "object", "object" },
+            { "array", "List<object>" },
+            { "Dictionary", "Dictionary<object, object>" },
+            { "Set", "HashSet<object>" },
+            { "Tuple", "Tuple" },
+            { "enum", "enum" },
+            { "void", "void" },
+            { "DateTime", "DateTime" },
+            { "any", "object" },
+            { "Func", "Func" },
+            { "Observable", "Observable" }
+        };
+
+        // μHigh method to C# method mapping table (partial, for demo)
+        private static readonly Dictionary<string, string> MethodMappings = new(StringComparer.OrdinalIgnoreCase)
+        {
+            { "Add_to_array", "Add" },
+            { "Add_to_set", "Add" },
+            { "Add_to_dict", "Add" },
+            { "Remove_from_array", "Remove" },
+            { "Remove_from_set", "Remove" },
+            { "Remove_from_dict", "Remove" },
+            { "Length_of_array", "Count" },
+            { "Length_of_set", "Count" },
+            { "Length_of_dict", "Count" },
+            { "Length_of_string", "Length" },
+            { "Index_of_array", "[]" },
+            { "Index_of_dict", "[]" },
+            { "Substring_of", "Substring" },
+            { "ToUpper", "ToUpper" },
+            { "ToLower", "ToLower" },
+            { "Contains_in_array", "Contains" },
+            { "Contains_in_set", "Contains" },
+            { "Contains_in_dict", "ContainsKey" },
+            { "Contains_in_string", "Contains" },
+            { "IndexOf_in_array", "IndexOf" },
+            { "IndexOf_in_string", "IndexOf" },
+            { "Join", "string.Join" },
+            { "ToString_of", "ToString" },
+            { "Sort_array", "Sort" },
+            { "Reverse_array", "Reverse" },
+            { "Slice_array", "GetRange" },
+            { "Map_array", "Select" },
+            { "Filter_array", "Where" },
+            { "Reduce_array", "Aggregate" }
+        };
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MultiFileGenerator"/> class
@@ -139,12 +203,12 @@ namespace uhigh.Net.CodeGen
             foreach (var statement in statements)
             {
                 string fileName = GetFileNameForStatement(statement);
-                
+
                 if (!groups.ContainsKey(fileName))
                 {
                     groups[fileName] = new List<Statement>();
                 }
-                
+
                 groups[fileName].Add(statement);
             }
 
@@ -161,7 +225,7 @@ namespace uhigh.Net.CodeGen
             return statement switch
             {
                 NamespaceDeclaration nsDecl => $"{nsDecl.Name}.cs",
-                ClassDeclaration classDecl => $"{classDecl.Name}.cs", 
+                ClassDeclaration classDecl => $"{classDecl.Name}.cs",
                 FunctionDeclaration funcDecl => "Functions.cs",
                 TypeAliasDeclaration typeAlias => "TypeAliases.cs",
                 ImportStatement => "Program.cs", // Imports go to main file
@@ -177,7 +241,7 @@ namespace uhigh.Net.CodeGen
         private void GenerateFile(string fileName, List<Statement> statements)
         {
             var output = new StringBuilder();
-            
+
             // Add using statements
             foreach (var usingDirective in _globalUsings.OrderBy(u => u))
             {
@@ -195,7 +259,7 @@ namespace uhigh.Net.CodeGen
 
             // Generate namespace or class content
             var hasNamespace = statements.Any(s => s is NamespaceDeclaration);
-            
+
             if (hasNamespace)
             {
                 // Generate namespace structure
@@ -209,8 +273,8 @@ namespace uhigh.Net.CodeGen
                 // Group by classes or create default Program class
                 var classes = statements.OfType<ClassDeclaration>().ToList();
                 var functions = statements.OfType<FunctionDeclaration>().ToList();
-                var otherStatements = statements.Where(s => !(s is ClassDeclaration) && 
-                                                           !(s is FunctionDeclaration) && 
+                var otherStatements = statements.Where(s => !(s is ClassDeclaration) &&
+                                                           !(s is FunctionDeclaration) &&
                                                            !(s is TypeAliasDeclaration) &&
                                                            !(s is ImportStatement)).ToList();
 
@@ -228,7 +292,7 @@ namespace uhigh.Net.CodeGen
                     // Create a Program class for functions and loose statements
                     output.AppendLine("public class Program");
                     output.AppendLine("{");
-                    
+
                     // Generate built-in functions
                     GenerateBuiltInFunctions(output, 1);
 
@@ -286,7 +350,7 @@ namespace uhigh.Net.CodeGen
         private void GenerateClass(StringBuilder output, ClassDeclaration classDecl, int indentLevel)
         {
             Indent(output, indentLevel);
-            
+
             if (classDecl.Modifiers.Count > 0)
             {
                 output.Append(string.Join(" ", classDecl.Modifiers) + " ");
@@ -295,15 +359,15 @@ namespace uhigh.Net.CodeGen
             {
                 output.Append("public ");
             }
-            
+
             output.Append("class ");
             output.Append(classDecl.Name);
-            
+
             if (classDecl.BaseClass != null)
             {
                 output.Append($" : {ConvertType(classDecl.BaseClass)}");
             }
-            
+
             output.AppendLine();
             Indent(output, indentLevel);
             output.AppendLine("{");
@@ -343,12 +407,46 @@ namespace uhigh.Net.CodeGen
                 case FunctionDeclaration funcDecl:
                     GenerateFunction(output, funcDecl, indentLevel);
                     break;
+                case ForStatement forStmt:
+                    GenerateForStatement(output, forStmt, indentLevel);
+                    break;
                 // Add other statement types as needed
                 default:
                     Indent(output, indentLevel);
                     output.AppendLine($"// TODO: Generate {statement.GetType().Name}");
                     break;
             }
+        }
+
+        private void GenerateForStatement(StringBuilder output, ForStatement forStmt, int indentLevel)
+        {
+            // μHigh for-in loop: for var i in expr { ... }
+            if (!string.IsNullOrEmpty(forStmt.IteratorVariable) && forStmt.IterableExpression != null)
+            {
+                Indent(output, indentLevel);
+                output.Append($"foreach (var {forStmt.IteratorVariable} in ");
+                // Use a simple expression generator for IterableExpression
+                output.Append("/* expr */");
+                output.AppendLine(")");
+                Indent(output, indentLevel);
+                output.AppendLine("{");
+                foreach (var stmt in forStmt.Body)
+                {
+                    GenerateStatement(output, stmt, indentLevel + 1);
+                }
+                Indent(output, indentLevel);
+                output.AppendLine("}");
+                return;
+            }
+
+            Indent(output, indentLevel);
+            output.AppendLine("for (; ; )");
+            Indent(output, indentLevel);
+            output.AppendLine("{");
+            Indent(output, indentLevel + 1);
+            output.AppendLine("// For loop body");
+            Indent(output, indentLevel);
+            output.AppendLine("}");
         }
 
         /// <summary>
@@ -365,7 +463,8 @@ namespace uhigh.Net.CodeGen
             }
 
             Indent(output, indentLevel);
-            
+
+            // Generate modifiers
             if (methodDecl.Modifiers.Count > 0)
             {
                 output.Append(string.Join(" ", methodDecl.Modifiers) + " ");
@@ -374,14 +473,37 @@ namespace uhigh.Net.CodeGen
             {
                 output.Append("public ");
             }
-            
-            var returnType = methodDecl.ReturnType != null ? ConvertType(methodDecl.ReturnType) : "void";
-            output.AppendLine($"{returnType} {methodDecl.Name}()");
-            
+
+            // Special handling for Main method
+            if (methodDecl.Name == "Main" && methodDecl.IsStatic)
+            {
+                output.AppendLine("static void Main(string[] args)");
+            }
+            else
+            {
+                var returnType = methodDecl.ReturnType != null ? ConvertType(methodDecl.ReturnType) : "void";
+                output.Append($"{returnType} {methodDecl.Name}(");
+                
+                // Parameters
+                for (int i = 0; i < methodDecl.Parameters.Count; i++)
+                {
+                    var param = methodDecl.Parameters[i];
+                    if (i > 0) output.Append(", ");
+                    var paramType = param.Type != null ? ConvertType(param.Type) : "object";
+                    output.Append($"{paramType} {param.Name}");
+                }
+                output.AppendLine(")");
+            }
+
             Indent(output, indentLevel);
             output.AppendLine("{");
-            Indent(output, indentLevel + 1);
-            output.AppendLine("// Method body");
+            
+            // Generate method body
+            foreach (var stmt in methodDecl.Body)
+            {
+                GenerateStatement(output, stmt, indentLevel + 1);
+            }
+            
             Indent(output, indentLevel);
             output.AppendLine("}");
             output.AppendLine();
@@ -396,7 +518,7 @@ namespace uhigh.Net.CodeGen
         private void GenerateField(StringBuilder output, FieldDeclaration fieldDecl, int indentLevel)
         {
             Indent(output, indentLevel);
-            
+
             if (fieldDecl.Modifiers.Count > 0)
             {
                 output.Append(string.Join(" ", fieldDecl.Modifiers) + " ");
@@ -405,7 +527,7 @@ namespace uhigh.Net.CodeGen
             {
                 output.Append("private ");
             }
-            
+
             var fieldType = fieldDecl.Type != null ? ConvertType(fieldDecl.Type) : "object";
             output.AppendLine($"{fieldType} {fieldDecl.Name};");
         }
@@ -437,7 +559,7 @@ namespace uhigh.Net.CodeGen
             }
 
             Indent(output, indentLevel);
-            
+
             if (funcDecl.Modifiers.Count > 0)
             {
                 output.Append(string.Join(" ", funcDecl.Modifiers) + " ");
@@ -446,10 +568,10 @@ namespace uhigh.Net.CodeGen
             {
                 output.Append("public static ");
             }
-            
+
             var returnType = funcDecl.ReturnType != null ? ConvertType(funcDecl.ReturnType) : "void";
             output.AppendLine($"{returnType} {funcDecl.Name}()");
-            
+
             Indent(output, indentLevel);
             output.AppendLine("{");
             Indent(output, indentLevel + 1);
@@ -546,7 +668,7 @@ namespace uhigh.Net.CodeGen
             {
                 return typeAnn.Name; // Already in correct format
             }
-            
+
             if (typeAnn.Name == "array" && typeAnn.TypeArguments.Count == 1)
             {
                 return $"{ConvertTypeAnnotation(typeAnn.TypeArguments[0])}[]";
@@ -570,7 +692,7 @@ namespace uhigh.Net.CodeGen
             {
                 return type; // Already in C# format
             }
-            
+
             // Handle generic types
             if (type.Contains('<') && type.Contains('>'))
             {
@@ -580,7 +702,7 @@ namespace uhigh.Net.CodeGen
                     var baseType = genericMatch.Groups[1].Value;
                     var typeArgs = genericMatch.Groups[2].Value;
                     var typeArgsList = typeArgs.Split(',').Select(t => ConvertType(t.Trim())).ToList();
-                    
+
                     return baseType switch
                     {
                         "array" => $"{typeArgsList[0]}[]",
@@ -590,17 +712,32 @@ namespace uhigh.Net.CodeGen
                     };
                 }
             }
-            
+
+            // Use mapping table for simple types
+            if (TypeMappings.TryGetValue(type, out var mapped))
+                return mapped;
+
             return type switch
             {
                 "int" => "int",
-                "float" => "double", 
+                "float" => "double",
                 "string" => "string",
                 "bool" => "bool",
                 "void" => "void",
                 "Command" => "Command", // Keep custom types as-is
                 _ => "object"
             };
+        }
+
+        // Example: Add a method to map μHigh method calls to C# equivalents
+        private string MapMethod(string methodName, string targetType)
+        {
+            // Compose key as "Method_on_type"
+            var key = $"{methodName}_of_{targetType}".ToLowerInvariant();
+            if (MethodMappings.TryGetValue(key, out var mapped))
+                return mapped;
+            // Fallback: just use methodName
+            return methodName;
         }
 
         /// <summary>

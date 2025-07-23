@@ -1,7 +1,8 @@
+using StdLib
 namespace test {
     class meow {
         func purr(): void {
-            print("purr purr")
+            IO.Print("purr purr")
         }
     }
     

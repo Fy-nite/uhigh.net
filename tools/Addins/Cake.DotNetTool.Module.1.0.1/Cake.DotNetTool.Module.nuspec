@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
+  <metadata>
+    <id>Cake.DotNetTool.Module</id>
+    <version>1.0.1</version>
+    <authors>Gary Ewan Park</authors>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <license type="expression">MIT</license>
+    <licenseUrl>https://licenses.nuget.org/MIT</licenseUrl>
+    <icon>icon.png</icon>
+    <projectUrl>https://github.com/cake-contrib/Cake.DotNetTool.Module/</projectUrl>
+    <iconUrl>https://cdn.jsdelivr.net/gh/cake-contrib/graphics/png/cake-contrib-medium.png</iconUrl>
+    <description>Cake Module that extends Cake with ability to install tools using dotnet cli.</description>
+    <releaseNotes>https://github.com/cake-contrib/Cake.DotNetTool.Module/releases/tag/1.0.1</releaseNotes>
+    <copyright>Copyright © 2016-2021 — Cake Contributions</copyright>
+    <tags>Cake Script Build DotNetTool Module</tags>
+    <repository type="git" url="https://github.com/cake-contrib/Cake.DotNetTool.Module.git" commit="b2a70f25e8b88a09d96f79d923cbb228b386e003" />
+    <dependencies>
+      <group targetFramework=".NETStandard2.0" />
+    </dependencies>
+  </metadata>
+</package>

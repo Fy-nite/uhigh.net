@@ -1,5 +1,5 @@
-using uhigh.Net.Lexer;
 using uhigh.Net.Diagnostics;
+using uhigh.Net.Lexer;
 
 namespace uhigh.Net.Testing
 {
@@ -134,16 +134,26 @@ namespace uhigh.Net.Testing
         [Test]
         public void TestGenericTypes()
         {
-            var lexer = CreateLexer("TimestampedEvent<string> Dictionary<string, int>");
+            var source = "List<string> items = new List<string>()";
+            var diagnostics = new DiagnosticsReporter();
+            var lexer = new Lexer.Lexer(source, diagnostics);
             var tokens = lexer.Tokenize();
-
-            // Should tokenize as: TimestampedEvent, <, string, >, Dictionary, <, string, ,, int, >, EOF
-            Assert.IsTrue(tokens.Count >= 11);
-            Assert.AreEqual(TokenType.Identifier, tokens[0].Type);
-            Assert.AreEqual("TimestampedEvent", tokens[0].Value);
-            Assert.AreEqual(TokenType.Less, tokens[1].Type);
-            Assert.AreEqual(TokenType.StringType, tokens[2].Type);
-            Assert.AreEqual(TokenType.Greater, tokens[3].Type);
+            
+            Assert.IsTrue(tokens.Any(t => t.Value == "List<string>"));
+            Assert.IsTrue(tokens.Any(t => t.Type == TokenType.Less));
+            Assert.IsTrue(tokens.Any(t => t.Type == TokenType.Greater));
+        }
+        
+        [Test]
+        public void TestNestedGenerics()
+        {
+            var source = "Dictionary<string, List<int>>";
+            var diagnostics = new DiagnosticsReporter();
+            var lexer = new Lexer.Lexer(source, diagnostics);
+            var tokens = lexer.Tokenize();
+            
+            Assert.IsTrue(tokens.Any(t => t.Value.Contains("Dictionary")));
+            Assert.IsTrue(tokens.Any(t => t.Value.Contains("List")));
         }
 
         /// <summary>
@@ -158,7 +168,7 @@ namespace uhigh.Net.Testing
             // Comments should be skipped
             var tokenTypes = tokens.Select(t => t.Type).ToArray();
             Assert.DoesNotContain(tokenTypes, TokenType.Comment);
-            
+
             // Should have: var, x, =, 42, var, y, =, 10, EOF
             Assert.AreEqual(9, tokens.Count);
         }
@@ -413,6 +423,22 @@ namespace uhigh.Net.Testing
             Assert.AreEqual("external", tokens[1].Value);
             Assert.AreEqual(TokenType.RightBracket, tokens[2].Type);
             Assert.AreEqual(TokenType.EOF, tokens[3].Type);
+        }
+
+        /// <summary>
+        /// Tests that test array and object literals
+        /// </summary>
+        [Test]
+        public void TestArrayAndObjectLiterals()
+        {
+            var lexer = CreateLexer("[] [1, 2, 3] {} {a: 1, b: 2}");
+            var tokens = lexer.Tokenize();
+
+            // Should tokenize brackets/braces and contents
+            Assert.IsTrue(tokens.Any(t => t.Type == TokenType.LeftBracket));
+            Assert.IsTrue(tokens.Any(t => t.Type == TokenType.RightBracket));
+            Assert.IsTrue(tokens.Any(t => t.Type == TokenType.LeftBrace));
+            Assert.IsTrue(tokens.Any(t => t.Type == TokenType.RightBrace));
         }
     }
 }

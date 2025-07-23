@@ -1,5 +1,3 @@
-using System.CommandLine;
-
 namespace uhigh.Net.CommandLine
 {
     /// <summary>
@@ -11,6 +9,7 @@ namespace uhigh.Net.CommandLine
         public string? OutputFile { get; set; }
         public bool RunInMemory { get; set; }
         public string? SaveCSharpTo { get; set; }
+        public string Target { get; set; } = "csharp"; // Default target language
     }
 
     /// <summary>
@@ -32,6 +31,7 @@ namespace uhigh.Net.CommandLine
         public string? Author { get; set; }
         public string OutputType { get; set; } = "Exe";
         public string TargetFramework { get; set; } = "net8.0";
+        public string Backend { get; set; } = "csharp";
     }
 
     /// <summary>
@@ -39,7 +39,7 @@ namespace uhigh.Net.CommandLine
     /// </summary>
     public class BuildOptions : BaseCommandOptions
     {
-        public string ProjectFile { get; set; } = "";
+        public string? ProjectFile { get; set; } = null;
         public string? OutputFile { get; set; }
         public string? SaveCSharpTo { get; set; }
     }
@@ -49,7 +49,7 @@ namespace uhigh.Net.CommandLine
     /// </summary>
     public class RunOptions : BaseCommandOptions
     {
-        public string ProjectFile { get; set; } = "";
+        public string? ProjectFile { get; set; } = null;
         public string? SaveCSharpTo { get; set; }
     }
 
@@ -58,7 +58,7 @@ namespace uhigh.Net.CommandLine
     /// </summary>
     public class InfoOptions : BaseCommandOptions
     {
-        public string ProjectFile { get; set; } = "";
+        public string? ProjectFile { get; set; } = null;
     }
 
     /// <summary>
@@ -66,7 +66,7 @@ namespace uhigh.Net.CommandLine
     /// </summary>
     public class AddFileOptions : BaseCommandOptions
     {
-        public string ProjectFile { get; set; } = "";
+        public string? ProjectFile { get; set; } = null;
         public string SourceFile { get; set; } = "";
         public bool CreateFile { get; set; }
     }
@@ -76,7 +76,7 @@ namespace uhigh.Net.CommandLine
     /// </summary>
     public class AddPackageOptions : BaseCommandOptions
     {
-        public string ProjectFile { get; set; } = "";
+        public string? ProjectFile { get; set; } = null;
         public string PackageName { get; set; } = "";
         public string? Version { get; set; }
         public bool CompileTimeOnly { get; set; }
@@ -89,7 +89,7 @@ namespace uhigh.Net.CommandLine
     /// </summary>
     public class RestorePackagesOptions : BaseCommandOptions
     {
-        public string ProjectFile { get; set; } = "";
+        public string? ProjectFile { get; set; } = null;
         public bool Force { get; set; }
     }
 
@@ -98,7 +98,7 @@ namespace uhigh.Net.CommandLine
     /// </summary>
     public class InstallPackagesOptions : BaseCommandOptions
     {
-        public string ProjectFile { get; set; } = "";
+        public string? ProjectFile { get; set; } = null;
     }
 
     /// <summary>
@@ -116,7 +116,7 @@ namespace uhigh.Net.CommandLine
     /// </summary>
     public class ListPackagesOptions
     {
-        public string ProjectFile { get; set; } = "";
+        public string? ProjectFile { get; set; } = null;
         public bool Verbose { get; set; }
     }
 

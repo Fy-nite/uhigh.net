@@ -5,15 +5,19 @@
             "name": ".NET Launch μHigh Compiler",
             "type": "coreclr",
             "request": "launch",
-          
-            "program": "${workspaceFolder}/bin/Debug/net9.0/uhigh.dll", // adjust for your output path and target framework
+            "program": "${workspaceFolder}/bin/Debug/net9.0/uhigh.dll", 
             "args": [
-                // Add any command-line arguments you want to test here, e.g.:
-                "Examples/test.uh",
+                "Examples/array.uh",
             ],
             "cwd": "${workspaceFolder}",
             "console": "integratedTerminal",
             "stopAtEntry": true
+        },
+        {
+            "name": "Attach to μHigh by Process Name",
+            "type": "coreclr",
+            "request": "attach",
+            "processName": "uhigh" 
         }
     ]
 }
