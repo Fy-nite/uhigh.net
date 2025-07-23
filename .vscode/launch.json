@@ -5,10 +5,9 @@
             "name": ".NET Launch μHigh Compiler",
             "type": "coreclr",
             "request": "launch",
-            "program": "${workspaceFolder}/bin/Debug/net9.0/uhigh.dll", // adjust for your output path and target framework
+            "program": "${workspaceFolder}/bin/Debug/net9.0/uhigh.dll", 
             "args": [
-
-                "Tests/uh/meow.uh",
+                "Examples/array.uh",
             ],
             "cwd": "${workspaceFolder}",
             "console": "integratedTerminal",
@@ -18,7 +17,7 @@
             "name": "Attach to μHigh by Process Name",
             "type": "coreclr",
             "request": "attach",
-            "processName": "uhigh" // replace with your process name, without .exe
+            "processName": "uhigh" 
         }
     ]
 }

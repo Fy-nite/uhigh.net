@@ -129,11 +129,12 @@ namespace uhigh.Net
         /// <param name="projectDir">The project dir</param>
         /// <param name="diagnostics">The diagnostics</param>
         /// <returns>A task containing the bool</returns>
-        public static async Task<bool> CreateAsync(string projectName, string projectDir, DiagnosticsReporter? diagnostics = null)
+        public static async Task<bool> CreateAsync(string projectName, string projectDir, DiagnosticsReporter? diagnostics = null, string backend = "csharp")
         {
             try
             {
                 var project = uhighProject.CreateDefault(projectName);
+                project.Backend = backend; // Set backend
                 var projectPath = Path.Combine(projectDir, $"{projectName}.uhighproj");
 
                 // Create directory if it doesn't exist

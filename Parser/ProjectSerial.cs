@@ -90,6 +90,12 @@ namespace uhigh.Net
         public string StdLibVersion { get; set; } = "1.0.0";
 
         /// <summary>
+        /// Gets or sets the backend (target language)
+        /// </summary>
+        [XmlElement("Backend")]
+        public string Backend { get; set; } = "csharp";
+
+        /// <summary>
         /// Creates the default using the specified project name
         /// </summary>
         /// <param name="projectName">The project name</param>
@@ -105,7 +111,8 @@ namespace uhigh.Net
                 SourceFiles = new List<string> { "main.uh" }, // This will be resolved relative to project directory
                 RootNamespace = projectName,
                 ClassName = "Program",
-                Nullable = true
+                Nullable = true,
+                Backend = "csharp"
             };
         }
     }

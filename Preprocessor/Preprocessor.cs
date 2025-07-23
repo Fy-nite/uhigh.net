@@ -3,15 +3,16 @@ using System.Text;
 
 namespace uhigh.Net.Preprocessor
 {
-    public class Preprocessor
+    public static class Preprocessor
     {
-        private readonly HashSet<string> _defines;
-        public Preprocessor(IEnumerable<string> defines)
-        {
-            _defines = new HashSet<string>(defines);
-        }
+        private static readonly HashSet<string> _defines = new HashSet<string>();
 
-        public string Process(string source)
+        /// <summary>
+        /// Processes the given source code, applying preprocessor directives.
+        /// </summary>
+        /// <param name="source">The source code to process.</param>
+        /// <returns>The processed source code.</returns>
+        public static string Process(string source)
         {
             var output = new StringBuilder();
             var lines = source.Split('\n');
@@ -103,6 +104,22 @@ namespace uhigh.Net.Preprocessor
                 }
             }
             return output.ToString();
+        }
+
+        /// <summary>
+        /// Maps a target language name to a preprocessor define symbol.
+        /// </summary>
+        public static string TargetLanguageToDefine(string target)
+        {
+            return target.ToLowerInvariant() switch
+            {
+                "csharp" or "cs" => "CSHARP",
+                "javascript" or "js" => "JAVASCRIPT",
+                "cpp" or "c++" => "CPP",
+                "llvm" => "LLVM",
+                "vala" => "VALA",
+                _ => target.ToUpperInvariant()
+            };
         }
     }
 }

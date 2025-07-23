@@ -480,9 +480,10 @@ namespace uhigh.Net.Parser
 
                 return ParseExpressionStatement();
             }
-            catch (ParseException)
+            catch (ParseException a)
             {
                 Synchronize();
+                Console.WriteLine(a);
                 return null;
             }
             catch (Exception ex)
@@ -1866,6 +1867,13 @@ namespace uhigh.Net.Parser
                 // If not an attribute, fall through to array parsing
             }
 
+            // Add support for array literals at expression level
+            if (Check(TokenType.LeftBrace))
+            {
+                // Parse as array literal
+                return ParseArrayLiteral();
+            }
+
             // Add support for range expressions
             if (Match(TokenType.Range))
             {
@@ -2666,14 +2674,12 @@ namespace uhigh.Net.Parser
                 // Check for constructor keyword
                 if (Check(TokenType.Constructor))
                 {
+                   
                     var ctor = ParseConstructorDeclaration(modifiers, attributes) as MethodDeclaration;
                     if (ctor != null && modifiers.Any(m => m == "static"))
                         ctor.IsStatic = true;
                     return ctor;
                 }
-
-
-
 
 
 
@@ -2779,6 +2785,28 @@ namespace uhigh.Net.Parser
                             Attributes = attributes
                         };
                     }
+                }
+
+   
+                // If we see a '{' at class scope, treat it as a block or array literal and skip it
+                if (Check(TokenType.LeftBrace))
+                {
+                    // This is likely an array literal or misplaced block, skip until matching '}'
+                    int braceCount = 0;
+                    do
+                    {
+                        if (Check(TokenType.LeftBrace))
+                        {
+                            braceCount++;
+                        }
+                        else if (Check(TokenType.RightBrace))
+                        {
+                            braceCount--;
+                        }
+                        Advance();
+                    } while (braceCount > 0 && !IsAtEnd());
+                    // After skipping, return null so the class member loop can continue
+                    return null;
                 }
             }
             catch (Exception ex)
@@ -2924,16 +2952,27 @@ namespace uhigh.Net.Parser
         /// <param name="defines">Symbols to define for #ifdef/#ifndef</param>
         /// <param name="diagnostics">Diagnostics reporter</param>
         /// <param name="verboseMode">Verbose mode</param>
+        /// <param name="targetLanguage">Target language (e.g. "csharp", "javascript")</param>
         /// <returns>The parsed Program AST</returns>
-        public static Program ParseWithPreprocessing(string source, IEnumerable<string>? defines = null, DiagnosticsReporter? diagnostics = null, bool verboseMode = false)
+        public static Program ParseWithPreprocessing(
+            string source,
+            IEnumerable<string>? defines = null,
+            DiagnosticsReporter? diagnostics = null,
+            bool verboseMode = false,
+            string? targetLanguage = null)
         {
-            // Run preprocessor first
-            var preprocessor = new uhigh.Net.Preprocessor.Preprocessor(defines ?? Array.Empty<string>());
-            var processedSource = preprocessor.Process(source);
+            var defineList = defines != null ? new List<string>(defines) : new List<string>();
+            if (!string.IsNullOrWhiteSpace(targetLanguage))
+            {
+                defineList.Add(uhigh.Net.Preprocessor.Preprocessor.TargetLanguageToDefine(targetLanguage));
+            }
+                // Console.WriteLine($"Using target language define: {defineList.Last()}");
+                // Run preprocessor first
+            var preprocessedSource = uhigh.Net.Preprocessor.Preprocessor.Process(source);
 
             // Tokenize and parse as usual
             var diag = diagnostics ?? new DiagnosticsReporter(verboseMode);
-            var lexer = new uhigh.Net.Lexer.Lexer(processedSource, diag);
+            var lexer = new uhigh.Net.Lexer.Lexer(preprocessedSource, diag);
             var tokens = lexer.Tokenize();
             var parser = new Parser(tokens, diag, verboseMode);
             return parser.Parse();

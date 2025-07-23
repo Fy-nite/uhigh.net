@@ -646,6 +646,8 @@ namespace uhigh.Net.Parser
         /// Gets or sets the value of the modifiers
         /// </summary>
         public List<string> Modifiers { get; set; } = new();
+        public int Line { get; set; } // New: line number for diagnostics
+        public int Column { get; set; } // New: column number for diagnostics
         public List<uhigh.Net.Parser.AttributeDeclaration> Attributes { get; set; } = new(); // New: attributes for fields
     }
 

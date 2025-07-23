@@ -559,7 +559,6 @@ namespace uhigh.Net.CodeGen
             _output.AppendLine("}");
             _output.AppendLine();
         }
-
         /// <summary>
         /// Generates the main function using the specified main func
         /// </summary>

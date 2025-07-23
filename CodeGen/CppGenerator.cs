@@ -434,6 +434,19 @@ using Set = std::set<T>;
                 case MethodDeclaration methodDecl:
                     GenerateMethod(methodDecl);
                     break;
+                case NamespaceDeclaration nsDecl:
+                    Indent();
+                    _output.AppendLine($"namespace {nsDecl.Name} {{");
+                    _indentLevel++;
+                    foreach (var member in nsDecl.Members)
+                    {
+                        GenerateStatement(member);
+                    }
+                    _indentLevel--;
+                    Indent();
+                    _output.AppendLine("}");
+                    _output.AppendLine();
+                    break;
                 default:
                     _diagnostics.ReportCodeGenWarning($"Unknown statement type for C++: {stmt.GetType().Name}");
                     break;

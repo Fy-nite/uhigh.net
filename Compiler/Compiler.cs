@@ -195,9 +195,12 @@ namespace uhigh.Net
                     diagnostics.ReportInfo("Starting μHigh compilation pipeline");
                 }
 
-                // Preprocess and parse with target language as define
-                var defines = new[] { _targetLanguage };
+                // Use the actual target language for defines
+                var defines = new[] { uhigh.Net.Preprocessor.Preprocessor.TargetLanguageToDefine(_targetLanguage) };
                 var ast = uhigh.Net.Parser.Parser.ParseWithPreprocessing(source, defines, diagnostics, _verboseMode);
+
+                // Semantic analysis for warnings
+                SemanticAnalyzer.Analyze(ast, diagnostics);
 
                 // Handle include statements before code generation
                 ast = ProcessIncludes(ast, diagnostics, new HashSet<string>());
@@ -244,9 +247,12 @@ namespace uhigh.Net
                     diagnostics.ReportInfo("Starting μHigh AST compilation");
                 }
 
-                // Preprocess and parse with target language as define
-                var defines = new[] { _targetLanguage };
+                // Use the actual target language for defines
+                var defines = new[] { uhigh.Net.Preprocessor.Preprocessor.TargetLanguageToDefine(_targetLanguage) };
                 var ast = uhigh.Net.Parser.Parser.ParseWithPreprocessing(source, defines, diagnostics, _verboseMode);
+
+                // Semantic analysis for warnings
+                SemanticAnalyzer.Analyze(ast, diagnostics);
 
                 // Handle include statements
                 ast = ProcessIncludes(ast, diagnostics, new HashSet<string>());
@@ -787,7 +793,7 @@ namespace uhigh.Net
                         return false;
                     }
 
-                    diagnostics.ReportInfo($"Compiling project: {project.Name} (OutputType: {project.OutputType})");
+                    diagnostics.ReportInfo($"Compiling project: {project.Name} (OutputType: {project.OutputType}, Backend: {project.Backend})");
 
                     // Define projectDir for resolving relative paths
                     var projectDir = Path.GetDirectoryName(Path.GetFullPath(projectPath)) ?? "";
@@ -874,8 +880,8 @@ namespace uhigh.Net
                                 // Use a diagnostics reporter with the actual source file path
                                 var fileDiagnostics = new DiagnosticsReporter(_verboseMode, fullSourcePath);
 
-                                // Compile to AST
-                                var ast = CompileToAST(source, fileDiagnostics, Path.GetFileName(fullSourcePath));
+                                // Use project.Backend for preprocessing defines
+                                var ast = CompileToAST(source, fileDiagnostics, Path.GetFileName(fullSourcePath), project.Backend);
 
                                 if (fileDiagnostics.HasErrors)
                                 {
@@ -904,11 +910,21 @@ namespace uhigh.Net
 
                     diagnostics.ReportInfo($"Successfully processed {allPrograms.Count} source files");
 
-                    // Generate combined C# code
+                    // Generate combined code for the specified backend
                     string combinedCode;
-                    using (var generateTimer = new NuGet.OperationTimer("Generating C# code", diagnostics, _verboseMode))
+                    string backend = project.Backend?.ToLowerInvariant() ?? "csharp";
+                    string buildDir = Path.Combine(projectDir, "build");
+                    Directory.CreateDirectory(buildDir);
+
+                    using (var generateTimer = new NuGet.OperationTimer($"Generating {backend} code", diagnostics, _verboseMode))
                     {
-                        var generator = new CSharpGenerator();
+                        var generator = CodeGen.CodeGeneratorRegistry.GetGenerator(backend);
+                        if (generator == null)
+                        {
+                            diagnostics.ReportError($"No code generator found for backend: {backend}");
+                            diagnostics.PrintSummary();
+                            return false;
+                        }
                         combinedCode = generator.GenerateCombined(allPrograms, diagnostics, projectRootNamespace, projectClassName);
 
                         if (diagnostics.HasErrors)
@@ -917,19 +933,9 @@ namespace uhigh.Net
                             return false;
                         }
 
-                        // Check for main method in executable projects
-                        var hasMainMethod = combinedCode.Contains("static void Main") || combinedCode.Contains("static async Task Main");
-
-                        if (!hasMainMethod && project.OutputType.Equals("Exe", StringComparison.OrdinalIgnoreCase))
-                        {
-                            diagnostics.ReportError("No main method found in executable project. Make sure you have a 'func main()' function.");
-                            diagnostics.PrintSummary();
-                            return false;
-                        }
-
                         if (_verboseMode)
                         {
-                            diagnostics.ReportInfo("Generated combined C# code:");
+                            diagnostics.ReportInfo($"Generated combined {backend} code:");
                             Console.WriteLine("=".PadRight(50, '='));
                             Console.WriteLine(combinedCode);
                             Console.WriteLine("=".PadRight(50, '='));
@@ -937,39 +943,50 @@ namespace uhigh.Net
                         }
                     }
 
-                    // Use in-memory compiler with project configuration
-                    bool success;
-                    using (var compileTimer = new NuGet.OperationTimer("Compiling to executable", diagnostics, _verboseMode))
+                    bool success = false;
+                    if (backend == "csharp")
                     {
-                        var inMemoryCompiler = new InMemoryCompiler(_stdLibPath);
-
-                        if (outputFile != null)
+                        // Compile C# code
+                        using (var compileTimer = new NuGet.OperationTimer("Compiling to executable", diagnostics, _verboseMode))
                         {
-                            // Resolve output file relative to project directory
-                            if (!Path.IsPathRooted(outputFile))
-                            {
-                                outputFile = Path.Combine(projectDir, outputFile);
-                            }
+                            var inMemoryCompiler = new InMemoryCompiler(_stdLibPath);
 
-                            success = await inMemoryCompiler.CompileToExecutable(combinedCode, outputFile, projectRootNamespace, projectClassName, project.OutputType, nugetAssemblies);
-                            if (success)
+                            if (outputFile != null)
                             {
-                                Console.WriteLine($"Project compiled successfully to: {outputFile}");
+                                if (!Path.IsPathRooted(outputFile))
+                                {
+                                    outputFile = Path.Combine(projectDir, outputFile);
+                                }
+
+                                success = await inMemoryCompiler.CompileToExecutable(combinedCode, outputFile, projectRootNamespace, projectClassName, project.OutputType, nugetAssemblies);
+                                if (success)
+                                {
+                                    Console.WriteLine($"Project compiled successfully to: {outputFile}");
+                                }
+                            }
+                            else
+                            {
+                                var defaultOutputFile = project.OutputType.Equals("Library", StringComparison.OrdinalIgnoreCase)
+                                    ? Path.Combine(projectDir, $"{project.Name}.dll")
+                                    : Path.Combine(projectDir, $"{project.Name}.exe");
+
+                                success = await inMemoryCompiler.CompileToExecutable(combinedCode, defaultOutputFile, projectRootNamespace, projectClassName, project.OutputType, nugetAssemblies);
+                                if (success)
+                                {
+                                    Console.WriteLine($"Project compiled successfully to: {defaultOutputFile}");
+                                }
                             }
                         }
-                        else
-                        {
-                            // Default output file based on project name and type
-                            var defaultOutputFile = project.OutputType.Equals("Library", StringComparison.OrdinalIgnoreCase)
-                                ? Path.Combine(projectDir, $"{project.Name}.dll")
-                                : Path.Combine(projectDir, $"{project.Name}.exe");
-
-                            success = await inMemoryCompiler.CompileToExecutable(combinedCode, defaultOutputFile, projectRootNamespace, projectClassName, project.OutputType, nugetAssemblies);
-                            if (success)
-                            {
-                                Console.WriteLine($"Project compiled successfully to: {defaultOutputFile}");
-                            }
-                        }
+                    }
+                    else
+                    {
+                        // For non-C# backends, save generated code to build directory
+                        var generator = CodeGen.CodeGeneratorRegistry.GetGenerator(backend);
+                        var ext = generator?.FileExtension ?? ".txt";
+                        var jsOutput = outputFile ?? Path.Combine(buildDir, $"{project.Name}{ext}");
+                        await File.WriteAllTextAsync(jsOutput, combinedCode);
+                        Console.WriteLine($"Generated {backend} code: {jsOutput}");
+                        success = true;
                     }
 
                     overallTimer.Stop();
@@ -1027,11 +1044,12 @@ namespace uhigh.Net
         /// <param name="source">The source</param>
         /// <param name="diagnostics">The diagnostics</param>
         /// <param name="fileName">The file name</param>
+        /// <param name="backend">The backend (target language) to use for preprocessing</param>
         /// <exception cref="Exception">Include processing failed for {fileName}</exception>
         /// <exception cref="Exception">Parsing failed for {fileName}</exception>
         /// <exception cref="Exception">Tokenization failed for {fileName}</exception>
         /// <returns>The program</returns>
-        private Program CompileToAST(string source, DiagnosticsReporter diagnostics, string fileName = "")
+        private Program CompileToAST(string source, DiagnosticsReporter diagnostics, string fileName = "", string? backend = null)
         {
             try
             {
@@ -1040,8 +1058,9 @@ namespace uhigh.Net
                     diagnostics.ReportInfo($"Compiling {fileName} to AST");
                 }
 
-                // Preprocess and parse with target language as define
-                var defines = new[] { _targetLanguage };
+                // Use the backend for defines if provided, else fallback to _targetLanguage
+                var lang = backend ?? _targetLanguage;
+                var defines = new[] { uhigh.Net.Preprocessor.Preprocessor.TargetLanguageToDefine(lang) };
                 var ast = uhigh.Net.Parser.Parser.ParseWithPreprocessing(source, defines, diagnostics, _verboseMode);
 
                 if (diagnostics.HasErrors)
@@ -1312,8 +1331,8 @@ namespace uhigh.Net
             };
             generator.Initialize(config, diagnostics);
 
-            // Preprocess and parse with target language as define
-            var defines = new[] { targetLanguage };
+            // Use the requested target language for defines
+            var defines = new[] { uhigh.Net.Preprocessor.Preprocessor.TargetLanguageToDefine(targetLanguage) };
             var ast = uhigh.Net.Parser.Parser.ParseWithPreprocessing(source, defines, diagnostics, _verboseMode);
 
             if (!generator.CanGenerate(ast, diagnostics))
@@ -1350,8 +1369,8 @@ namespace uhigh.Net
                     }
                     includedFiles.Add(filePath);
                     var includedSource = File.ReadAllText(filePath);
-                    // Preprocess and parse with target language as define
-                    var defines = new[] { _targetLanguage };
+                    // Use the actual target language for defines
+                    var defines = new[] { uhigh.Net.Preprocessor.Preprocessor.TargetLanguageToDefine(_targetLanguage) };
                     var includedAst = uhigh.Net.Parser.Parser.ParseWithPreprocessing(includedSource, defines, diagnostics, _verboseMode);
                     var processedAst = ProcessIncludes(includedAst, diagnostics, includedFiles);
                     newStatements.AddRange(processedAst.Statements);

@@ -74,6 +74,13 @@ namespace uhigh.Net.CodeGen
             // Generate program content
             GenerateProgramContent(program);
 
+            // Add main() call if a top-level main function exists
+            if (HasTopLevelMainFunction(program))
+            {
+                _output.AppendLine();
+                _output.AppendLine("main();");
+            }
+
             _diagnostics.ReportInfo($"JavaScript code generation completed. Generated {_output.ToString().Split('\n').Length} lines");
             return _output.ToString();
         }
@@ -104,6 +111,13 @@ namespace uhigh.Net.CodeGen
             foreach (var program in programs)
             {
                 GenerateProgramContent(program);
+            }
+
+            // Add main() call if any program has a top-level main function
+            if (programs.Any(HasTopLevelMainFunction))
+            {
+                _output.AppendLine();
+                _output.AppendLine("main();");
             }
 
             return _output.ToString();
@@ -196,6 +210,9 @@ namespace uhigh.Net.CodeGen
                     break;
                 case UsingStatement usingStmt:
                     GenerateUsingStatement(usingStmt);
+                    break;
+                case MatchStatement matchStmt:
+                    GenerateMatchStatement(matchStmt);
                     break;
                 default:
                     _diagnostics.ReportCodeGenWarning($"Unknown statement type for JavaScript: {statement.GetType().Name}");
@@ -1031,6 +1048,64 @@ namespace uhigh.Net.CodeGen
                 _output.AppendLine("}");
             }
             
+            _indentLevel--;
+            Indent();
+            _output.AppendLine("}");
+        }
+
+        // Helper to check for top-level main function
+        private bool HasTopLevelMainFunction(Program program)
+        {
+            return program.Statements.OfType<FunctionDeclaration>().Any(f => f.Name == "main");
+        }
+
+        // Add this method to generate match statements as switch in JS
+        private void GenerateMatchStatement(MatchStatement matchStmt)
+        {
+            Indent();
+            _output.Append("switch (");
+            GenerateExpression(matchStmt.Value);
+            _output.AppendLine(") {");
+            _indentLevel++;
+
+            foreach (var arm in matchStmt.Arms)
+            {
+                if (arm.IsDefault)
+                {
+                    Indent();
+                    _output.AppendLine("default:");
+                }
+                else
+                {
+                    foreach (var pattern in arm.Patterns)
+                    {
+                        Indent();
+                        _output.Append("case ");
+                        GenerateExpression(pattern);
+                        _output.AppendLine(":");
+                    }
+                }
+
+                _indentLevel++;
+                // If the result is a block, emit its statements
+                if (arm.Result is BlockExpression blockExpr)
+                {
+                    foreach (var stmt in blockExpr.Statements)
+                    {
+                        GenerateStatement(stmt);
+                    }
+                }
+                else
+                {
+                    Indent();
+                    GenerateExpression(arm.Result);
+                    _output.AppendLine(";");
+                }
+                Indent();
+                _output.AppendLine("break;");
+                _indentLevel--;
+            }
+
             _indentLevel--;
             Indent();
             _output.AppendLine("}");

@@ -8,6 +8,7 @@ var target = Argument("target", "Default");
 var configuration = Argument("configuration", "Release");
 var solution = "./uhigh.net.sln";
 var project = "./uhigh.csproj";
+var targetLang = Argument("targetLang", "csharp");
 
 // Tasks
 
@@ -31,6 +32,10 @@ Task("Build")
     .IsDependentOn("Restore")
     .Does(() =>
 {
+    // Example: pass targetLang to your CLI if needed
+    // DotNetBuild(solution, ...); // For .NET projects
+    // If you have a custom CLI, use:
+    // StartProcess("dotnet", $"run -- compile --target {targetLang} ...");
     DotNetBuild(solution, new DotNetBuildSettings {
         Configuration = configuration,
         NoRestore = true

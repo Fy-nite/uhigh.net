@@ -31,6 +31,7 @@ namespace uhigh.Net.CommandLine
         public string? Author { get; set; }
         public string OutputType { get; set; } = "Exe";
         public string TargetFramework { get; set; } = "net8.0";
+        public string Backend { get; set; } = "csharp";
     }
 
     /// <summary>

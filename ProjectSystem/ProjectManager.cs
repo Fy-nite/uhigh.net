@@ -14,7 +14,7 @@ namespace uhigh.Net.ProjectSystem
             _stdLibPath = stdLibPath;
         }
 
-        public async Task<bool> CreateProject(string projectName, string? projectDir = null, string? description = null, string? author = null, string outputType = "Exe", string target = "net9.0")
+        public async Task<bool> CreateProject(string projectName, string? projectDir = null, string? description = null, string? author = null, string outputType = "Exe", string target = "net9.0", string backend = "csharp")
         {
             var diagnostics = new DiagnosticsReporter(_verboseMode);
 
@@ -33,21 +33,18 @@ namespace uhigh.Net.ProjectSystem
                     OutputType = outputType,
                     SourceFiles = new List<string> { "main.uh" },
                     RootNamespace = projectName,
-                    Nullable = true
+                    Nullable = true,
+                    Backend = backend
                 };
 
-                var success = await ProjectFile.CreateAsync(projectName, fullProjectDir, diagnostics);
+                var success = await ProjectFile.CreateAsync(projectName, fullProjectDir, diagnostics, backend);
 
                 if (success)
                 {
                     Console.WriteLine($"Created project '{projectName}' in '{fullProjectDir}'");
                     Console.WriteLine($"Project file: {Path.Combine(fullProjectDir, $"{projectName}.uhighproj")}");
                     Console.WriteLine($"Main file: {Path.Combine(fullProjectDir, "main.uh")}");
-                    Console.WriteLine($"Output type: {outputType}");
                 }
-
-                diagnostics.PrintSummary();
-                return success;
             }
             catch (Exception ex)
             {
@@ -55,6 +52,8 @@ namespace uhigh.Net.ProjectSystem
                 diagnostics.PrintSummary();
                 return false;
             }
+
+            return true;
         }
 
         public async Task<bool> ListProjectInfo(string projectPath)

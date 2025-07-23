@@ -86,6 +86,7 @@ namespace uhigh.Net.CommandLine
 
             var typeOption = new Option<string>(new[] { "-t", "--type" }, () => "Exe", "Project type (Exe or Library)");
             var frameworkOption = new Option<string>(new[] { "-f", "--framework" }, () => "net8.0", ".NET target framework");
+            var backendOption = new Option<string>(new[] { "--backend" }, () => "csharp", "Target language backend (e.g. csharp, javascript)");
 
             command.AddArgument(projectNameArg);
             command.AddArgument(directoryArg);
@@ -93,6 +94,7 @@ namespace uhigh.Net.CommandLine
             command.AddArgument(authorArg);
             command.AddOption(typeOption);
             command.AddOption(frameworkOption);
+            command.AddOption(backendOption);
             command.AddOption(CommonOptions.CreateVerboseOption());
             command.AddOption(CommonOptions.CreateStdLibPathOption());
 

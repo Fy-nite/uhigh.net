@@ -99,6 +99,11 @@ namespace uhigh.Net.CodeGen
         /// </summary>
         /// <returns>Collection of using statements</returns>
         HashSet<string> GetCollectedUsings();
+
+        /// <summary>
+        /// Gets the preprocessor define symbol for this generator's target language.
+        /// </summary>
+        string TargetLanguageDefine => uhigh.Net.Preprocessor.Preprocessor.TargetLanguageToDefine(TargetName);
     }
 
     /// <summary>
@@ -184,7 +189,9 @@ namespace uhigh.Net.CodeGen
             // Register built-in generators
             Register(new CSharpGeneratorFactory());
             Register(new JavaScriptGeneratorFactory());
-            Register(new LLVMGeneratorFactory()); // Replace CppGeneratorFactory with LLVMGeneratorFactory
+            Register(new LLVMGeneratorFactory());
+            Register(new CppGeneratorFactory());
+            Register(new ValaGeneratorFactory()); // Add Vala generator
         }
 
         /// <summary>
@@ -258,7 +265,7 @@ namespace uhigh.Net.CodeGen
             }
 
             var pluginFiles = Directory.GetFiles(pluginDirectory, "*.dll", SearchOption.AllDirectories);
-            
+
             foreach (var pluginFile in pluginFiles)
             {
                 if (_loadedPlugins.Contains(pluginFile)) continue;
@@ -266,7 +273,7 @@ namespace uhigh.Net.CodeGen
                 try
                 {
                     var assembly = System.Reflection.Assembly.LoadFrom(pluginFile);
-                    
+
                     // Look for types implementing ICodeGeneratorFactory
                     var factoryTypes = assembly.GetTypes()
                         .Where(t => typeof(ICodeGeneratorFactory).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
@@ -375,6 +382,47 @@ namespace uhigh.Net.CodeGen
         };
 
         public ICodeGenerator CreateGenerator() => new LLVMGenerator();
+
+        public bool CanHandle(CodeGeneratorConfig config) => true;
+    }
+
+    /// <summary>
+    /// Factory for Vala code generator
+    /// </summary>
+    public class ValaGeneratorFactory : ICodeGeneratorFactory
+    {
+        public string TargetName => "vala";
+
+        public CodeGeneratorInfo GeneratorInfo => new()
+        {
+            Name = "Vala Code Generator",
+            Description = "Generates Vala code from μHigh programs with GObject integration",
+            Version = "1.0.0",
+            SupportedFeatures = new() { "classes", "functions", "interfaces", "properties", "async", "generics" },
+            RequiredDependencies = new() { "vala >= 0.48", "glib-2.0", "gobject-2.0", "gcc" }
+        };
+
+        public ICodeGenerator CreateGenerator() => new ValaGenerator();
+
+        public bool CanHandle(CodeGeneratorConfig config) => true;
+    }
+    /// <summary>
+    /// Factory for C++ code generator
+    /// </summary>
+    public class CppGeneratorFactory : ICodeGeneratorFactory
+    {
+        public string TargetName => "cpp";
+
+        public CodeGeneratorInfo GeneratorInfo => new()
+        {
+            Name = "C++ Code Generator",
+            Description = "Generates C++ code from μHigh programs with STL support",
+            Version = "1.0.0",
+            SupportedFeatures = new() { "classes", "functions", "templates", "match", "lambdas" },
+            RequiredDependencies = new() { "g++", "C++17 or later" }
+        };
+
+        public ICodeGenerator CreateGenerator() => new CppGenerator();
 
         public bool CanHandle(CodeGeneratorConfig config) => true;
     }
