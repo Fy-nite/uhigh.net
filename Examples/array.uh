@@ -1,5 +1,4 @@
 using System
-
 using System.Diagnostics
 using System.IO
 namespace test
@@ -8,11 +7,12 @@ namespace test
     {
         public static func Main(args: string[]): void
         {
-            var arr = {1, 2, 3, 4, 5}
+            var arr = {}
             for var i in arr
             {
                 Console.WriteLine(i)
             }
+            arr.append(2)
         }
     }
 }
