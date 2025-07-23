@@ -1670,8 +1670,11 @@ namespace uhigh.Net.Parser
                 return new UnaryExpression { Operator = op, Operand = expr };
             }
 
-            // Remove the match expression parsing from here - match should only be parsed as statements
-            // The match keyword should be handled in ParseStatement(), not as a postfix operator
+            // Handle match expressions as postfix operators: expr match { ... }
+            if (Match(TokenType.Match))
+            {
+                return ParseMatchExpression(expr);
+            }
 
             return expr;
         }
