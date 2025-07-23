@@ -1,5 +1,6 @@
 using uhigh.Net;
 using uhigh.Net.CommandLine;
+using uhigh.Net.UbPackage;
 using System.CommandLine;
 using System.CommandLine.Parsing;
 
@@ -53,6 +54,13 @@ public class EntryPoint
         rootCommand.AddCommand(CreateLspCommand());
         rootCommand.AddCommand(CreateTestCommand());
         rootCommand.AddCommand(CreateReplCommand());
+        
+        // Add .ub package commands
+        rootCommand.AddCommand(CreatePackCommand());
+        rootCommand.AddCommand(CreateUnpackCommand());
+        rootCommand.AddCommand(CreateInstallUbPackageCommand());
+        rootCommand.AddCommand(CreateListUbPackagesCommand());
+        rootCommand.AddCommand(CreateBuildFromPackageCommand());
 
         return rootCommand;
     }
@@ -559,6 +567,171 @@ public class EntryPoint
     }
 
     /// <summary>
+    /// Creates the pack command
+    /// </summary>
+    private static Command CreatePackCommand()
+    {
+        var projectFileArg = CommonOptions.CreateProjectFileArgument();
+        var verboseOption = CommonOptions.CreateVerboseOption();
+        var stdLibOption = CommonOptions.CreateStdLibPathOption();
+        var outputOption = new Option<string?>("--output", "Output .ub package file path");
+
+        var command = new Command("pack", "Package a μHigh project into a .ub file")
+        {
+            projectFileArg,
+            verboseOption,
+            stdLibOption,
+            outputOption
+        };
+
+        command.SetHandler(async (projectFile, verbose, stdLibPath, output) =>
+        {
+            var options = new PackOptions
+            {
+                ProjectFile = projectFile,
+                Verbose = verbose,
+                StdLibPath = stdLibPath,
+                OutputFile = output
+            };
+            Environment.ExitCode = await HandlePackCommand(options);
+        }, projectFileArg, verboseOption, stdLibOption, outputOption);
+
+        return command;
+    }
+
+    /// <summary>
+    /// Creates the unpack command
+    /// </summary>
+    private static Command CreateUnpackCommand()
+    {
+        var packageFileArg = new Argument<string>("package-file", "Path to the .ub package file");
+        var verboseOption = CommonOptions.CreateVerboseOption();
+        var stdLibOption = CommonOptions.CreateStdLibPathOption();
+        var outputOption = new Option<string?>("--output", "Output directory to extract to");
+
+        var command = new Command("unpack", "Extract a .ub package")
+        {
+            packageFileArg,
+            verboseOption,
+            stdLibOption,
+            outputOption
+        };
+
+        command.SetHandler(async (packageFile, verbose, stdLibPath, output) =>
+        {
+            var options = new UnpackOptions
+            {
+                PackageFile = packageFile,
+                Verbose = verbose,
+                StdLibPath = stdLibPath,
+                OutputDirectory = output
+            };
+            Environment.ExitCode = await HandleUnpackCommand(options);
+        }, packageFileArg, verboseOption, stdLibOption, outputOption);
+
+        return command;
+    }
+
+    /// <summary>
+    /// Creates the install-ub-package command
+    /// </summary>
+    private static Command CreateInstallUbPackageCommand()
+    {
+        var projectFileArg = CommonOptions.CreateProjectFileArgument();
+        var packageFileArg = new Argument<string>("package-file", "Path to the .ub package file");
+        var verboseOption = CommonOptions.CreateVerboseOption();
+        var stdLibOption = CommonOptions.CreateStdLibPathOption();
+        var cacheDirOption = new Option<string?>("--cache-dir", "Directory to store package cache");
+
+        var command = new Command("install-ub-package", "Install a .ub package as a dependency")
+        {
+            projectFileArg,
+            packageFileArg,
+            verboseOption,
+            stdLibOption,
+            cacheDirOption
+        };
+
+        command.SetHandler(async (projectFile, packageFile, verbose, stdLibPath, cacheDir) =>
+        {
+            var options = new InstallUbPackageOptions
+            {
+                ProjectFile = projectFile,
+                PackageFile = packageFile,
+                Verbose = verbose,
+                StdLibPath = stdLibPath,
+                PackageCachePath = cacheDir
+            };
+            Environment.ExitCode = await HandleInstallUbPackageCommand(options);
+        }, projectFileArg, packageFileArg, verboseOption, stdLibOption, cacheDirOption);
+
+        return command;
+    }
+
+    /// <summary>
+    /// Creates the list-ub-packages command
+    /// </summary>
+    private static Command CreateListUbPackagesCommand()
+    {
+        var projectFileArg = CommonOptions.CreateProjectFileArgument();
+        var verboseOption = CommonOptions.CreateVerboseOption();
+        var stdLibOption = CommonOptions.CreateStdLibPathOption();
+
+        var command = new Command("list-ub-packages", "List installed .ub packages in a project")
+        {
+            projectFileArg,
+            verboseOption,
+            stdLibOption
+        };
+
+        command.SetHandler(async (projectFile, verbose, stdLibPath) =>
+        {
+            var options = new ListUbPackagesOptions
+            {
+                ProjectFile = projectFile,
+                Verbose = verbose,
+                StdLibPath = stdLibPath
+            };
+            Environment.ExitCode = await HandleListUbPackagesCommand(options);
+        }, projectFileArg, verboseOption, stdLibOption);
+
+        return command;
+    }
+
+    /// <summary>
+    /// Creates the build-from-package command
+    /// </summary>
+    private static Command CreateBuildFromPackageCommand()
+    {
+        var packageFileArg = new Argument<string>("package-file", "Path to the .ub package file");
+        var verboseOption = CommonOptions.CreateVerboseOption();
+        var stdLibOption = CommonOptions.CreateStdLibPathOption();
+        var outputOption = new Option<string?>("--output", "Output executable file path");
+
+        var command = new Command("build-from-package", "Build an executable directly from a .ub package")
+        {
+            packageFileArg,
+            verboseOption,
+            stdLibOption,
+            outputOption
+        };
+
+        command.SetHandler(async (packageFile, verbose, stdLibPath, output) =>
+        {
+            var options = new BuildFromPackageOptions
+            {
+                PackageFile = packageFile,
+                Verbose = verbose,
+                StdLibPath = stdLibPath,
+                OutputFile = output
+            };
+            Environment.ExitCode = await HandleBuildFromPackageCommand(options);
+        }, packageFileArg, verboseOption, stdLibOption, outputOption);
+
+        return command;
+    }
+
+    /// <summary>
     /// Ises the known verb using the specified arg
     /// </summary>
     /// <param name="arg">The arg</param>
@@ -568,7 +741,8 @@ public class EntryPoint
         var knownVerbs = new[] { 
             "compile", "create", "build", "run", "info", "add-file", 
             "add-package", "install-packages", "search-packages", 
-            "list-packages", "restore-packages", "ast", "lsp", "test", "repl" 
+            "list-packages", "restore-packages", "ast", "lsp", "test", "repl",
+            "pack", "unpack", "install-ub-package", "list-ub-packages", "build-from-package"
         };
         return knownVerbs.Contains(arg.ToLower());
     }
@@ -1045,6 +1219,185 @@ public class EntryPoint
             {
                 Console.WriteLine($"Stack trace:\n{ex.StackTrace}");
             }
+            return 1;
+        }
+    }
+
+    /// <summary>
+    /// Handles the pack command using the specified options
+    /// </summary>
+    /// <param name="options">The options</param>
+    /// <returns>A task containing the int</returns>
+    private static async Task<int> HandlePackCommand(PackOptions options)
+    {
+        try
+        {
+            var diagnostics = new uhigh.Net.Diagnostics.DiagnosticsReporter();
+            var packageManager = new uhigh.Net.UbPackage.UbPackageManager(diagnostics);
+
+            if (!File.Exists(options.ProjectFile))
+            {
+                WriteError($"Project file not found: {options.ProjectFile}");
+                return 1;
+            }
+
+            // Determine output file if not specified
+            var outputFile = options.OutputFile;
+            if (string.IsNullOrEmpty(outputFile))
+            {
+                var projectName = Path.GetFileNameWithoutExtension(options.ProjectFile);
+                outputFile = Path.Combine(Path.GetDirectoryName(options.ProjectFile) ?? "", $"{projectName}.ub");
+            }
+
+            var success = await packageManager.PackAsync(options.ProjectFile, outputFile);
+            return success ? 0 : 1;
+        }
+        catch (Exception ex)
+        {
+            WriteError($"Pack command failed: {ex.Message}");
+            return 1;
+        }
+    }
+
+    /// <summary>
+    /// Handles the unpack command using the specified options
+    /// </summary>
+    /// <param name="options">The options</param>
+    /// <returns>A task containing the int</returns>
+    private static async Task<int> HandleUnpackCommand(UnpackOptions options)
+    {
+        try
+        {
+            var diagnostics = new uhigh.Net.Diagnostics.DiagnosticsReporter();
+            var packageManager = new uhigh.Net.UbPackage.UbPackageManager(diagnostics);
+
+            if (!File.Exists(options.PackageFile))
+            {
+                WriteError($"Package file not found: {options.PackageFile}");
+                return 1;
+            }
+
+            // Determine output directory if not specified
+            var outputDir = options.OutputDirectory;
+            if (string.IsNullOrEmpty(outputDir))
+            {
+                var packageName = Path.GetFileNameWithoutExtension(options.PackageFile);
+                outputDir = Path.Combine(Path.GetDirectoryName(options.PackageFile) ?? "", packageName);
+            }
+
+            var success = await packageManager.UnpackAsync(options.PackageFile, outputDir);
+            return success ? 0 : 1;
+        }
+        catch (Exception ex)
+        {
+            WriteError($"Unpack command failed: {ex.Message}");
+            return 1;
+        }
+    }
+
+    /// <summary>
+    /// Handles the install-ub-package command using the specified options
+    /// </summary>
+    /// <param name="options">The options</param>
+    /// <returns>A task containing the int</returns>
+    private static async Task<int> HandleInstallUbPackageCommand(InstallUbPackageOptions options)
+    {
+        try
+        {
+            var diagnostics = new uhigh.Net.Diagnostics.DiagnosticsReporter();
+            var packageManager = new uhigh.Net.UbPackage.UbPackageManager(diagnostics);
+
+            if (!File.Exists(options.ProjectFile))
+            {
+                WriteError($"Project file not found: {options.ProjectFile}");
+                return 1;
+            }
+
+            if (!File.Exists(options.PackageFile))
+            {
+                WriteError($"Package file not found: {options.PackageFile}");
+                return 1;
+            }
+
+            var success = await packageManager.InstallAsync(options.PackageFile, options.ProjectFile, options.PackageCachePath);
+            return success ? 0 : 1;
+        }
+        catch (Exception ex)
+        {
+            WriteError($"Install ub-package command failed: {ex.Message}");
+            return 1;
+        }
+    }
+
+    /// <summary>
+    /// Handles the list-ub-packages command using the specified options
+    /// </summary>
+    /// <param name="options">The options</param>
+    /// <returns>A task containing the int</returns>
+    private static async Task<int> HandleListUbPackagesCommand(ListUbPackagesOptions options)
+    {
+        try
+        {
+            var diagnostics = new uhigh.Net.Diagnostics.DiagnosticsReporter();
+            var packageManager = new uhigh.Net.UbPackage.UbPackageManager(diagnostics);
+
+            if (!File.Exists(options.ProjectFile))
+            {
+                WriteError($"Project file not found: {options.ProjectFile}");
+                return 1;
+            }
+
+            var installedPackages = await packageManager.ListInstalledAsync(options.ProjectFile);
+            
+            if (installedPackages.Count == 0)
+            {
+                Console.WriteLine("No .ub packages installed in this project.");
+                return 0;
+            }
+
+            Console.WriteLine($"Installed .ub packages:");
+            foreach (var (name, version, path) in installedPackages)
+            {
+                Console.WriteLine($"  {name} v{version}");
+                if (options.Verbose)
+                {
+                    Console.WriteLine($"    Path: {path}");
+                }
+            }
+
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            WriteError($"List ub-packages command failed: {ex.Message}");
+            return 1;
+        }
+    }
+
+    /// <summary>
+    /// Handles the build-from-package command using the specified options
+    /// </summary>
+    /// <param name="options">The options</param>
+    /// <returns>A task containing the int</returns>
+    private static async Task<int> HandleBuildFromPackageCommand(BuildFromPackageOptions options)
+    {
+        try
+        {
+            var diagnostics = new uhigh.Net.Diagnostics.DiagnosticsReporter();
+            var packageManager = new uhigh.Net.UbPackage.UbPackageManager(diagnostics);
+
+            if (!File.Exists(options.PackageFile))
+            {
+                WriteError($"Package file not found: {options.PackageFile}");
+                return 1;
+            }
+
+            var success = await packageManager.BuildFromPackageAsync(options.PackageFile, options.OutputFile);
+            return success ? 0 : 1;
+        }
+        catch (Exception ex)
+        {
+            WriteError($"Build from package command failed: {ex.Message}");
             return 1;
         }
     }
