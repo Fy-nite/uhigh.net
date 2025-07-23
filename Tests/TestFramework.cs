@@ -163,33 +163,35 @@ namespace uhigh.Net.Testing
             return result;
         }
 
-        private static Lock run_test_lock = new();
+        private static object run_test_lock = new();
         // Function to get tests from to_run_tests and run them, exiting on special test
         public static void TesterThread()
         {
             while (true)
             {
                 bool is_test_to_run = false;
-                while (!is_test_to_run)
-                {
-                    run_test_lock.EnterScope();
-                    if (to_run_tests.Count == 0)
-                    {
-                        run_test_lock.Exit();
+
+                while (!is_test_to_run) {
+                    lock (run_test_lock) {
+                        if (to_run_tests.Count == 0) {
+                            continue;
+                        } else {
+                            is_test_to_run = true;
+                        }
                     }
-                    else
-                    {
-                        is_test_to_run = true;
+                    if (!is_test_to_run) {
+                        Thread.Sleep(10); // Small delay to avoid busy waiting
                     }
                 }
-                TestRunnerData data = to_run_tests.First();
-                if (data.is_exit == true)
-                {
-                    run_test_lock.Exit();
-                    return;
+                TestRunnerData data;
+                lock (run_test_lock) {
+                    data = to_run_tests.First();
+                    if (data.is_exit == true) {
+                        return;
+                    }
+                    to_run_tests.RemoveAt(0);
+
                 }
-                to_run_tests.RemoveAt(0);
-                run_test_lock.Exit(); // Exit the lock because we are done with the to_run_tests list
                 data.Run();
             }
         }

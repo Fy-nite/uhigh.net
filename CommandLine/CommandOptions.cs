@@ -145,4 +145,49 @@ namespace uhigh.Net.CommandLine
         public int? Port { get; set; }
         public bool UseStdio { get; set; } = true;
     }
+
+    /// <summary>
+    /// Options for the pack command
+    /// </summary>
+    public class PackOptions : BaseCommandOptions
+    {
+        public string ProjectFile { get; set; } = "";
+        public string? OutputFile { get; set; }
+    }
+
+    /// <summary>
+    /// Options for the unpack command
+    /// </summary>
+    public class UnpackOptions : BaseCommandOptions
+    {
+        public string PackageFile { get; set; } = "";
+        public string? OutputDirectory { get; set; }
+    }
+
+    /// <summary>
+    /// Options for the install-ub-package command
+    /// </summary>
+    public class InstallUbPackageOptions : BaseCommandOptions
+    {
+        public string ProjectFile { get; set; } = "";
+        public string PackageFile { get; set; } = "";
+        public string? PackageCachePath { get; set; }
+    }
+
+    /// <summary>
+    /// Options for the list-ub-packages command
+    /// </summary>
+    public class ListUbPackagesOptions : BaseCommandOptions
+    {
+        public string ProjectFile { get; set; } = "";
+    }
+
+    /// <summary>
+    /// Options for the build-from-package command
+    /// </summary>
+    public class BuildFromPackageOptions : BaseCommandOptions
+    {
+        public string PackageFile { get; set; } = "";
+        public string? OutputFile { get; set; }
+    }
 }

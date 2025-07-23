@@ -8,7 +8,7 @@ A simple, modern language that compiles to C# and runs on .NET. μHigh offers ac
 ```bash
 git clone https://github.com/fy-nite/uhigh.net
 cd uhigh.net
-dotnet build
+pwsh -c ./install.ps1
 ```
 
 **Hello World:**
@@ -67,19 +67,22 @@ uhigh test
 var name = "World"
 const PI = 3.14159
 
-func greet(person) {
+func greet(person: string) {
     return "Hello, " + person + "!"
 }
 
 namespace MyApp {
     public class Calculator {
-        public func add(a, b) {
+        public func add(a: int , b: int): int {
             return a + b
         }
     }
 }
 
-if (name != "") {
+
+// Control flow
+if name != "" {
+
     print(greet(name))
 } else {
     print("Hello, Anonymous!")
@@ -145,6 +148,9 @@ See [GitHub](https://github.com/fy-nite/uhigh.net) to get started.
 
 ## License
 
+
+AGPL
+
 See [LICENSE](LICENSE) for details.
 
 ## Custom Code Generation Targets
@@ -168,6 +174,5 @@ var compiler = new Compiler(verboseMode: true, stdLibPath: null, targetLanguage:
 var jsCode = compiler.CompileToTarget(source, "javascript");
 ```
 
----
 
 *μHigh: Simple syntax, powerful runtime* ⚡
