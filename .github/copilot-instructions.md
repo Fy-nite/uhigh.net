@@ -3,7 +3,9 @@
 This project is a Custom programming language called Uhigh (micro-high) written in Csharp.
 
 # notes
-- allways use the dev branch for commiting changes. dev is the main working branch and things will explode if not developed on.
+- try to use the `Dev` or `dev` branch for development, this is the main branch for development and will be merged into `stable` when ready.
+if you can't find dev, run `git pull` to update your local repository and then try running `git checkout dev` to switch to the dev branch.
+- if you are working on a feature, try to create a new branch from `dev` then merge it back into `dev` when you are done.
 - try to write unit tests for any new features for the `Tests/` folder and make sure to run `dotnet run test` before pushing changes to see if the compiler builds and has any failing tests.
 
 
