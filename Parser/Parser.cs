@@ -1209,16 +1209,25 @@ namespace uhigh.Net.Parser
                 returnType = ParseTypeName();
             }
 
-            Consume(TokenType.LeftBrace, "Expected '{' before function body");
             var body = new List<Statement>();
-
-            while (!Check(TokenType.RightBrace) && !IsAtEnd())
+            
+            // Check if this is an external function (no body expected)
+            // The attributes will be set later by the calling code, so we need to be flexible
+            // External functions and interface methods don't require bodies
+            if (Check(TokenType.LeftBrace))
             {
-                var stmt = ParseStatement();
-                if (stmt != null) body.Add(stmt);
-            }
+                // Function has a body
+                Consume(TokenType.LeftBrace, "Expected '{' before function body");
+                
+                while (!Check(TokenType.RightBrace) && !IsAtEnd())
+                {
+                    var stmt = ParseStatement();
+                    if (stmt != null) body.Add(stmt);
+                }
 
-            Consume(TokenType.RightBrace, "Expected '}' after function body");
+                Consume(TokenType.RightBrace, "Expected '}' after function body");
+            }
+            // If no opening brace found, assume this is an external/interface function declaration
 
             return new FunctionDeclaration
             {

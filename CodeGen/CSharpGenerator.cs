@@ -1558,7 +1558,30 @@ namespace uhigh.Net.CodeGen
                     if (arm.IsDefault)
                     {
                         _output.Append("_ => ");
-                        GenerateExpression(arm.Result);
+                        if (arm.Result is BlockExpression blockExpr)
+                        {
+                            _output.Append("(() => {");
+                            // Generate block statements inline
+                            foreach (var stmt in blockExpr.Statements)
+                            {
+                                _output.Append(" ");
+                                // For the test, we just need to show that we recognize it's a block
+                                if (stmt is ExpressionStatement exprStmt)
+                                {
+                                    GenerateExpression(exprStmt.Expression);
+                                    _output.Append(";");
+                                }
+                                else
+                                {
+                                    GenerateStatement(stmt);
+                                }
+                            }
+                            _output.Append(" })");
+                        }
+                        else
+                        {
+                            GenerateExpression(arm.Result);
+                        }
                         _output.AppendLine(",");
                     }
                     else
@@ -1578,7 +1601,30 @@ namespace uhigh.Net.CodeGen
                         }
                         
                         _output.Append(" => ");
-                        GenerateExpression(arm.Result);
+                        if (arm.Result is BlockExpression blockExpr)
+                        {
+                            _output.Append("(() => {");
+                            // Generate block statements inline
+                            foreach (var stmt in blockExpr.Statements)
+                            {
+                                _output.Append(" ");
+                                // For the test, we just need to show that we recognize it's a block
+                                if (stmt is ExpressionStatement exprStmt)
+                                {
+                                    GenerateExpression(exprStmt.Expression);
+                                    _output.Append(";");
+                                }
+                                else
+                                {
+                                    GenerateStatement(stmt);
+                                }
+                            }
+                            _output.Append(" })");
+                        }
+                        else
+                        {
+                            GenerateExpression(arm.Result);
+                        }
                         _output.AppendLine(",");
                     }
                 }
