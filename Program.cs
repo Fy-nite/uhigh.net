@@ -781,6 +781,8 @@ public class EntryPoint
             };
             Environment.ExitCode = await HandleBuildFromPackageCommand(options);
         }, packageFileArg, verboseOption, stdLibOption, outputOption);
+        return command;
+    }
 
 
     /// Creates the list-targets command
@@ -1516,15 +1518,5 @@ public class EntryPoint
         return 1;
     }
 
-    /// <summary>
-    /// Writes the error using the specified message
-    /// </summary>
-    /// <param name="message">The message</param>
-    private static void WriteError(string message)
-    {
-        Console.ForegroundColor = ConsoleColor.Red;
-        Console.WriteLine(message);
-        Console.ResetColor();
-    }
 }
 
