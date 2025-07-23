@@ -17,4 +17,5 @@ if you can't find dev, run `git pull` to update your local repository and then t
 
   # documenting
   - if new language features are added, make sure to create patch notes in the `docs/` directory for these and mark it with a unique identifier.
-  
+  - if you are adding a new feature, make sure to document it in the `docs/` directory.
+  - if you are fixing a bug, make sure to document it in the `docs/` directory if you find what caused the bug and how you fixed it.
