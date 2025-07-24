@@ -3,6 +3,12 @@ using System.CommandLine.Parsing;
 using uhigh.Net;
 using uhigh.Net.CommandLine;
 using uhigh.Net.UbPackage;
+using uhigh.Net.Templates;
+using uhigh.Net.Diagnostics;
+using System.CommandLine;
+using System.CommandLine.Parsing;
+using System.CommandLine.Invocation;
+
 
 /// <summary>
 /// The entry point class
@@ -41,6 +47,7 @@ public class EntryPoint
         // Add all subcommands
         rootCommand.AddCommand(CreateCompileCommand());
         rootCommand.AddCommand(CreateCreateCommand());
+        rootCommand.AddCommand(CreateListTemplatesCommand());
         rootCommand.AddCommand(CreateBuildCommand());
         rootCommand.AddCommand(CreateRunCommand());
         rootCommand.AddCommand(CreateInfoCommand());
@@ -124,6 +131,7 @@ public class EntryPoint
         var authorOption = new Option<string?>("--author", "Project author");
         var outputTypeOption = new Option<string>("--output-type", () => "Exe", "Output type (Exe, Library)");
         var targetFrameworkOption = new Option<string>("--target-framework", () => "net8.0", "Target framework");
+        var templateOption = new Option<string>("--template", () => "console", "Project template to use (console, classlib, test)");
 
         var command = new Command("create", "Create a new μHigh project")
         {
@@ -134,11 +142,22 @@ public class EntryPoint
             descriptionOption,
             authorOption,
             outputTypeOption,
-            targetFrameworkOption
+            targetFrameworkOption,
+            templateOption
         };
 
-        command.SetHandler(async (projectName, verbose, stdLibPath, directory, description, author, outputType, targetFramework) =>
+        command.SetHandler(async (InvocationContext context) =>
         {
+            var projectName = context.ParseResult.GetValueForArgument(projectNameArg);
+            var verbose = context.ParseResult.GetValueForOption(verboseOption);
+            var stdLibPath = context.ParseResult.GetValueForOption(stdLibOption);
+            var directory = context.ParseResult.GetValueForOption(directoryOption);
+            var description = context.ParseResult.GetValueForOption(descriptionOption);
+            var author = context.ParseResult.GetValueForOption(authorOption);
+            var outputType = context.ParseResult.GetValueForOption(outputTypeOption);
+            var targetFramework = context.ParseResult.GetValueForOption(targetFrameworkOption);
+            var template = context.ParseResult.GetValueForOption(templateOption);
+            
             var options = new CreateOptions
             {
                 ProjectName = projectName,
@@ -148,10 +167,41 @@ public class EntryPoint
                 Description = description,
                 Author = author,
                 OutputType = outputType,
-                TargetFramework = targetFramework
+                TargetFramework = targetFramework,
+                Template = template
             };
+            
             Environment.ExitCode = await HandleCreateCommand(options);
-        }, projectNameArg, verboseOption, stdLibOption, directoryOption, descriptionOption, authorOption, outputTypeOption, targetFrameworkOption);
+        });
+
+        return command;
+    }
+
+    /// <summary>
+    /// Creates the list-templates command
+    /// </summary>
+    private static Command CreateListTemplatesCommand()
+    {
+        var verboseOption = CommonOptions.CreateVerboseOption();
+        var stdLibOption = CommonOptions.CreateStdLibPathOption();
+
+        var command = new Command("list-templates", "List available project templates")
+        {
+            verboseOption,
+            stdLibOption
+        };
+
+        command.SetHandler(async (verbose, stdLibPath) =>
+        {
+            var options = new CreateOptions
+            {
+                ProjectName = "", // Not needed for listing
+                Verbose = verbose,
+                StdLibPath = stdLibPath
+            };
+            
+            Environment.ExitCode = await HandleListTemplatesCommand(options);
+        }, verboseOption, stdLibOption);
 
         return command;
     }
@@ -892,20 +942,114 @@ public class EntryPoint
     {
         try
         {
-            var projectManager = new uhigh.Net.ProjectSystem.ProjectManager(options.Verbose, options.StdLibPath);
-            var success = await projectManager.CreateProject(
-                options.ProjectName,
-                options.Directory,
-                options.Description,
-                options.Author,
-                options.OutputType,
-                options.TargetFramework);
 
+            var compiler = new Compiler(options.Verbose, options.StdLibPath);
+            
+            // Initialize template discovery
+            var templateDiscovery = new TemplateDiscovery(options.Verbose ? new DiagnosticsReporter(true) : null);
+            
+            // Discover templates from built-in and addons folder
+            var addonsPath = Path.Combine(AppContext.BaseDirectory, "addons", "templates");
+            await templateDiscovery.DiscoverTemplatesAsync(addonsPath);
+            
+            // Get the requested template
+            var template = templateDiscovery.GetTemplate(options.Template);
+            if (template == null)
+            {
+                WriteError($"Template '{options.Template}' not found. Available templates:");
+                foreach (var templateName in templateDiscovery.ListTemplateNames())
+                {
+                    var templateInfo = templateDiscovery.GetTemplate(templateName);
+                    Console.WriteLine($"  {templateName}: {templateInfo?.Description}");
+                }
+                return 1;
+            }
+            
+            // Prepare template parameters
+            var templateParameters = new Dictionary<string, object>();
+            if (!string.IsNullOrEmpty(options.Description))
+                templateParameters["description"] = options.Description;
+            if (!string.IsNullOrEmpty(options.Author))
+                templateParameters["author"] = options.Author;
+            if (!string.IsNullOrEmpty(options.TargetFramework))
+                templateParameters["targetFramework"] = options.TargetFramework;
+            
+            // Create project using template
+            var projectDir = options.Directory ?? Environment.CurrentDirectory;
+            var fullProjectDir = Path.Combine(projectDir, options.ProjectName);
+            
+            var diagnostics = new DiagnosticsReporter(options.Verbose);
+            var success = await template.CreateProjectAsync(options.ProjectName, fullProjectDir, templateParameters, diagnostics);
+            
+            if (success)
+            {
+                Console.WriteLine($"Created project '{options.ProjectName}' using template '{template.Name}'");
+                Console.WriteLine($"Project directory: {fullProjectDir}");
+                Console.WriteLine($"Project file: {Path.Combine(fullProjectDir, $"{options.ProjectName}.uhighproj")}");
+                Console.WriteLine($"Template: {template.Description}");
+                Console.WriteLine($"Output type: {template.OutputType}");
+            }
+            
             return success ? 0 : 1;
         }
         catch (Exception ex)
         {
             WriteError($"Project creation failed: {ex.Message}");
+            return 1;
+        }
+    }
+
+    /// <summary>
+    /// Handles the list templates command
+    /// </summary>
+    /// <param name="options">The options</param>
+    /// <returns>A task containing the int</returns>
+    private static async Task<int> HandleListTemplatesCommand(CreateOptions options)
+    {
+        try
+        {
+            // Initialize template discovery
+            var templateDiscovery = new TemplateDiscovery(options.Verbose ? new DiagnosticsReporter(true) : null);
+            
+            // Discover templates from built-in and addons folder
+            var addonsPath = Path.Combine(AppContext.BaseDirectory, "addons", "templates");
+            await templateDiscovery.DiscoverTemplatesAsync(addonsPath);
+            
+            Console.WriteLine("Available μHigh Project Templates:");
+            Console.WriteLine("====================================");
+            
+            var templates = templateDiscovery.Templates.Values.OrderBy(t => t.Name);
+            foreach (var template in templates)
+            {
+                Console.WriteLine();
+                Console.WriteLine($"Template: {template.Name}");
+                Console.WriteLine($"  Description: {template.Description}");
+                Console.WriteLine($"  Output Type: {template.OutputType}");
+                Console.WriteLine($"  Version: {template.Version}");
+                Console.WriteLine($"  Author: {template.Author}");
+                
+                var parameters = template.GetParameters();
+                if (parameters.Any())
+                {
+                    Console.WriteLine("  Parameters:");
+                    foreach (var param in parameters)
+                    {
+                        Console.WriteLine($"    --{param.Key}: {param.Value}");
+                    }
+                }
+            }
+            
+            Console.WriteLine();
+            Console.WriteLine("Usage:");
+            Console.WriteLine("  uhigh create MyProject --template console");
+            Console.WriteLine("  uhigh create MyLibrary --template classlib");
+            Console.WriteLine("  uhigh create MyTests --template test");
+            
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            WriteError($"Failed to list templates: {ex.Message}");
             return 1;
         }
     }

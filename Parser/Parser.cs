@@ -1274,16 +1274,25 @@ namespace uhigh.Net.Parser
                 returnType = ParseTypeName();
             }
 
-            Consume(TokenType.LeftBrace, "Expected '{' before function body");
             var body = new List<Statement>();
-
-            while (!Check(TokenType.RightBrace) && !IsAtEnd())
+            
+            // Check if this is an external function (no body expected)
+            // The attributes will be set later by the calling code, so we need to be flexible
+            // External functions and interface methods don't require bodies
+            if (Check(TokenType.LeftBrace))
             {
-                var stmt = ParseStatement();
-                if (stmt != null) body.Add(stmt);
-            }
+                // Function has a body
+                Consume(TokenType.LeftBrace, "Expected '{' before function body");
+                
+                while (!Check(TokenType.RightBrace) && !IsAtEnd())
+                {
+                    var stmt = ParseStatement();
+                    if (stmt != null) body.Add(stmt);
+                }
 
-            Consume(TokenType.RightBrace, "Expected '}' after function body");
+                Consume(TokenType.RightBrace, "Expected '}' after function body");
+            }
+            // If no opening brace found, assume this is an external/interface function declaration
 
             return new FunctionDeclaration
             {
@@ -1739,11 +1748,14 @@ namespace uhigh.Net.Parser
             if (Match(TokenType.Increment, TokenType.Decrement))
             {
                 var op = Previous().Type;
-                return new UnaryExpression { Operator = op, Operand = expr };
+                return new UnaryExpression { Operator = op, Operand = expr, IsPostfix = true };
             }
 
-            // Remove the match expression parsing from here - match should only be parsed as statements
-            // The match keyword should be handled in ParseStatement(), not as a postfix operator
+            // Handle match expressions as postfix operators: expr match { ... }
+            if (Match(TokenType.Match))
+            {
+                return ParseMatchExpression(expr);
+            }
 
             return expr;
         }
@@ -2210,7 +2222,32 @@ namespace uhigh.Net.Parser
             }
 
             Consume(TokenType.RightParen, "Expected ')' after arguments");
-
+            
+            // Check if this is a special function call that should create specific expression types
+            if (callee is IdentifierExpression idExpr)
+            {
+                // Handle range function calls: range(10) -> RangeExpression
+                if (string.Equals(idExpr.Name, "range", StringComparison.OrdinalIgnoreCase) && arguments.Count == 1)
+                {
+                    return new RangeExpression
+                    {
+                        Start = new LiteralExpression { Value = 0, Type = TokenType.Number },
+                        End = arguments[0],
+                        IsExclusive = false
+                    };
+                }
+                
+                // Check if this should be a constructor call (identifier starting with capital letter)
+                if (!string.IsNullOrEmpty(idExpr.Name) && char.IsUpper(idExpr.Name[0]))
+                {
+                    return new ConstructorCallExpression 
+                    { 
+                        ClassName = idExpr.Name, 
+                        Arguments = arguments 
+                    };
+                }
+            }
+            
             return new CallExpression { Function = callee, Arguments = arguments };
         }
 

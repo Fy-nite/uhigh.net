@@ -117,6 +117,10 @@ namespace uhigh.Net.Parser
         /// Gets or sets the value of the operand
         /// </summary>
         public Expression Operand { get; set; } = null!;
+        /// <summary>
+        /// Gets or sets whether this is a postfix operation (e.g., i++ vs ++i)
+        /// </summary>
+        public bool IsPostfix { get; set; } = false;
     }
 
     /// <summary>
