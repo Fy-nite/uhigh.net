@@ -1680,20 +1680,9 @@ namespace uhigh.Net.Parser
             }
 
             // Handle match expressions as postfix operators: expr match { ... }
-            // Only allow postfix match if we have a valid expression and the next token after match is '{'
-            if (Check(TokenType.Match))
+            if (Match(TokenType.Match))
             {
-                // Look ahead to see if this is really a postfix match expression
-                var matchTokenIndex = _current;
-                var nextTokenIndex = matchTokenIndex + 1;
-                
-                // For postfix match, the token after 'match' should be '{'
-                if (nextTokenIndex < _tokens.Count && _tokens[nextTokenIndex].Type == TokenType.LeftBrace)
-                {
-                    Advance(); // consume the match token
-                    return ParseMatchExpression(expr);
-                }
-                // Otherwise, don't consume the match token - let statement parsing handle it
+                return ParseMatchExpression(expr);
             }
 
             return expr;
