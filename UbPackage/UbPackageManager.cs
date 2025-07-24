@@ -374,7 +374,43 @@ namespace uhigh.Net.UbPackage
 
                     // Build the project
                     var compiler = new Compiler(true, null); // verbose mode
-                    var success = await compiler.CompileProject(tempProjectPath, outputPath);
+                    
+                    // If no output path specified, place output in same directory as the .ub file
+                    var finalOutputPath = outputPath;
+                    if (string.IsNullOrEmpty(finalOutputPath))
+                    {
+                        var packageDir = Path.GetDirectoryName(Path.GetFullPath(packagePath)) ?? "";
+                        var extension = manifest.OutputType.Equals("Library", StringComparison.OrdinalIgnoreCase) ? ".dll" : ".exe";
+                        finalOutputPath = Path.Combine(packageDir, manifest.Name + extension);
+                    }
+                    
+                    var success = await compiler.CompileProject(tempProjectPath, finalOutputPath);
+                    
+                    // If we defaulted the output path and compilation succeeded, copy from build directory to intended location
+                    if (success && string.IsNullOrEmpty(outputPath))
+                    {
+                        var buildDir = Path.Combine(Path.GetDirectoryName(finalOutputPath)!, "build");
+                        var extension = manifest.OutputType.Equals("Library", StringComparison.OrdinalIgnoreCase) ? ".dll" : ".exe";
+                        var sourceFile = Path.Combine(buildDir, manifest.Name + extension);
+                        
+                        if (File.Exists(sourceFile) && !string.IsNullOrEmpty(finalOutputPath))
+                        {
+                            File.Copy(sourceFile, finalOutputPath, overwrite: true);
+                            
+                            // Also copy the runtime config file for executables
+                            if (manifest.OutputType.Equals("Exe", StringComparison.OrdinalIgnoreCase))
+                            {
+                                var sourceRuntimeConfig = Path.Combine(buildDir, manifest.Name + ".runtimeconfig.json");
+                                var targetRuntimeConfig = Path.ChangeExtension(finalOutputPath, ".runtimeconfig.json");
+                                if (File.Exists(sourceRuntimeConfig))
+                                {
+                                    File.Copy(sourceRuntimeConfig, targetRuntimeConfig, overwrite: true);
+                                }
+                            }
+                            
+                            Console.WriteLine($"Output copied to: {finalOutputPath}");
+                        }
+                    }
 
                     return success;
                 }

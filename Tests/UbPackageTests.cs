@@ -252,5 +252,68 @@ namespace uhigh.Net.Tests
                 }
             }
         }
+
+        [Test]
+        public static async Task TestBuildFromPackageWithoutOutputPlacesFileInSameDirectory()
+        {
+            var tempDir = Path.Combine(Path.GetTempPath(), "uhigh-build-test", Guid.NewGuid().ToString());
+            Directory.CreateDirectory(tempDir);
+
+            try
+            {
+                // Create a simple executable project
+                var projectDir = Path.Combine(tempDir, "project");
+                Directory.CreateDirectory(projectDir);
+
+                var projectPath = Path.Combine(projectDir, "TestExe.uhighproj");
+                var sourceFile = Path.Combine(projectDir, "main.uh");
+
+                var project = new uhighProject
+                {
+                    Name = "TestExe",
+                    Version = "1.0.0",
+                    Description = "Test executable",
+                    OutputType = "Exe",
+                    SourceFiles = new List<string> { "main.uh" }
+                };
+
+                // Create a simple main function
+                var sourceCode = @"func main() {
+    print(""Hello World"");
+}";
+
+                await File.WriteAllTextAsync(sourceFile, sourceCode);
+                var saveSuccess = await uhigh.Net.ProjectFile.SaveAsync(project, projectPath);
+                Assert.IsTrue(saveSuccess, "Project file save should succeed");
+
+                // Create package in a different directory from the project
+                var packageDir = Path.Combine(tempDir, "packages");
+                Directory.CreateDirectory(packageDir);
+                var packagePath = Path.Combine(packageDir, "TestExe.ub");
+
+                var diagnostics = new uhigh.Net.Diagnostics.DiagnosticsReporter();
+                var packageManager = new uhigh.Net.UbPackage.UbPackageManager(diagnostics);
+
+                var packSuccess = await packageManager.PackAsync(projectPath, packagePath);
+                Assert.IsTrue(packSuccess, "Package creation should succeed");
+                Assert.IsTrue(File.Exists(packagePath), "Package file should exist");
+
+                // Now build from package without specifying output
+                var buildSuccess = await packageManager.BuildFromPackageAsync(packagePath);
+                Assert.IsTrue(buildSuccess, "Build from package should succeed");
+
+                // The expected output should be in the same directory as the .ub file
+                var expectedOutputPath = Path.Combine(packageDir, "TestExe.exe");
+                Assert.IsTrue(File.Exists(expectedOutputPath), 
+                    $"Output executable should exist at {expectedOutputPath} when --output is not specified");
+            }
+            finally
+            {
+                if (Directory.Exists(tempDir))
+                {
+                    Directory.Delete(tempDir, true);
+                }
+            }
+        }
     }
 }
