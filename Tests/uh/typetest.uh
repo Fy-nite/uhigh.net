@@ -1,0 +1,24 @@
+namespace TypeTest
+{
+    public class Program
+    {
+        public static func Main(args: string[]): void
+        {
+            var stringMeow = Meow<string>("Hello")
+            var result = stringMeow.GetValue()
+            Console.WriteLine(result)
+        }
+    }
+
+    public class Meow<T> {
+        private field value: T
+
+        public constructor(value: T) {
+            this.value = value
+        }
+
+        public func GetValue(): T {
+            return this.value
+        }
+    }
+}

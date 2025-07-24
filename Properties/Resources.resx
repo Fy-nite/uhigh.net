@@ -1,0 +1,198 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="UH001" xml:space="preserve">
+    <value>UH001 means that the compiler ran into a unexpected token while reading the source file/files. check the contents of your program with the error that was provided for more information.</value>
+  </data>
+  <data name="UH002" xml:space="preserve">
+    <value>UH002 means that the compiler tried to parse a string but didn't find a closing quote on the same line. check the error that was provided for the source file or line that the error came from.</value>
+  </data>
+  <data name="UH003" xml:space="preserve">
+    <value>UH003 means that the compiler tried to and failed to parse a number that ether was used in a variable assignment, if expression/equality operator or as a float value. check the error that was provided for more information.</value>
+  </data>
+  <data name="UH004" xml:space="preserve">
+    <value>UH004 means that the compiler somehow managed to find a unexpected character that was not allowed in the expression that was checked. read the error that was provided for more information.</value>
+  </data>
+  <data name="UH005" xml:space="preserve">
+    <value>UH005 means that something internal with the token handling inside the compiler broke, please check the error for more infomation.</value>
+  </data>
+  <!-- Parser errors -->
+  <data name="UH006" xml:space="preserve">
+    <value>UH006 means that the parser expected an expression but did not find one. Check for missing or misplaced tokens in your code.</value>
+  </data>
+  <data name="UH007" xml:space="preserve">
+    <value>UH007 means that the parser expected a closing parenthesis, bracket, or brace but did not find one. Check for unbalanced or missing delimiters.</value>
+  </data>
+  <data name="UH008" xml:space="preserve">
+    <value>UH008 means that the parser encountered an unexpected end of file. This usually means you have an incomplete statement or block.</value>
+  </data>
+  <data name="UH009" xml:space="preserve">
+    <value>UH009 means that the parser found a duplicate declaration of a variable, function, or class in the same scope.</value>
+  </data>
+  <data name="UH010" xml:space="preserve">
+    <value>UH010 means that the parser encountered an invalid or unsupported syntax construct. Check the documentation for supported language features.</value>
+  </data>
+  <!-- Code generator errors -->
+  <data name="UH011" xml:space="preserve">
+    <value>UH011 means that the code generator could not resolve a type or symbol. This may be due to a missing declaration or an unsupported type.</value>
+  </data>
+  <data name="UH012" xml:space="preserve">
+    <value>UH012 means that the code generator encountered an unsupported operation or expression. This may be a bug or a feature not yet implemented.</value>
+  </data>
+  <data name="UH013" xml:space="preserve">
+    <value>UH013 means that the code generator failed to emit code for a statement or expression. Check for invalid or incomplete constructs.</value>
+  </data>
+  <data name="UH014" xml:space="preserve">
+    <value>UH014 means that the code generator detected a circular dependency or infinite recursion in your code.</value>
+  </data>
+  <!-- General warnings -->
+  <data name="UH015" xml:space="preserve">
+    <value>UH015 is a warning that a variable is declared but never used. Consider removing unused variables to clean up your code.</value>
+  </data>
+  <data name="UH016" xml:space="preserve">
+    <value>UH016 is a warning that a function is declared but never called. Unused functions may indicate dead code.</value>
+  </data>
+  <data name="UH017" xml:space="preserve">
+    <value>UH017 is a warning that a value is assigned but never read. This may indicate a logic error or unnecessary assignment.</value>
+  </data>
+  <data name="UH018" xml:space="preserve">
+    <value>UH018 is a warning that an implicit type conversion may result in data loss or unexpected behavior.</value>
+  </data>
+  <data name="UH019" xml:space="preserve">
+    <value>UH019 is a warning that a deprecated feature or syntax is used. Consider updating your code to use recommended alternatives.</value>
+  </data>
+  <data name="UH020" xml:space="preserve">
+    <value>UH020 means that the compiler detected unreachable code after a return, break, or continue statement.</value>
+  </data>
+  <data name="UH021" xml:space="preserve">
+    <value>UH021 means that the parser found an invalid identifier name. Identifiers must start with a letter or underscore and contain only letters, digits, or underscores.</value>
+  </data>
+  <data name="UH022" xml:space="preserve">
+    <value>UH022 means that the code generator encountered an attempt to divide by zero, which is not allowed.</value>
+  </data>
+  <data name="UH023" xml:space="preserve">
+    <value>UH023 means that the compiler detected a possible null reference usage. Ensure the variable is initialized before use.</value>
+  </data>
+  <data name="UH024" xml:space="preserve">
+    <value>UH024 means that the parser found a function or method call with the wrong number of arguments.</value>
+  </data>
+  <data name="UH025" xml:space="preserve">
+    <value>UH025 means that the compiler encountered an unsupported escape sequence in a string literal.</value>
+  </data>
+</root>

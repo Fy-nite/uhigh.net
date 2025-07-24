@@ -202,6 +202,19 @@ var text = string(456)
 var decimal = float(42)
 ```
 
+### Generic Classes
+
+You can define classes with generic type parameters:
+
+```go
+class Box<T> {
+    var value: T
+}
+
+var intBox = Box<int>()
+var strBox = Box<string>()
+```
+
 ### Functions
 
 Define reusable code blocks:
