@@ -15,7 +15,8 @@
 web/
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
-
+*.exe
+build/
 # Mono auto generated files
 mono_crash.*
 
