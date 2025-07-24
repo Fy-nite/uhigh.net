@@ -1,0 +1,19 @@
+error[UH100]: Parse error: Expected '{' after match value, found 'test'
+  --> 3:7
+
+Tokens:
+0: Var = 'var' at 2:1
+1: Identifier = 'test' at 2:5
+2: Assign = '=' at 2:10
+3: String = 'test' at 2:12
+4: Match = 'match' at 3:1
+5: Identifier = 'test' at 3:7
+6: LeftBrace = '{' at 3:12
+7: String = 'test' at 4:5
+8: Arrow = '=>' at 4:12
+9: Identifier = 'Console.WriteLine' at 4:15
+10: LeftParen = '(' at 4:32
+11: String = 'found' at 4:33
+12: RightParen = ')' at 4:40
+13: RightBrace = '}' at 5:1
+14: EOF = '' at 5:2
