@@ -53,7 +53,7 @@ namespace uhigh.Net.Templates.BuiltIn
                         new PackageReference
                         {
                             Name = "uhigh-stdlib",
-                            Version = "1.1.3",
+                            Version = "1.0.0",
                             
                         }
                     },
@@ -96,10 +96,10 @@ namespace {projectName}
         {{
             IO.Print(""Hello, μHigh! Welcome to {projectName}!"");
             
-            if args.Length > 0
+            if (args.Length > 0)
             {{
                 IO.Print(""Arguments received:"");
-                for var i = 0; i < args.Length; i++
+                for (var i = 0; i < args.Length; i++)
                 {{
                     IO.Print(""  ["" + i + ""]: "" + args[i]);
                 }}
