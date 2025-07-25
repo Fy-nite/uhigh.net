@@ -1167,9 +1167,6 @@ public class EntryPoint
                 return success ? 0 : 1;
             }
 
-
-            return success ? 0 : 1;
-
         }
         catch (Exception ex)
         {
