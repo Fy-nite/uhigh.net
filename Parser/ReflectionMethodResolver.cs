@@ -1,8 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using uhigh.Net.Diagnostics;
+using uhigh.Net.Lexer;
 
 namespace uhigh.Net.Parser
 {
@@ -80,9 +78,9 @@ namespace uhigh.Net.Parser
 
             // Load current assembly types
             LoadAssembly(Assembly.GetExecutingAssembly());
-            
+
             // Try to load uhigh.StdLib assembly
-            try 
+            try
             {
                 var stdLibAssembly = Assembly.LoadFrom("uhigh.StdLib.dll");
                 LoadAssembly(stdLibAssembly);
@@ -106,9 +104,9 @@ namespace uhigh.Net.Parser
         public void LoadAssembly(Assembly assembly)
         {
             if (_loadedAssemblies.Contains(assembly)) return;
-            
+
             _loadedAssemblies.Add(assembly);
-            
+
             try
             {
                 foreach (var type in assembly.GetTypes().Where(t => t.IsPublic))
@@ -138,7 +136,7 @@ namespace uhigh.Net.Parser
         public bool TryResolveMethod(string typeName, string methodName, List<Expression> arguments, out MethodInfo? method)
         {
             method = null;
-            
+
             if (!_knownTypes.TryGetValue(typeName, out var type))
             {
                 return false;
@@ -172,7 +170,7 @@ namespace uhigh.Net.Parser
             {
                 var parameters = method.GetParameters();
                 var score = CalculateMatchScore(parameters, arguments);
-                
+
                 if (score >= 0) // Valid match
                 {
                     candidates.Add((method, score));
@@ -198,14 +196,14 @@ namespace uhigh.Net.Parser
                 {
                     return arguments.Count >= parameters.Length - 1 ? 50 : -1; // Lower score for params
                 }
-                
+
                 // Check for optional parameters
                 var requiredParams = parameters.Count(p => !p.HasDefaultValue);
                 if (arguments.Count < requiredParams || arguments.Count > parameters.Length)
                 {
                     return -1; // Invalid match
                 }
-                
+
                 return 75; // Lower score for optional parameters
             }
 
@@ -249,9 +247,51 @@ namespace uhigh.Net.Parser
                 LiteralExpression lit => InferLiteralType(lit),
                 IdentifierExpression => typeof(object), // Unknown at compile time
                 BinaryExpression => typeof(object), // Would need more analysis
+                UnaryExpression unaryExpr => InferUnaryExpressionType(unaryExpr),
                 CallExpression => typeof(object), // Would need return type analysis
+                MatchExpression => typeof(object), // Type depends on arms
+                LambdaExpression => typeof(Delegate), // Function type
+                ArrayExpression => typeof(System.Collections.IList), // Array type
                 _ => typeof(object)
             };
+        }
+
+        /// <summary>
+        /// Infers the type of a unary expression based on its operator
+        /// </summary>
+        /// <param name="unaryExpr">The unary expression</param>
+        /// <returns>The inferred type</returns>
+        private Type InferUnaryExpressionType(UnaryExpression unaryExpr)
+        {
+            return unaryExpr.Operator switch
+            {
+                TokenType.Not => typeof(bool),
+                TokenType.Minus => InferNumericType(unaryExpr.Operand),
+                TokenType.Increment => InferNumericType(unaryExpr.Operand),
+                TokenType.Decrement => InferNumericType(unaryExpr.Operand),
+                _ => typeof(object)
+            };
+        }
+
+        /// <summary>
+        /// Infers the numeric type of an expression
+        /// </summary>
+        /// <param name="expression">The expression</param>
+        /// <returns>The numeric type</returns>
+        private Type InferNumericType(Expression expression)
+        {
+            var type = InferExpressionType(expression);
+            
+            // If we can determine it's a numeric type, return that
+            if (type == typeof(int) || type == typeof(long) || 
+                type == typeof(float) || type == typeof(double) ||
+                type == typeof(byte) || type == typeof(short))
+            {
+                return type;
+            }
+            
+            // Default to int for numeric operations
+            return typeof(int);
         }
 
         /// <summary>
@@ -273,7 +313,7 @@ namespace uhigh.Net.Parser
         private bool TypesMatch(Type paramType, Type argType)
         {
             if (paramType == argType) return true;
-            
+
             // Handle nullable types
             if (IsNullableType(paramType))
             {
@@ -293,7 +333,7 @@ namespace uhigh.Net.Parser
         private bool IsImplicitlyConvertible(Type from, Type to)
         {
             if (from == to) return true;
-            
+
             // Check for built-in implicit conversions
             var conversions = new Dictionary<Type, Type[]>
             {
@@ -353,13 +393,13 @@ namespace uhigh.Net.Parser
         public bool TryResolveStaticMethod(string qualifiedName, List<Expression> arguments, out MethodInfo? method)
         {
             method = null;
-            
+
             var lastDot = qualifiedName.LastIndexOf('.');
             if (lastDot == -1) return false;
-            
+
             var typeName = qualifiedName.Substring(0, lastDot);
             var methodName = qualifiedName.Substring(lastDot + 1);
-            
+
             return TryResolveMethod(typeName, methodName, arguments, out method);
         }
 

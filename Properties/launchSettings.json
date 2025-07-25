@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "uhigh": {
+      "commandName": "Project"
+    },
+    "lsp test": {
+      "commandName": "Project",
+      "commandLineArgs": "lsp"
+    }
+  }
+}

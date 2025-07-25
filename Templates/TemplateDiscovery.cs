@@ -169,9 +169,18 @@ namespace uhigh.Net.Templates
                     }
                 }
             }
+            catch (ReflectionTypeLoadException ex)
+            {
+                var loaderExceptions = string.Join("; ", ex.LoaderExceptions.Select(e => e.Message));
+                _diagnostics?.ReportWarning($"Failed to load types from assembly {assemblyPath}: {loaderExceptions}");
+            }
+            catch (FileLoadException ex)
+            {
+                _diagnostics?.ReportWarning($"Failed to load assembly file {assemblyPath}: {ex.Message}");
+            }
             catch (Exception ex)
             {
-                _diagnostics?.ReportWarning($"Failed to load assembly {assemblyPath}: {ex.Message}");
+                _diagnostics?.ReportWarning($"Unexpected error while loading assembly {assemblyPath}: {ex.Message}");
             }
         }
         

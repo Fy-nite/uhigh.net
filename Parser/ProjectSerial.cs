@@ -1,5 +1,4 @@
 using System.Xml.Serialization;
-using System.Collections.Generic; // Add this using directive
 
 namespace uhigh.Net
 {
@@ -85,6 +84,18 @@ namespace uhigh.Net
         public bool Nullable { get; set; } = true;
 
         /// <summary>
+        /// Gets or sets the value of the standard library version
+        /// </summary>
+        [XmlElement("StdLibVersion")]
+        public string StdLibVersion { get; set; } = "1.0.0";
+
+        /// <summary>
+        /// Gets or sets the backend (target language)
+        /// </summary>
+        [XmlElement("Backend")]
+        public string Backend { get; set; } = "csharp";
+
+        /// <summary>
         /// Creates the default using the specified project name
         /// </summary>
         /// <param name="projectName">The project name</param>
@@ -100,7 +111,8 @@ namespace uhigh.Net
                 SourceFiles = new List<string> { "main.uh" }, // This will be resolved relative to project directory
                 RootNamespace = projectName,
                 ClassName = "Program",
-                Nullable = true
+                Nullable = true,
+                Backend = "csharp"
             };
         }
     }
@@ -121,37 +133,37 @@ namespace uhigh.Net
         /// </summary>
         [XmlAttribute("Version")]
         public string Version { get; set; } = "";
-        
+
         /// <summary>
         /// Gets or sets the value of the required for
         /// </summary>
         [XmlAttribute("RequiredFor")]
         public string? RequiredFor { get; set; } // New: track what feature requires this package
-        
+
         /// <summary>
         /// Gets or sets the value of the source
         /// </summary>
         [XmlAttribute("Source")]
         public string? Source { get; set; } // New: NuGet source URL
-        
+
         /// <summary>
         /// Gets or sets the value of the include assets
         /// </summary>
         [XmlAttribute("IncludeAssets")]
         public string? IncludeAssets { get; set; } // New: What assets to include (compile, runtime, build, etc.)
-        
+
         /// <summary>
         /// Gets or sets the value of the exclude assets
         /// </summary>
         [XmlAttribute("ExcludeAssets")]
         public string? ExcludeAssets { get; set; } // New: What assets to exclude
-        
+
         /// <summary>
         /// Gets or sets the value of the private assets
         /// </summary>
         [XmlAttribute("PrivateAssets")]
         public string? PrivateAssets { get; set; } // New: Private assets
-        
+
         /// <summary>
         /// Gets or sets the value of the compile only
         /// </summary>
@@ -175,7 +187,7 @@ namespace uhigh.Net
         /// </summary>
         [XmlAttribute("Value")]
         public string Value { get; set; } = "";
-        
+
         /// <summary>
         /// Gets or sets the value of the category
         /// </summary>

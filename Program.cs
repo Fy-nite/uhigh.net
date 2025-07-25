@@ -1,3 +1,5 @@
+using System.CommandLine;
+using System.CommandLine.Parsing;
 using uhigh.Net;
 using uhigh.Net.CommandLine;
 using uhigh.Net.UbPackage;
@@ -6,6 +8,7 @@ using uhigh.Net.Diagnostics;
 using System.CommandLine;
 using System.CommandLine.Parsing;
 using System.CommandLine.Invocation;
+
 
 /// <summary>
 /// The entry point class
@@ -19,7 +22,7 @@ public class EntryPoint
     public static async Task<int> Main(string[] args)
     {
         // Handle the case where user provides a file directly without a verb
-        if (args.Length > 0 && !args[0].StartsWith("-") && 
+        if (args.Length > 0 && !args[0].StartsWith("-") &&
             (args[0].EndsWith(".uh") || args[0].EndsWith(".uhigh")) &&
             !IsKnownVerb(args[0]))
         {
@@ -58,6 +61,7 @@ public class EntryPoint
         rootCommand.AddCommand(CreateLspCommand());
         rootCommand.AddCommand(CreateTestCommand());
         rootCommand.AddCommand(CreateReplCommand());
+
         
         // Add .ub package commands
         rootCommand.AddCommand(CreatePackCommand());
@@ -65,6 +69,9 @@ public class EntryPoint
         rootCommand.AddCommand(CreateInstallUbPackageCommand());
         rootCommand.AddCommand(CreateListUbPackagesCommand());
         rootCommand.AddCommand(CreateBuildFromPackageCommand());
+
+        rootCommand.AddCommand(CreateListTargetsCommand());
+
 
         return rootCommand;
     }
@@ -80,6 +87,7 @@ public class EntryPoint
         var saveCsOption = CommonOptions.CreateSaveCSharpOption();
         var outputOption = new Option<string?>("--output", "Output executable file path");
         var runInMemoryOption = new Option<bool>("--run", "Run the compiled code in memory");
+        var targetOption = new Option<string>("--target", () => "csharp", "Code generation target (e.g. csharp, javascript)");
 
         var command = new Command("compile", "Compile a μHigh source file")
         {
@@ -88,10 +96,11 @@ public class EntryPoint
             stdLibOption,
             saveCsOption,
             outputOption,
-            runInMemoryOption
+            runInMemoryOption,
+            targetOption
         };
 
-        command.SetHandler(async (sourceFile, verbose, stdLibPath, saveCsTo, output, runInMemory) =>
+        command.SetHandler(async (sourceFile, verbose, stdLibPath, saveCsTo, output, runInMemory, target) =>
         {
             var options = new CompileOptions
             {
@@ -100,10 +109,11 @@ public class EntryPoint
                 StdLibPath = stdLibPath,
                 SaveCSharpTo = saveCsTo,
                 OutputFile = output,
-                RunInMemory = runInMemory
+                RunInMemory = runInMemory,
+                Target = target
             };
             Environment.ExitCode = await HandleCompileCommand(options);
-        }, sourceFileArg, verboseOption, stdLibOption, saveCsOption, outputOption, runInMemoryOption);
+        }, sourceFileArg, verboseOption, stdLibOption, saveCsOption, outputOption, runInMemoryOption, targetOption);
 
         return command;
     }
@@ -218,9 +228,29 @@ public class EntryPoint
 
         command.SetHandler(async (projectFile, verbose, stdLibPath, saveCsTo, output) =>
         {
+            // If projectFile is null, try to find one in current directory
+            if (string.IsNullOrEmpty(projectFile))
+            {
+                try
+                {
+                    projectFile = CommonOptions.FindProjectFile();
+                }
+                catch (Exception ex)
+                {
+                    WriteError(ex.Message);
+                    Environment.ExitCode = 1;
+                    return;
+                }
+                if (string.IsNullOrEmpty(projectFile))
+                {
+                    WriteError("No .uhighproj file found in current directory.");
+                    Environment.ExitCode = 1;
+                    return;
+                }
+            }
             var options = new BuildOptions
             {
-                ProjectFile = projectFile,
+                ProjectFile = projectFile!,
                 Verbose = verbose,
                 StdLibPath = stdLibPath,
                 SaveCSharpTo = saveCsTo,
@@ -230,6 +260,13 @@ public class EntryPoint
         }, projectFileArg, verboseOption, stdLibOption, saveCsOption, outputOption);
 
         return command;
+    }
+
+    private static void WriteError(string message)
+    {
+        Console.ForegroundColor = ConsoleColor.Red;
+        Console.WriteLine($"Error: {message}");
+        Console.ResetColor();
     }
 
     /// <summary>
@@ -252,9 +289,28 @@ public class EntryPoint
 
         command.SetHandler(async (projectFile, verbose, stdLibPath, saveCsTo) =>
         {
+            if (string.IsNullOrEmpty(projectFile))
+            {
+                try
+                {
+                    projectFile = CommonOptions.FindProjectFile();
+                }
+                catch (Exception ex)
+                {
+                    WriteError(ex.Message);
+                    Environment.ExitCode = 1;
+                    return;
+                }
+                if (string.IsNullOrEmpty(projectFile))
+                {
+                    WriteError("No .uhighproj file found in current directory.");
+                    Environment.ExitCode = 1;
+                    return;
+                }
+            }
             var options = new RunOptions
             {
-                ProjectFile = projectFile,
+                ProjectFile = projectFile!,
                 Verbose = verbose,
                 StdLibPath = stdLibPath,
                 SaveCSharpTo = saveCsTo
@@ -614,6 +670,7 @@ public class EntryPoint
     }
 
     /// <summary>
+
     /// Creates the pack command
     /// </summary>
     private static Command CreatePackCommand()
@@ -774,6 +831,20 @@ public class EntryPoint
             };
             Environment.ExitCode = await HandleBuildFromPackageCommand(options);
         }, packageFileArg, verboseOption, stdLibOption, outputOption);
+        return command;
+    }
+
+
+    /// Creates the list-targets command
+    /// </summary>
+    private static Command CreateListTargetsCommand()
+    {
+        var command = new Command("list-targets", "List available code generation targets");
+        command.SetHandler(() =>
+        {
+            var compiler = new Compiler();
+            compiler.ListAvailableTargets();
+        });
 
         return command;
     }
@@ -785,11 +856,13 @@ public class EntryPoint
     /// <returns>The bool</returns>
     private static bool IsKnownVerb(string arg)
     {
+
         var knownVerbs = new[] { 
             "compile", "create", "build", "run", "info", "add-file", 
             "add-package", "install-packages", "search-packages", 
             "list-packages", "restore-packages", "ast", "lsp", "test", "repl",
             "pack", "unpack", "install-ub-package", "list-ub-packages", "build-from-package"
+
         };
         return knownVerbs.Contains(arg.ToLower());
     }
@@ -803,7 +876,7 @@ public class EntryPoint
     {
         try
         {
-            var compiler = new Compiler(options.Verbose, options.StdLibPath);
+            var compiler = new Compiler(options.Verbose, options.StdLibPath, options.Target);
             bool success;
 
             if (!File.Exists(options.SourceFile))
@@ -812,6 +885,28 @@ public class EntryPoint
                 return 1;
             }
 
+            // If target is not csharp, use modular backend
+            if (!string.IsNullOrEmpty(options.Target) && options.Target.ToLower() != "csharp")
+            {
+                var source = await File.ReadAllTextAsync(options.SourceFile);
+                var diagnostics = new uhigh.Net.Diagnostics.DiagnosticsReporter(options.Verbose, options.SourceFile);
+                var code = compiler.CompileToTarget(source, options.Target, diagnostics);
+
+                var outputFile = options.OutputFile;
+                if (string.IsNullOrEmpty(outputFile))
+                {
+                    var generator = uhigh.Net.CodeGen.CodeGeneratorRegistry.GetGenerator(options.Target);
+                    var ext = generator?.FileExtension ?? ".txt";
+                    outputFile = Path.ChangeExtension(options.SourceFile, ext);
+                }
+
+                await File.WriteAllTextAsync(outputFile, code);
+                Console.WriteLine($"Generated {options.Target} code: {outputFile}");
+                diagnostics.PrintSummary();
+                return diagnostics.HasErrors ? 1 : 0;
+            }
+
+            // Default: C# backend
             if (!string.IsNullOrEmpty(options.SaveCSharpTo))
             {
                 success = await compiler.SaveCSharpCode(options.SourceFile, options.SaveCSharpTo);
@@ -847,6 +942,7 @@ public class EntryPoint
     {
         try
         {
+
             var compiler = new Compiler(options.Verbose, options.StdLibPath);
             
             // Initialize template discovery
@@ -989,7 +1085,7 @@ public class EntryPoint
             {
                 success = await compiler.CompileProject(options.ProjectFile, options.OutputFile);
             }
-            
+
             return success ? 0 : 1;
         }
         catch (Exception ex)
@@ -1070,6 +1166,10 @@ public class EntryPoint
                 
                 return success ? 0 : 1;
             }
+
+
+            return success ? 0 : 1;
+
         }
         catch (Exception ex)
         {
@@ -1122,7 +1222,7 @@ public class EntryPoint
     {
         try
         {
-            var compiler = new Compiler(options.Verbose, options.StdLibPath);
+            var projectManager = new uhigh.Net.ProjectSystem.ProjectManager(options.Verbose, options.StdLibPath);
 
             if (!File.Exists(options.ProjectFile))
             {
@@ -1130,7 +1230,7 @@ public class EntryPoint
                 return 1;
             }
 
-            var success = await compiler.ListProjectInfo(options.ProjectFile);
+            var success = await projectManager.ListProjectInfo(options.ProjectFile);
             return success ? 0 : 1;
         }
         catch (Exception ex)
@@ -1149,7 +1249,7 @@ public class EntryPoint
     {
         try
         {
-            var compiler = new Compiler(options.Verbose, options.StdLibPath);
+            var projectManager = new uhigh.Net.ProjectSystem.ProjectManager(options.Verbose, options.StdLibPath);
 
             if (!File.Exists(options.ProjectFile))
             {
@@ -1157,7 +1257,7 @@ public class EntryPoint
                 return 1;
             }
 
-            var success = await compiler.AddSourceFileToProject(options.ProjectFile, options.SourceFile, options.CreateFile);
+            var success = await projectManager.AddSourceFileToProject(options.ProjectFile, options.SourceFile, options.CreateFile);
             return success ? 0 : 1;
         }
         catch (Exception ex)
@@ -1176,7 +1276,7 @@ public class EntryPoint
     {
         try
         {
-            var compiler = new Compiler(options.Verbose, options.StdLibPath);
+            var projectManager = new uhigh.Net.ProjectSystem.ProjectManager(options.Verbose, options.StdLibPath);
 
             if (!File.Exists(options.ProjectFile))
             {
@@ -1184,7 +1284,7 @@ public class EntryPoint
                 return 1;
             }
 
-            var success = await compiler.AddPackageToProject(options.ProjectFile, options.PackageName, options.Version!);
+            var success = await projectManager.AddPackageToProject(options.ProjectFile, options.PackageName, options.Version!);
             return success ? 0 : 1;
         }
         catch (Exception ex)
@@ -1204,7 +1304,7 @@ public class EntryPoint
         try
         {
             Console.WriteLine($"Installing packages for project: {options.ProjectFile}");
-            
+
             var project = await uhigh.Net.ProjectFile.LoadAsync(options.ProjectFile);
             if (project == null)
             {
@@ -1215,7 +1315,7 @@ public class EntryPoint
             var projectDir = Path.GetDirectoryName(options.ProjectFile) ?? "";
             var nugetManager = new uhigh.Net.NuGet.NuGetManager();
             var success = await nugetManager.RestorePackagesAsync(project, projectDir, force: true);
-            
+
             if (success)
             {
                 Console.WriteLine("All packages installed successfully");
@@ -1244,16 +1344,16 @@ public class EntryPoint
         try
         {
             Console.WriteLine($"Searching for packages: {options.SearchTerm}");
-            
+
             var nugetManager = new uhigh.Net.NuGet.NuGetManager();
             var packages = await nugetManager.SearchPackagesAsync(options.SearchTerm, options.Take);
-            
+
             if (packages.Count == 0)
             {
                 Console.WriteLine("No packages found");
                 return 0;
             }
-            
+
             Console.WriteLine($"Found {packages.Count} packages:");
             foreach (var package in packages)
             {
@@ -1264,7 +1364,7 @@ public class EntryPoint
                 }
                 Console.WriteLine();
             }
-            
+
             return 0;
         }
         catch (Exception ex)
@@ -1289,19 +1389,19 @@ public class EntryPoint
                 WriteError($"Project file '{options.ProjectFile}' not found or invalid");
                 return 1;
             }
-            
+
             if (project.Dependencies.Count == 0)
             {
                 Console.WriteLine("No packages found in project");
                 return 0;
             }
-            
+
             Console.WriteLine($"Packages in {project.Name}:");
             foreach (var dep in project.Dependencies)
             {
                 Console.WriteLine($"  {dep.Name} v{dep.Version}");
             }
-            
+
             return 0;
         }
         catch (Exception ex)
@@ -1326,11 +1426,11 @@ public class EntryPoint
                 WriteError($"Project file '{options.ProjectFile}' not found or invalid");
                 return 1;
             }
-            
+
             var projectDir = Path.GetDirectoryName(options.ProjectFile) ?? "";
             var nugetManager = new uhigh.Net.NuGet.NuGetManager();
             var success = await nugetManager.RestorePackagesAsync(project, projectDir, options.Force);
-            
+
             if (success)
             {
                 Console.WriteLine("Packages restored successfully");
@@ -1350,7 +1450,7 @@ public class EntryPoint
     }
 
     /// <summary>
-    /// Handles the ast command using the specified options
+    /// Creates the ast command using the specified options
     /// </summary>
     /// <param name="options">The options</param>
     /// <returns>A task containing the int</returns>
@@ -1377,7 +1477,7 @@ public class EntryPoint
     private static async Task<int> HandleLspCommand(LspOptions options)
     {
         // For now, redirect to the simple LSP test
-        await SimpleLSPTest.TestMain(new[] { "simple-lsp" });
+        await UhighLanguageServer.srv.StartServerAsync();
         return 0;
     }
 
@@ -1393,14 +1493,15 @@ public class EntryPoint
             Console.WriteLine("Running μHigh Tests...");
             Console.WriteLine();
             List<string> skip = new();
-            if (options.SkipFile != null) {
+            if (options.SkipFile != null)
+            {
                 using StreamReader reader = new(options.SkipFile);
-                while (!reader.EndOfStream) {string? line = reader.ReadLine(); if (line != null) {skip.Add(line.Trim());}}
+                while (!reader.EndOfStream) { string? line = reader.ReadLine(); if (line != null) { skip.Add(line.Trim()); } }
             }
-            
+
             var testSuites = uhigh.Net.Testing.TestRunner.RunAllTests(skip);
             uhigh.Net.Testing.TestRunner.PrintResults(testSuites);
-            
+
             var totalFailed = testSuites.Sum(s => s.Counts.Failed);
             return totalFailed == 0 ? 0 : 1;
         }
@@ -1421,12 +1522,12 @@ public class EntryPoint
         try
         {
             Console.WriteLine("Starting μHigh REPL...");
-            
+
             var repl = new uhigh.Net.Repl.ReplSession(
                 verboseMode: options.Verbose,
                 stdLibPath: options.StdLibPath,
                 saveCSharpTo: options.SaveCSharpTo);
-            
+
             await repl.StartAsync();
             return 0;
         }
@@ -1440,6 +1541,7 @@ public class EntryPoint
             return 1;
         }
     }
+
 
     /// <summary>
     /// Handles the pack command using the specified options
@@ -1642,14 +1744,5 @@ public class EntryPoint
         return 1;
     }
 
-    /// <summary>
-    /// Writes the error using the specified message
-    /// </summary>
-    /// <param name="message">The message</param>
-    private static void WriteError(string message)
-    {
-        Console.ForegroundColor = ConsoleColor.Red;
-        Console.WriteLine(message);
-        Console.ResetColor();
-    }
 }
+

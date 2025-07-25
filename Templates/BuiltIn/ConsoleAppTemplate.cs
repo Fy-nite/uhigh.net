@@ -48,6 +48,15 @@ namespace uhigh.Net.Templates.BuiltIn
                     OutputType = OutputType,
                     SourceFiles = new List<string> { "main.uh" },
                     RootNamespace = projectName,
+                    Dependencies = new List<PackageReference>
+                    {
+                        new PackageReference
+                        {
+                            Name = "uhigh-stdlib",
+                            Version = "1.1.3",
+                            
+                        }
+                    },
                     Nullable = true
                 };
                 
@@ -87,10 +96,10 @@ namespace {projectName}
         {{
             IO.Print(""Hello, μHigh! Welcome to {projectName}!"");
             
-            if (args.Length > 0)
+            if args.Length > 0
             {{
                 IO.Print(""Arguments received:"");
-                for (var i = 0; i < args.Length; i++)
+                for var i = 0; i < args.Length; i++
                 {{
                     IO.Print(""  ["" + i + ""]: "" + args[i]);
                 }}

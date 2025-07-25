@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Text;
 using uhigh.Net.Diagnostics;
+using System.Formats.Tar; // Add this for TAR support
 
 namespace uhigh.Net.UbPackage
 {
@@ -22,7 +23,7 @@ namespace uhigh.Net.UbPackage
         }
 
         /// <summary>
-        /// Creates a .ub package from a μHigh project
+        /// Creates a .ub package from a μHigh project using tar.gz compression
         /// </summary>
         /// <param name="projectPath">Path to the .uhighproj file</param>
         /// <param name="outputPath">Path where to create the .ub file</param>
@@ -60,40 +61,48 @@ namespace uhigh.Net.UbPackage
                     Directory.CreateDirectory(outputDir);
                 }
 
-                // Create the .ub package
-                using var archive = ZipFile.Open(outputPath, ZipArchiveMode.Create);
-                
-                // Add manifest
-                var manifestEntry = archive.CreateEntry(ManifestFileName);
-                using (var manifestStream = manifestEntry.Open())
-                using (var writer = new StreamWriter(manifestStream, Encoding.UTF8))
+                // Create tar archive in memory
+                using var tarStream = new MemoryStream();
+                using (var tarWriter = new TarWriter(tarStream, leaveOpen: true))
                 {
-                    await writer.WriteAsync(manifest.ToJson());
-                }
-
-                // Add source files
-                foreach (var sourceFile in manifest.SourceFiles)
-                {
-                    var fullSourcePath = Path.IsPathRooted(sourceFile) 
-                        ? sourceFile 
-                        : Path.Combine(projectDir, sourceFile);
-
-                    if (!File.Exists(fullSourcePath))
+                    // Add manifest
+                    var manifestBytes = Encoding.UTF8.GetBytes(manifest.ToJson());
+                    using (var manifestStream = new MemoryStream(manifestBytes))
                     {
-                        _diagnostics?.ReportWarning($"Source file not found: {fullSourcePath}");
-                        continue;
+                        var manifestEntry = new PaxTarEntry(TarEntryType.RegularFile, ManifestFileName)
+                        {
+                            DataStream = manifestStream,
+                            ModificationTime = DateTimeOffset.Now
+                        };
+                        tarWriter.WriteEntry(manifestEntry);
                     }
 
-                    // Use relative path in archive
-                    var archivePath = sourceFile.Replace('\\', '/');
-                    var sourceEntry = archive.CreateEntry(archivePath);
-                    
-                    using var sourceStream = sourceEntry.Open();
-                    using var fileStream = File.OpenRead(fullSourcePath);
-                    await fileStream.CopyToAsync(sourceStream);
+                    // Add source files
+                    foreach (var sourceFile in manifest.SourceFiles)
+                    {
+                        var fullSourcePath = Path.IsPathRooted(sourceFile) 
+                            ? sourceFile 
+                            : Path.Combine(projectDir, sourceFile);
 
-                    _diagnostics?.ReportInfo($"Added source file: {archivePath}");
+                        if (!File.Exists(fullSourcePath))
+                        {
+                            _diagnostics?.ReportWarning($"Source file not found: {fullSourcePath}");
+                            continue;
+                        }
+
+                        // Use relative path in archive
+                        var archivePath = sourceFile.Replace('\\', '/');
+                        tarWriter.WriteEntry(archivePath, fullSourcePath);
+
+                        _diagnostics?.ReportInfo($"Added source file: {archivePath}");
+                    }
                 }
+
+                // Compress tar to gzip
+                tarStream.Position = 0;
+                using var outStream = File.Create(outputPath);
+                using var gzipStream = new GZipStream(outStream, CompressionLevel.Optimal);
+                await tarStream.CopyToAsync(gzipStream);
 
                 _diagnostics?.ReportInfo($"Package created successfully: {outputPath}");
                 return true;
@@ -106,7 +115,7 @@ namespace uhigh.Net.UbPackage
         }
 
         /// <summary>
-        /// Extracts a .ub package to a directory
+        /// Extracts a .ub package (tar.gz) to a directory
         /// </summary>
         /// <param name="packagePath">Path to the .ub file</param>
         /// <param name="extractPath">Directory to extract to</param>
@@ -123,30 +132,31 @@ namespace uhigh.Net.UbPackage
                     return false;
                 }
 
-                // Create extraction directory
                 if (!Directory.Exists(extractPath))
                 {
                     Directory.CreateDirectory(extractPath);
                 }
 
-                using var archive = ZipFile.OpenRead(packagePath);
-                
-                // Extract all files
-                foreach (var entry in archive.Entries)
+                using var fileStream = File.OpenRead(packagePath);
+                using var gzipStream = new GZipStream(fileStream, CompressionMode.Decompress);
+                using var tarReader = new TarReader(gzipStream);
+
+                TarEntry entry;
+                while ((entry = tarReader.GetNextEntry()) != null)
                 {
-                    var destPath = Path.Combine(extractPath, entry.FullName);
+                    var destPath = Path.Combine(extractPath, entry.Name);
                     var destDir = Path.GetDirectoryName(destPath);
-                    
+
                     if (!string.IsNullOrEmpty(destDir) && !Directory.Exists(destDir))
                     {
                         Directory.CreateDirectory(destDir);
                     }
 
-                    using var entryStream = entry.Open();
+                    using var entryStream = entry.DataStream;
                     using var destStream = File.Create(destPath);
                     await entryStream.CopyToAsync(destStream);
 
-                    _diagnostics?.ReportInfo($"Extracted: {entry.FullName}");
+                    _diagnostics?.ReportInfo($"Extracted: {entry.Name}");
                 }
 
                 _diagnostics?.ReportInfo($"Package extracted successfully to: {extractPath}");
@@ -160,7 +170,7 @@ namespace uhigh.Net.UbPackage
         }
 
         /// <summary>
-        /// Reads the manifest from a .ub package
+        /// Reads the manifest from a .ub package (tar.gz)
         /// </summary>
         /// <param name="packagePath">Path to the .ub file</param>
         /// <returns>Package manifest or null if not found/invalid</returns>
@@ -173,20 +183,24 @@ namespace uhigh.Net.UbPackage
                     return null;
                 }
 
-                using var archive = ZipFile.OpenRead(packagePath);
-                var manifestEntry = archive.GetEntry(ManifestFileName);
-                
-                if (manifestEntry == null)
+                using var fileStream = File.OpenRead(packagePath);
+                using var gzipStream = new GZipStream(fileStream, CompressionMode.Decompress);
+                using var tarReader = new TarReader(gzipStream);
+
+                TarEntry entry;
+                while ((entry = tarReader.GetNextEntry()) != null)
                 {
-                    _diagnostics?.ReportError($"Package manifest not found in: {packagePath}");
-                    return null;
+                    if (entry.Name == ManifestFileName)
+                    {
+                        using var manifestStream = entry.DataStream;
+                        using var reader = new StreamReader(manifestStream, Encoding.UTF8);
+                        var manifestJson = await reader.ReadToEndAsync();
+                        return PackageManifest.FromJson(manifestJson);
+                    }
                 }
 
-                using var manifestStream = manifestEntry.Open();
-                using var reader = new StreamReader(manifestStream, Encoding.UTF8);
-                var manifestJson = await reader.ReadToEndAsync();
-
-                return PackageManifest.FromJson(manifestJson);
+                _diagnostics?.ReportError($"Package manifest not found in: {packagePath}");
+                return null;
             }
             catch (Exception ex)
             {

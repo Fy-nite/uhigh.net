@@ -1,9 +1,6 @@
-Using uhigh.StdLib.StdLib
+With uhigh.StdLib.StdLib
 namespace testing
 {
-
-    
-    
     class Program
     {
         [Serializable]
@@ -13,9 +10,6 @@ namespace testing
         static field timestamp: TimestampedEvent<string>
         static field time: Dictionary<string, string>
         static field temptime: Temporal<string>
-
-        
-
         public static func Main(args: string[]): void
         {
             var catt = new Program()
@@ -31,7 +25,6 @@ namespace testing
             time.Add("morning", "8 AM")
             time.Add("afternoon", "12 PM")
             time.Add("evening", "6 PM")
-
             cats.Add("purr")
             cats.Add("meow")
             cats.Add("hiss")
@@ -42,6 +35,7 @@ namespace testing
             {
                 Console.WriteLine("Cat sound: " + c);
             }
+            
             // Iterating through the time dictionary
             // and printing each time of day with its corresponding value
             for var t in time
@@ -83,5 +77,4 @@ namespace testing
             }
         }
     }
-
 }

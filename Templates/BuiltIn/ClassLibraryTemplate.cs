@@ -48,6 +48,15 @@ namespace uhigh.Net.Templates.BuiltIn
                     OutputType = OutputType,
                     SourceFiles = new List<string> { "Library.uh" },
                     RootNamespace = projectName,
+                    Dependencies = new List<PackageReference>
+                    {
+                        new PackageReference
+                        {
+                            Name = "uhigh-stdlib",
+                            Version = "1.1.3",
+                            
+                        }
+                    },
                     Nullable = true
                 };
                 
@@ -127,7 +136,7 @@ namespace {projectName}
         /// <returns>True if valid</returns>
         public static func ValidateData(data: string): bool
         {{
-            return data != null && data.Length > 0;
+            return data != null && data.Length > 0
         }}
         
         /// <summary>
@@ -137,12 +146,12 @@ namespace {projectName}
         /// <returns>Formatted string</returns>
         public static func FormatData(data: string): string
         {{
-            if (!ValidateData(data))
+            if !ValidateData(data)
             {{
                 return ""[Invalid Data]"";
             }}
             
-            return ""[{projectName}] "" + data;
+            return ""[{projectName}] "" + data
         }}
     }}
 }}";

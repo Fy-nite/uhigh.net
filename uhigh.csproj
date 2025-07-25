@@ -1,22 +1,38 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    
+    <Version>1.1.3</Version>
     <!-- Global Tool Configuration -->
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>uhigh</ToolCommandName>
     
     <!-- Package Metadata -->
     <PackageId>uhigh</PackageId>
-    <PackageVersion>1.1.2</PackageVersion>
-    <Authors>charlie-san</Authors>
+    <PackageVersion>1.1.3</PackageVersion>
+    <Authors>charlie-san, Finite</Authors>
     <Description>Micro-High on dotnet</Description>
     <PackageProjectUrl>https://github.com/fy-nite/uhigh.net</PackageProjectUrl>
     <RepositoryUrl>https://github.com/fy-nite/uhigh.net</RepositoryUrl>
+    <Configurations>Debug;Release;debug lsp</Configurations>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <PublishAot>False</PublishAot>
+    <SignAssembly>False</SignAssembly>
+    <Title>Micro-high</Title>
+    <Copyright>C 2025 Charlie-san, all rights reserved</Copyright>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryType>git</RepositoryType>
+    <NeutralLanguage>en-AU</NeutralLanguage>
+    <AssemblyVersion>1.0.0.1</AssemblyVersion>
+    <FileVersion>1.0.0.1</FileVersion>
+    <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
+    <IncludeSymbols>True</IncludeSymbols>
+    <SymbolPackageFormat>symbols.nupkg</SymbolPackageFormat>
+    <PackageLicenseExpression>AGPL-1.0-or-later</PackageLicenseExpression>
+    <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
   </PropertyGroup>
   
   <ItemGroup>
@@ -25,6 +41,47 @@
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="4.7.0" />
     <PackageReference Include="System.Text.Json" Version="9.0.0" />
     <PackageReference Include="System.IO.Compression" Version="4.3.0" />
+    <PackageReference Include="LanguageServerProtocol" Version="7.0.0" />
+
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Compile Update="Diagnostics\Resources\errors.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>errors.resx</DependentUpon>
+    </Compile>
+    <Compile Update="Diagnostics\Resources\Resource1.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resource1.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  
+  <ItemGroup>
+    <EmbeddedResource Update="Diagnostics\Resources\errors.resx">
+      <Generator>PublicResXFileCodeGenerator</Generator>
+      <LastGenOutput>errors.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <EmbeddedResource Update="Diagnostics\Resources\Resource1.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resource1.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+  
+  <ItemGroup>
+    <None Update="README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+  
+  <ItemGroup>
+    <EditorConfigFiles Remove="D:\uhigh.net\Properties\.editorconfig" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <None Include="D:\uhigh.net\Properties\.editorconfig" />
   </ItemGroup>
 
 </Project>
