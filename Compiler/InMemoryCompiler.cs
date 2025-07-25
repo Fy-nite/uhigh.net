@@ -90,7 +90,7 @@ namespace uhigh.Net.CodeGen
 
             var references = new List<MetadataReference>();
 
-            // Use only the basic, compatible references
+            // Use only the basic, compatible references from the target framework
             references.AddRange(new[]
             {
                 MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
@@ -99,19 +99,21 @@ namespace uhigh.Net.CodeGen
                 MetadataReference.CreateFromFile(typeof(System.Collections.IEnumerable).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(System.Collections.Generic.List<>).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(System.Linq.Enumerable).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(InMemoryCompiler).Assembly.Location),
+                // Note: Removed InMemoryCompiler assembly reference to avoid version conflicts
             });
 
-            // Add μHigh compiler assembly (uhigh.dll) if present
-            var uhighDllPath = Path.Combine(AppContext.BaseDirectory, "uhigh.dll");
-            if (File.Exists(uhighDllPath))
-            {
-                try
-                {
-                    references.Add(MetadataReference.CreateFromFile(uhighDllPath));
-                }
-                catch { /* ignore if already loaded or error */ }
-            }
+            // Note: Removed μHigh compiler assembly references to avoid version conflicts
+            // This prevents .NET 9.0 dependencies from being included in generated assemblies
+            // // Add μHigh compiler assembly (uhigh.dll) if present
+            // var uhighDllPath = Path.Combine(AppContext.BaseDirectory, "uhigh.dll");
+            // if (File.Exists(uhighDllPath))
+            // {
+            //     try
+            //     {
+            //         references.Add(MetadataReference.CreateFromFile(uhighDllPath));
+            //     }
+            //     catch { /* ignore if already loaded or error */ }
+            // }
 
             // Add standard library references with caching
             var stdLibReferences = GetStandardLibraryReferences(stdLibPath);
@@ -277,7 +279,7 @@ namespace uhigh.Net.CodeGen
 
                     if (outputType.Equals("Exe", StringComparison.OrdinalIgnoreCase))
                     {
-                        await CreateRuntimeConfigAsync(outputPath);
+                        await CreateRuntimeConfigAsync(outputPath, targetFramework);
                     }
 
                     if (!OperatingSystem.IsWindows() && outputType.Equals("Exe", StringComparison.OrdinalIgnoreCase))
@@ -683,7 +685,7 @@ namespace uhigh.Net.CodeGen
                 // Create runtime configuration file only for executables
                 if (outputKind == OutputKind.ConsoleApplication)
                 {
-                    await CreateRuntimeConfigAsync(finalPath);
+                    await CreateRuntimeConfigAsync(finalPath, targetFramework);
                     Console.WriteLine($"Executable created: {finalPath}");
                     Console.WriteLine($"Run with: dotnet \"{finalPath}\"");
                 }
@@ -805,13 +807,27 @@ namespace uhigh.Net.CodeGen
         /// Creates the runtime config using the specified executable path
         /// </summary>
         /// <param name="executablePath">The executable path</param>
-        private async Task CreateRuntimeConfigAsync(string executablePath)
+        /// <param name="targetFramework">The target framework (e.g., "net8.0")</param>
+        private async Task CreateRuntimeConfigAsync(string executablePath, string targetFramework = "net8.0")
         {
             var runtimeConfigPath = Path.ChangeExtension(executablePath, ".runtimeconfig.json");
 
-            // Get the actual runtime version
-            var runtimeVersion = Environment.Version;
-            var tfm = $"net{runtimeVersion.Major}.{runtimeVersion.Minor}";
+            // Parse target framework version from string like "net8.0"
+            var tfm = targetFramework;
+            var version = "8.0.0"; // Default to 8.0.0
+            
+            if (targetFramework.StartsWith("net"))
+            {
+                var versionPart = targetFramework.Substring(3);
+                if (versionPart.Contains('.'))
+                {
+                    var parts = versionPart.Split('.');
+                    if (parts.Length >= 2 && int.TryParse(parts[0], out var major) && int.TryParse(parts[1], out var minor))
+                    {
+                        version = $"{major}.{minor}.0";
+                    }
+                }
+            }
 
             var runtimeConfig = new
             {
@@ -821,7 +837,7 @@ namespace uhigh.Net.CodeGen
                     framework = new
                     {
                         name = "Microsoft.NETCore.App",
-                        version = $"{runtimeVersion.Major}.{runtimeVersion.Minor}.0"
+                        version = version
                     },
                     configProperties = new
                     {
