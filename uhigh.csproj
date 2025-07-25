@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -42,21 +42,30 @@
     <PackageReference Include="System.Text.Json" Version="9.0.0" />
     <PackageReference Include="System.IO.Compression" Version="4.3.0" />
     <PackageReference Include="LanguageServerProtocol" Version="7.0.0" />
-    <PackageReference Include="System.Formats.Tar" Version="8.0.0" />
+
   </ItemGroup>
   
   <ItemGroup>
-    <Compile Update="Properties\Resources.Designer.cs">
+    <Compile Update="Diagnostics\Resources\errors.Designer.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
-      <DependentUpon>Resources.resx</DependentUpon>
+      <DependentUpon>errors.resx</DependentUpon>
+    </Compile>
+    <Compile Update="Diagnostics\Resources\Resource1.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resource1.resx</DependentUpon>
     </Compile>
   </ItemGroup>
   
   <ItemGroup>
-    <EmbeddedResource Update="Properties\Resources.resx">
+    <EmbeddedResource Update="Diagnostics\Resources\errors.resx">
       <Generator>PublicResXFileCodeGenerator</Generator>
-      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <LastGenOutput>errors.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <EmbeddedResource Update="Diagnostics\Resources\Resource1.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resource1.Designer.cs</LastGenOutput>
     </EmbeddedResource>
   </ItemGroup>
   
