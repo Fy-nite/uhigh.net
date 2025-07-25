@@ -48,15 +48,9 @@ namespace uhigh.Net.Templates.BuiltIn
                     OutputType = OutputType,
                     SourceFiles = new List<string> { "main.uh" },
                     RootNamespace = projectName,
-                    Dependencies = new List<PackageReference>
-                    {
-                        new PackageReference
-                        {
-                            Name = "uhigh-stdlib",
-                            Version = "1.1.3",
-                            
-                        }
-                    },
+                    // Note: stdlib dependency removed due to .NET 9.0 targeting issue
+                    // TODO: Re-add when stdlib supports .NET 8.0
+                    Dependencies = new List<PackageReference>(),
                     Nullable = true
                 };
                 
@@ -81,7 +75,6 @@ namespace uhigh.Net.Templates.BuiltIn
                 
                 var sourceCode = $@"// {projectName} - Console Application
 using System
-using StdLib
 
 namespace {projectName}
 {{
@@ -94,14 +87,14 @@ namespace {projectName}
         /// <returns>void</returns>
         public static func Main(args: string[]) : void
         {{
-            IO.Print(""Hello, μHigh! Welcome to {projectName}!"");
+            Console.WriteLine(""Hello, μHigh! Welcome to {projectName}!"");
             
-            if args.Length > 0
+            if (args.Length > 0)
             {{
-                IO.Print(""Arguments received:"");
-                for var i = 0; i < args.Length; i++
+                Console.WriteLine(""Arguments received:"");
+                for (var i = 0; i < args.Length; i++)
                 {{
-                    IO.Print(""  ["" + i + ""]: "" + args[i]);
+                    Console.WriteLine(""  ["" + i + ""]: "" + args[i]);
                 }}
             }}
         }}
