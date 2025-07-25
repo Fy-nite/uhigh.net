@@ -52,7 +52,9 @@ namespace uhigh.Net.CommandLine
     /// </summary>
     public class RunOptions : BaseCommandOptions
     {
+
         public string? ProjectFile { get; set; } = null;
+
         public string? SaveCSharpTo { get; set; }
     }
 

@@ -274,12 +274,12 @@ public class EntryPoint
     /// </summary>
     private static Command CreateRunCommand()
     {
-        var projectFileArg = CommonOptions.CreateProjectFileArgument();
+        var projectFileArg = new Argument<string?>("project-file", () => null, "Path to the μHigh project file or source file (optional - will auto-detect .uhighproj if not specified)");
         var verboseOption = CommonOptions.CreateVerboseOption();
         var stdLibOption = CommonOptions.CreateStdLibPathOption();
         var saveCsOption = CommonOptions.CreateSaveCSharpOption();
 
-        var command = new Command("run", "Run a μHigh project")
+        var command = new Command("run", "Run a μHigh project or source file")
         {
             projectFileArg,
             verboseOption,
@@ -1105,29 +1105,111 @@ public class EntryPoint
         try
         {
             var compiler = new Compiler(options.Verbose, options.StdLibPath);
+            string fileToRun;
 
-            if (!File.Exists(options.ProjectFile))
+            // Determine what file to run
+            if (string.IsNullOrEmpty(options.ProjectFile))
             {
-                WriteError($"Project file '{options.ProjectFile}' not found");
-                return 1;
-            }
-
-            bool success;
-            if (!string.IsNullOrEmpty(options.SaveCSharpTo))
-            {
-                success = await compiler.SaveCSharpCodeFromProject(options.ProjectFile, options.SaveCSharpTo);
+                // Auto-detect .uhighproj file in current directory
+                fileToRun = FindProjectFileInCurrentDirectory();
+                if (fileToRun == null)
+                {
+                    return 1; // Error already reported by FindProjectFileInCurrentDirectory
+                }
             }
             else
             {
-                success = await compiler.CompileProjectAndRun(options.ProjectFile);
+                fileToRun = options.ProjectFile;
             }
 
+            // Check if the file is a .uh source file
+            if (fileToRun.EndsWith(".uh", StringComparison.OrdinalIgnoreCase) || 
+                fileToRun.EndsWith(".uhigh", StringComparison.OrdinalIgnoreCase))
+            {
+                // Run as a source file directly
+                if (!File.Exists(fileToRun))
+                {
+                    WriteError($"Source file '{fileToRun}' not found");
+                    return 1;
+                }
+
+                bool success;
+                if (!string.IsNullOrEmpty(options.SaveCSharpTo))
+                {
+                    success = await compiler.SaveCSharpCode(fileToRun, options.SaveCSharpTo);
+                }
+                else
+                {
+                    success = await compiler.CompileAndRunInMemory(fileToRun);
+                }
+                
+                return success ? 0 : 1;
+            }
+            else
+            {
+                // Run as a project file
+                if (!File.Exists(fileToRun))
+                {
+                    WriteError($"Project file '{fileToRun}' not found");
+                    return 1;
+                }
+
+                bool success;
+                if (!string.IsNullOrEmpty(options.SaveCSharpTo))
+                {
+                    success = await compiler.SaveCSharpCodeFromProject(fileToRun, options.SaveCSharpTo);
+                }
+                else
+                {
+                    success = await compiler.CompileProjectAndRun(fileToRun);
+                }
+                
+                return success ? 0 : 1;
+            }
+
+
             return success ? 0 : 1;
+
         }
         catch (Exception ex)
         {
             WriteError($"Run failed: {ex.Message}");
             return 1;
+        }
+    }
+
+    /// <summary>
+    /// Finds a .uhighproj file in the current directory
+    /// </summary>
+    /// <returns>The path to the project file, or null if not found or multiple found</returns>
+    private static string? FindProjectFileInCurrentDirectory()
+    {
+        var currentDir = Environment.CurrentDirectory;
+        var projectFiles = Directory.GetFiles(currentDir, "*.uhighproj");
+
+        if (projectFiles.Length == 0)
+        {
+            WriteError("No .uhighproj file found in the current directory. Please specify a project file or navigate to a directory containing a .uhighproj file.");
+            return null;
+        }
+        else if (projectFiles.Length > 1)
+        {
+            WriteError($"Multiple .uhighproj files found in the current directory:");
+            foreach (var file in projectFiles)
+            {
+                WriteError($"  {Path.GetFileName(file)}");
+            }
+            WriteError("Please specify which project file to use.");
+            return null;
+        }
+        else
+        {
+            var projectFile = projectFiles[0];
+            if (Environment.GetEnvironmentVariable("UHIGH_VERBOSE") == "1")
+            {
+                Console.WriteLine($"Auto-detected project file: {Path.GetFileName(projectFile)}");
+            }
+            return projectFile;
         }
     }
 

@@ -47,6 +47,19 @@ uhigh compile myfile.uh --save-cs ./output # Save C# code
 ```bash
 uhigh create MyApp --type Exe
 uhigh build MyApp/MyApp.uhighproj
+
+
+# Run project (auto-detects .uhighproj in current directory)
+uhigh run
+
+# Run specific project file
+uhigh run MyApp/MyApp.uhighproj
+
+# Run .uh source file directly
+uhigh run myfile.uh
+
+# Add dependencies
+
 uhigh add-package MyApp/MyApp.uhighproj Newtonsoft.Json
 uhigh restore-packages MyApp/MyApp.uhighproj
 ```
