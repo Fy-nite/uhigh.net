@@ -47,13 +47,13 @@ This project successfully implements a Language Server Protocol (LSP) server for
 
 ```bash
 # Compile to C# and run (default)
-dotnet run --framework net8.0 -- program.uh
+dotnet run --framework net9.0 -- program.uh
 
 # Compile to JavaScript
-dotnet run --framework net8.0 -- compile program.uh --target javascript
+dotnet run --framework net9.0 -- compile program.uh --target javascript
 
 # List available targets
-dotnet run --framework net8.0 -- list-targets
+dotnet run --framework net9.0 -- list-targets
 ```
 
 ### Creating Custom Code Generators
@@ -176,11 +176,11 @@ CodeGeneratorConfig
 
 | Target | Description | Features | Dependencies |
 |--------|-------------|----------|--------------|
-| csharp | C# code generation | Full μHigh feature set | .NET 8.0+ |
+| csharp | C# code generation | Full μHigh feature set | .NET 9.0+ |
 | javascript | Modern JavaScript | Functions, classes, async | Node.js 16+ |
 ### Available Targets
 
 | Target | Description | Features | Dependencies |
 |--------|-------------|----------|--------------|
-| csharp | C# code generation | Full μHigh feature set | .NET 8.0+ |
+| csharp | C# code generation | Full μHigh feature set | .NET 9.0+ |
 | javascript | Modern JavaScript | Functions, classes, async | Node.js 16+ |

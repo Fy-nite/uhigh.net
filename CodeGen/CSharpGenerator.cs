@@ -59,7 +59,7 @@ namespace uhigh.Net.CodeGen
             Description = "Generates C# code from μHigh programs with full feature support",
             Version = "2.0.0",
             SupportedFeatures = new() { "classes", "functions", "generics", "match", "lambdas", "async", "attributes" },
-            RequiredDependencies = new() { ".NET 8.0+", "Microsoft.CodeAnalysis" }
+            RequiredDependencies = new() { ".NET 9.0+", "Microsoft.CodeAnalysis" }
         };
 
         public string TargetName => "csharp";
@@ -1804,7 +1804,7 @@ namespace uhigh.Net.CodeGen
             }
             else
             {
-                // Use C# 8.0+ switch expression syntax for expression-only arms
+                // Use C# 9.0+ switch expression syntax for expression-only arms
                 _output.Append("(");
                 GenerateExpression(matchExpr.Value);
                 _output.Append(" switch");

@@ -185,7 +185,7 @@ namespace uhigh.Net.NuGet
                         var csprojContent = $@"
         <Project Sdk=""Microsoft.NET.Sdk"">
           <PropertyGroup>
-            <TargetFramework>net8.0</TargetFramework>
+            <TargetFramework>net9.0</TargetFramework>
           </PropertyGroup>
           <ItemGroup>
             <PackageReference Include=""{package.Name}"" Version=""{package.Version}"" />
@@ -263,7 +263,7 @@ namespace uhigh.Net.NuGet
             }
         }
 
-        public List<string> GetPackageAssemblies(PackageReference package, string targetFramework = "net8.0")
+        public List<string> GetPackageAssemblies(PackageReference package, string targetFramework = "net9.0")
         {
             var assemblies = new List<string>();
 

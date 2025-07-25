@@ -336,7 +336,7 @@ namespace uhigh.Net.CodeGen
             Description = "Generates C# code from μHigh programs",
             Version = "2.0.0",
             SupportedFeatures = new() { "classes", "functions", "generics", "match", "lambdas" },
-            RequiredDependencies = new() { ".NET 8.0+" }
+            RequiredDependencies = new() { ".NET 9.0+" }
         };
 
         public ICodeGenerator CreateGenerator() => new CSharpGenerator();

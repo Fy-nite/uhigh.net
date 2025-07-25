@@ -90,7 +90,7 @@ All templates support these common parameters:
 |-----------|-------------|---------|
 | `--author` | Project author name | None |
 | `--description` | Project description | None |
-| `--target-framework` | .NET target framework | `net8.0` |
+| `--target-framework` | .NET target framework | `net9.0` |
 
 ## Creating External Templates
 

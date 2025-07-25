@@ -85,7 +85,7 @@ namespace uhigh.Net.CommandLine
             var authorArg = new Argument<string?>("author", () => null, "Author name");
 
             var typeOption = new Option<string>(new[] { "-t", "--type" }, () => "Exe", "Project type (Exe or Library)");
-            var frameworkOption = new Option<string>(new[] { "-f", "--framework" }, () => "net8.0", ".NET target framework");
+            var frameworkOption = new Option<string>(new[] { "-f", "--framework" }, () => "net9.0", ".NET target framework");
             var backendOption = new Option<string>(new[] { "--backend" }, () => "csharp", "Target language backend (e.g. csharp, javascript)");
 
             command.AddArgument(projectNameArg);
