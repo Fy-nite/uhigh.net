@@ -79,11 +79,12 @@ namespace uhigh.Net.Templates.BuiltIn
             {
                 var libraryFilePath = Path.Combine(projectPath, "Library.uh");
                 
+                var sanitizedNamespace = SanitizeNamespaceIdentifier(projectName);
                 var sourceCode = $@"// {projectName} - Class Library
 using System
 using StdLib
 
-namespace {projectName}
+namespace {sanitizedNamespace}
 {{
     /// <summary>
     /// Main class for the {projectName} library
