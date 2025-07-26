@@ -778,6 +778,57 @@ namespace uhigh.Net.Testing
         }
 
         /// <summary>
+        /// Tests that array indexing works correctly
+        /// </summary>
+        [Test]
+        public void TestArrayIndexing()
+        {
+            var program = ParseSource(@"
+                func test() {
+                    var arr = {1, 2, 3, 4, 5}
+                    var first = arr[0]
+                    var second = arr[1]
+                    var nested = arr[arr[1]]
+                    var expr = arr[1 + 2]
+                }");
+
+            Assert.AreEqual(1, program.Statements.Count);
+            var funcDecl = (FunctionDeclaration)program.Statements[0];
+            Assert.AreEqual("test", funcDecl.Name);
+            Assert.AreEqual(5, funcDecl.Body.Count);
+
+            // Test simple array indexing
+            var firstVarDecl = (VariableDeclaration)funcDecl.Body[1];
+            Assert.AreEqual("first", firstVarDecl.Name);
+            Assert.IsTrue(firstVarDecl.Initializer is IndexExpression);
+            
+            var firstIndexExpr = (IndexExpression)firstVarDecl.Initializer!;
+            Assert.IsTrue(firstIndexExpr.Object is IdentifierExpression);
+            Assert.IsTrue(firstIndexExpr.Index is LiteralExpression);
+
+            // Test second array indexing
+            var secondVarDecl = (VariableDeclaration)funcDecl.Body[2];
+            Assert.AreEqual("second", secondVarDecl.Name);
+            Assert.IsTrue(secondVarDecl.Initializer is IndexExpression);
+
+            // Test nested array indexing
+            var nestedVarDecl = (VariableDeclaration)funcDecl.Body[3];
+            Assert.AreEqual("nested", nestedVarDecl.Name);
+            Assert.IsTrue(nestedVarDecl.Initializer is IndexExpression);
+            
+            var nestedIndexExpr = (IndexExpression)nestedVarDecl.Initializer!;
+            Assert.IsTrue(nestedIndexExpr.Index is IndexExpression); // arr[1] as index
+
+            // Test expression in array index
+            var exprVarDecl = (VariableDeclaration)funcDecl.Body[4];
+            Assert.AreEqual("expr", exprVarDecl.Name);
+            Assert.IsTrue(exprVarDecl.Initializer is IndexExpression);
+            
+            var exprIndexExpr = (IndexExpression)exprVarDecl.Initializer!;
+            Assert.IsTrue(exprIndexExpr.Index is BinaryExpression); // 1 + 2 as index
+        }
+
+        /// <summary>
         /// Tests that test function with array parameter
         /// </summary>
         [Test]
@@ -799,6 +850,73 @@ namespace uhigh.Net.Testing
             Assert.AreEqual("items", funcDecl.Parameters[0].Name);
             Assert.AreEqual("string[]", funcDecl.Parameters[0].Type);
             Assert.AreEqual("void", funcDecl.ReturnType);
+        }
+
+        /// <summary>
+        /// Tests that return statements work with string literals and semicolons
+        /// </summary>
+        [Test]
+        public void TestReturnStatementWithStringLiteralsAndSemicolons()
+        {
+            // Test return with string literal containing square brackets and semicolon
+            var program = ParseSource(@"
+                func formatData(data: string): string {
+                    return ""[ulib] "" + data;
+                }");
+
+            Assert.AreEqual(1, program.Statements.Count);
+            Assert.IsTrue(program.Statements[0] is FunctionDeclaration);
+
+            var funcDecl = (FunctionDeclaration)program.Statements[0];
+            Assert.AreEqual("formatData", funcDecl.Name);
+            Assert.AreEqual(1, funcDecl.Body.Count);
+            Assert.IsTrue(funcDecl.Body[0] is ReturnStatement);
+
+            var returnStmt = (ReturnStatement)funcDecl.Body[0];
+            Assert.IsNotNull(returnStmt.Value);
+            Assert.IsTrue(returnStmt.Value is BinaryExpression);
+
+            var binaryExpr = (BinaryExpression)returnStmt.Value;
+            Assert.AreEqual(TokenType.Plus, binaryExpr.Operator);
+            Assert.IsTrue(binaryExpr.Left is LiteralExpression);
+            Assert.IsTrue(binaryExpr.Right is IdentifierExpression);
+
+            var leftLiteral = (LiteralExpression)binaryExpr.Left;
+            Assert.AreEqual("[ulib] ", (string)leftLiteral.Value!);
+        }
+
+        /// <summary>
+        /// Tests that return statements work with various formats (with and without semicolons)
+        /// </summary>
+        [Test]
+        public void TestReturnStatementFormats()
+        {
+            // Test multiple return statements with different formats
+            var program = ParseSource(@"
+                func testReturns(flag: bool): string {
+                    if flag {
+                        return ""with semicolon"";
+                    }
+                    return ""without semicolon""
+                }");
+
+            Assert.AreEqual(1, program.Statements.Count);
+            Assert.IsTrue(program.Statements[0] is FunctionDeclaration);
+
+            var funcDecl = (FunctionDeclaration)program.Statements[0];
+            Assert.AreEqual(2, funcDecl.Body.Count);
+            
+            // First statement should be an if statement containing a return
+            Assert.IsTrue(funcDecl.Body[0] is IfStatement);
+            var ifStmt = (IfStatement)funcDecl.Body[0];
+            Assert.AreEqual(1, ifStmt.ThenBranch.Count);
+            Assert.IsTrue(ifStmt.ThenBranch[0] is ReturnStatement);
+
+            // Second statement should be a return statement
+            Assert.IsTrue(funcDecl.Body[1] is ReturnStatement);
+            var returnStmt = (ReturnStatement)funcDecl.Body[1];
+            Assert.IsNotNull(returnStmt.Value);
+            Assert.IsTrue(returnStmt.Value is LiteralExpression);
         }
 
         /// <summary>

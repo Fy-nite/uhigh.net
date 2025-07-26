@@ -124,9 +124,9 @@ namespace uhigh.Net.Parser
             {
                 try
                 {
-                    // Check for attributes first
+                    // Check for attributes first - but only if they're actually attributes
                     var attributes = new List<AttributeDeclaration>();
-                    while (Check(TokenType.LeftBracket))
+                    while (Check(TokenType.LeftBracket) && IsAttributeStart())
                     {
                         attributes.Add(ParseAttribute());
                     }
@@ -1466,6 +1466,11 @@ namespace uhigh.Net.Parser
             {
                 value = ParseExpression();
             }
+            // Don't require semicolons for now, just consume them if present
+            if (Check(TokenType.Semicolon))
+            {
+                Advance();
+            }
             return new ReturnStatement { Value = value };
         }
 
@@ -2552,6 +2557,36 @@ namespace uhigh.Net.Parser
                 TokenType.Sealed or TokenType.Readonly or TokenType.Async => true,
                 _ => false
             };
+        }
+
+        /// <summary>
+        /// Checks if the current LeftBracket token is the start of an attribute declaration
+        /// rather than array indexing or other bracket usage
+        /// </summary>
+        /// <returns>True if this appears to be an attribute, false otherwise</returns>
+        private bool IsAttributeStart()
+        {
+            // We need at least 2 tokens to check: '[' and the next token
+            if (_current + 1 >= _tokens.Count)
+                return false;
+
+            // The token immediately after '[' should be an identifier for attributes
+            var nextToken = _tokens[_current + 1];
+            if (nextToken.Type != TokenType.Identifier)
+                return false;
+
+            // Look ahead to see what comes after the identifier
+            if (_current + 2 >= _tokens.Count)
+                return true; // Assume it's an attribute if we can't see further
+
+            var tokenAfterIdentifier = _tokens[_current + 2];
+            
+            // Attributes can be followed by:
+            // - ']' for simple attributes like [External]
+            // - '(' for attributes with parameters like [External("name")]
+            // Array indexing would have expressions that typically don't start with identifiers
+            return tokenAfterIdentifier.Type == TokenType.RightBracket || 
+                   tokenAfterIdentifier.Type == TokenType.LeftParen;
         }
 
         /// <summary>
