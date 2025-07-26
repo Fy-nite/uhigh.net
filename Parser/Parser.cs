@@ -1466,6 +1466,11 @@ namespace uhigh.Net.Parser
             {
                 value = ParseExpression();
             }
+            // Don't require semicolons for now, just consume them if present
+            if (Check(TokenType.Semicolon))
+            {
+                Advance();
+            }
             return new ReturnStatement { Value = value };
         }
 
