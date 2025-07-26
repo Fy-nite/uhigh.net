@@ -955,7 +955,7 @@ namespace uhigh.Net
                             {
                                 if (!Path.IsPathRooted(outputFile))
                                 {
-                                    outputFile = Path.Combine(projectDir, outputFile);
+                                    outputFile = Path.Combine(buildDir, outputFile);
                                 }
 
                                 success = await inMemoryCompiler.CompileToExecutable(combinedCode, outputFile, projectRootNamespace, projectClassName, project.OutputType, nugetAssemblies);
@@ -967,8 +967,8 @@ namespace uhigh.Net
                             else
                             {
                                 var defaultOutputFile = project.OutputType.Equals("Library", StringComparison.OrdinalIgnoreCase)
-                                    ? Path.Combine(projectDir, $"{project.Name}.dll")
-                                    : Path.Combine(projectDir, $"{project.Name}.exe");
+                                    ? Path.Combine(buildDir, $"{project.Name}.dll")
+                                    : Path.Combine(buildDir, $"{project.Name}.exe");
 
                                 success = await inMemoryCompiler.CompileToExecutable(combinedCode, defaultOutputFile, projectRootNamespace, projectClassName, project.OutputType, nugetAssemblies);
                                 if (success)
