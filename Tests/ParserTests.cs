@@ -802,6 +802,73 @@ namespace uhigh.Net.Testing
         }
 
         /// <summary>
+        /// Tests that return statements work with string literals and semicolons
+        /// </summary>
+        [Test]
+        public void TestReturnStatementWithStringLiteralsAndSemicolons()
+        {
+            // Test return with string literal containing square brackets and semicolon
+            var program = ParseSource(@"
+                func formatData(data: string): string {
+                    return ""[ulib] "" + data;
+                }");
+
+            Assert.AreEqual(1, program.Statements.Count);
+            Assert.IsTrue(program.Statements[0] is FunctionDeclaration);
+
+            var funcDecl = (FunctionDeclaration)program.Statements[0];
+            Assert.AreEqual("formatData", funcDecl.Name);
+            Assert.AreEqual(1, funcDecl.Body.Count);
+            Assert.IsTrue(funcDecl.Body[0] is ReturnStatement);
+
+            var returnStmt = (ReturnStatement)funcDecl.Body[0];
+            Assert.IsNotNull(returnStmt.Value);
+            Assert.IsTrue(returnStmt.Value is BinaryExpression);
+
+            var binaryExpr = (BinaryExpression)returnStmt.Value;
+            Assert.AreEqual(TokenType.Plus, binaryExpr.Operator);
+            Assert.IsTrue(binaryExpr.Left is LiteralExpression);
+            Assert.IsTrue(binaryExpr.Right is IdentifierExpression);
+
+            var leftLiteral = (LiteralExpression)binaryExpr.Left;
+            Assert.AreEqual("[ulib] ", (string)leftLiteral.Value!);
+        }
+
+        /// <summary>
+        /// Tests that return statements work with various formats (with and without semicolons)
+        /// </summary>
+        [Test]
+        public void TestReturnStatementFormats()
+        {
+            // Test multiple return statements with different formats
+            var program = ParseSource(@"
+                func testReturns(flag: bool): string {
+                    if flag {
+                        return ""with semicolon"";
+                    }
+                    return ""without semicolon""
+                }");
+
+            Assert.AreEqual(1, program.Statements.Count);
+            Assert.IsTrue(program.Statements[0] is FunctionDeclaration);
+
+            var funcDecl = (FunctionDeclaration)program.Statements[0];
+            Assert.AreEqual(2, funcDecl.Body.Count);
+            
+            // First statement should be an if statement containing a return
+            Assert.IsTrue(funcDecl.Body[0] is IfStatement);
+            var ifStmt = (IfStatement)funcDecl.Body[0];
+            Assert.AreEqual(1, ifStmt.ThenBranch.Count);
+            Assert.IsTrue(ifStmt.ThenBranch[0] is ReturnStatement);
+
+            // Second statement should be a return statement
+            Assert.IsTrue(funcDecl.Body[1] is ReturnStatement);
+            var returnStmt = (ReturnStatement)funcDecl.Body[1];
+            Assert.IsNotNull(returnStmt.Value);
+            Assert.IsTrue(returnStmt.Value is LiteralExpression);
+        }
+
+        /// <summary>
         /// Tests that test project compilation
         /// </summary>
         [Test]
