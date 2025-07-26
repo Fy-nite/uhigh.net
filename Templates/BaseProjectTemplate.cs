@@ -160,5 +160,49 @@ namespace uhigh.Net.Templates
             }
             return defaultValue;
         }
+        
+        /// <summary>
+        /// Converts a project name into a valid namespace identifier by replacing or removing invalid characters
+        /// </summary>
+        /// <param name="projectName">The project name to sanitize</param>
+        /// <returns>A valid namespace identifier</returns>
+        protected static string SanitizeNamespaceIdentifier(string projectName)
+        {
+            if (string.IsNullOrWhiteSpace(projectName))
+            {
+                return "Project";
+            }
+            
+            var sanitized = new System.Text.StringBuilder();
+            
+            for (int i = 0; i < projectName.Length; i++)
+            {
+                char c = projectName[i];
+                
+                // Replace invalid characters with underscores
+                if (char.IsLetterOrDigit(c) || c == '_')
+                {
+                    sanitized.Append(c);
+                }
+                else
+                {
+                    // Replace dashes, spaces, and other special characters with underscores
+                    // but avoid consecutive underscores
+                    if (sanitized.Length > 0 && sanitized[sanitized.Length - 1] != '_')
+                    {
+                        sanitized.Append('_');
+                    }
+                }
+            }
+            
+            // Ensure it starts with a letter or underscore (not a digit)
+            if (sanitized.Length > 0 && char.IsDigit(sanitized[0]))
+            {
+                sanitized.Insert(0, '_');
+            }
+            
+            // Ensure we have a valid result
+            return sanitized.Length > 0 ? sanitized.ToString() : "Project";
+        }
     }
 }

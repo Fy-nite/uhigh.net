@@ -1,7 +1,7 @@
-// my-test-project - Console Application
+// MyValidProject - Console Application
 using System
 
-namespace my-test-project
+namespace MyValidProject
 {
     public class Program
     {
@@ -12,7 +12,7 @@ namespace my-test-project
         /// <returns>void</returns>
         public static func Main(args: string[]) : void
         {
-            Console.WriteLine("Hello, μHigh! Welcome to my-test-project!");
+            Console.WriteLine("Hello, μHigh! Welcome to MyValidProject!");
             
             if (args.Length > 0)
             {

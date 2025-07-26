@@ -80,11 +80,12 @@ namespace uhigh.Net.Templates.BuiltIn
             {
                 var testFilePath = Path.Combine(projectPath, "Tests.uh");
                 
+                var sanitizedNamespace = SanitizeNamespaceIdentifier(projectName);
                 var sourceCode = $@"// {projectName} - Test Project
 using System
 using StdLib
 
-namespace {projectName}
+namespace {sanitizedNamespace}
 {{
     /// <summary>
     /// Test class for demonstrating μHigh testing features
@@ -108,7 +109,7 @@ namespace {projectName}
         /// Test method that demonstrates basic testing
         /// </summary>
         [TestWith(typeof(SampleTestClass))]
-        public static func TestBasicFunctionality(testObj: {projectName}.SampleTestClass): void
+        public static func TestBasicFunctionality(testObj: {sanitizedNamespace}.SampleTestClass): void
         {{
             // Arrange
             testObj.expectedValue = 42;

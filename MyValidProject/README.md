@@ -1,17 +1,17 @@
-# my-test-project
+# MyValidProject
 
 A console application created with μHigh.
 
 ## Build
 
 ```bash
-uhigh build my-test-project.uhighproj
+uhigh build MyValidProject.uhighproj
 ```
 
 ## Run
 
 ```bash
-uhigh run my-test-project.uhighproj
+uhigh run MyValidProject.uhighproj
 ```
 
 ## About
