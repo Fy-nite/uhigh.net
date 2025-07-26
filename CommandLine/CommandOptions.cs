@@ -30,7 +30,7 @@ namespace uhigh.Net.CommandLine
         public string? Description { get; set; }
         public string? Author { get; set; }
         public string OutputType { get; set; } = "Exe";
-        public string TargetFramework { get; set; } = "net8.0";
+        public string TargetFramework { get; set; } = "net9.0";
         public string Template { get; set; } = "console";
         public Dictionary<string, string> TemplateParameters { get; set; } = new();
         public string Backend { get; set; } = "csharp";

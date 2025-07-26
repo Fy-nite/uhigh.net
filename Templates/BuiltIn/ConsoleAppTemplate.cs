@@ -36,7 +36,7 @@ namespace uhigh.Net.Templates.BuiltIn
             {
                 var description = GetParameter(parameters, "description", (string?)null);
                 var author = GetParameter(parameters, "author", (string?)null);
-                var targetFramework = GetParameter(parameters, "targetFramework", "net8.0");
+                var targetFramework = GetParameter(parameters, "targetFramework", "net9.0");
                 
                 var project = new uhighProject
                 {
@@ -49,7 +49,7 @@ namespace uhigh.Net.Templates.BuiltIn
                     SourceFiles = new List<string> { "main.uh" },
                     RootNamespace = projectName,
                     // Note: stdlib dependency removed due to .NET 9.0 targeting issue
-                    // TODO: Re-add when stdlib supports .NET 8.0
+                    // TODO: Re-add when stdlib supports .NET 9.0
                     Dependencies = new List<PackageReference>(),
                     Nullable = true
                 };

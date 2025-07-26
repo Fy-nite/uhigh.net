@@ -440,5 +440,24 @@ namespace uhigh.Net.Testing
             Assert.IsTrue(tokens.Any(t => t.Type == TokenType.LeftBrace));
             Assert.IsTrue(tokens.Any(t => t.Type == TokenType.RightBrace));
         }
+
+        /// <summary>
+        /// Tests that test string literal in return and binary expressions
+        /// </summary>
+        [Test]
+        public void TestStringLiteralInReturnAndBinary()
+        {
+            var lexer = CreateLexer("return \"ulib\" + data");
+            var tokens = lexer.Tokenize();
+
+            // Should tokenize as: return, string, +, identifier, EOF
+            Assert.AreEqual(TokenType.Return, tokens[0].Type);
+            Assert.AreEqual(TokenType.String, tokens[1].Type);
+            Assert.AreEqual("ulib", tokens[1].Value);
+            Assert.AreEqual(TokenType.Plus, tokens[2].Type);
+            Assert.AreEqual(TokenType.Identifier, tokens[3].Type);
+            Assert.AreEqual("data", tokens[3].Value);
+            Assert.AreEqual(TokenType.EOF, tokens[4].Type);
+        }
     }
 }

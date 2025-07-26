@@ -46,7 +46,7 @@ namespace uhigh.Net.Templates.BuiltIn
             {
                 var description = GetParameter(parameters, "description", (string?)null);
                 var author = GetParameter(parameters, "author", (string?)null);
-                var targetFramework = GetParameter(parameters, "targetFramework", "net8.0");
+                var targetFramework = GetParameter(parameters, "targetFramework", "net9.0");
                 
                 var project = new uhighProject
                 {

@@ -4,7 +4,7 @@ $ErrorActionPreference = "Stop"
 
 Write-Host "Building μHigh compiler..."
 $OS_version = [System.Environment]::OSVersion.Version.ToString()
-dotnet publish 
+dotnet build --configuration Release uhigh.csproj
 dotnet pack uhigh.csproj
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 

@@ -42,7 +42,7 @@ namespace uhigh.Net.UbPackage
         /// Target framework
         /// </summary>
         [JsonPropertyName("targetFramework")]
-        public string TargetFramework { get; set; } = "net8.0";
+        public string TargetFramework { get; set; } = "net9.0";
 
         /// <summary>
         /// Output type (Exe, Library)

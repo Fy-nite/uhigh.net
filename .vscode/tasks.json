@@ -8,7 +8,7 @@
 			"args": [
 				"run",
 				"--framework",
-				"net8.0",
+				"net9.0",
 				"--",
 				"--lsp"
 			],

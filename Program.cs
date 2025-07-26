@@ -130,7 +130,7 @@ public class EntryPoint
         var descriptionOption = new Option<string?>("--description", "Project description");
         var authorOption = new Option<string?>("--author", "Project author");
         var outputTypeOption = new Option<string>("--output-type", () => "Exe", "Output type (Exe, Library)");
-        var targetFrameworkOption = new Option<string>("--target-framework", () => "net8.0", "Target framework");
+        var targetFrameworkOption = new Option<string>("--target-framework", () => "net9.0", "Target framework");
         var templateOption = new Option<string>("--template", () => "console", "Project template to use (console, classlib, test)");
 
         var command = new Command("create", "Create a new μHigh project")

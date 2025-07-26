@@ -351,6 +351,7 @@ namespace uhigh.Net.Lexer
             _position++; // Skip closing quote
             _column++;
 
+            // Always return a TokenType.String token for string literals
             return new Token(TokenType.String, value, line, column);
         }
 

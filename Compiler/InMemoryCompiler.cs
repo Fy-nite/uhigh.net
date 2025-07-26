@@ -232,7 +232,7 @@ namespace uhigh.Net.CodeGen
         /// <param name="nugetPackages">The NuGet packages</param>
         /// <param name="targetFramework">The target framework</param>
         /// <returns>A task containing the bool</returns>
-        public async Task<bool> CompileAndRun(string csharpCode, string? outputPath = null, string? rootNamespace = null, string? className = null, string outputType = "Exe", List<string>? additionalAssemblies = null, List<PackageReference>? nugetPackages = null, string targetFramework = "net8.0")
+        public async Task<bool> CompileAndRun(string csharpCode, string? outputPath = null, string? rootNamespace = null, string? className = null, string outputType = "Exe", List<string>? additionalAssemblies = null, List<PackageReference>? nugetPackages = null, string targetFramework = "net9.0")
         {
             // Resolve NuGet assemblies if provided
             if (nugetPackages != null && nugetPackages.Count > 0)
@@ -550,7 +550,7 @@ namespace uhigh.Net.CodeGen
         /// </summary>
         /// <param name="csharpCode">The csharp code</param>
         /// <returns>A task containing the byte array</returns>
-        public Task<byte[]?> CompileToBytes(string csharpCode, List<string>? additionalAssemblies = null, List<PackageReference>? nugetPackages = null, string targetFramework = "net8.0")
+        public Task<byte[]?> CompileToBytes(string csharpCode, List<string>? additionalAssemblies = null, List<PackageReference>? nugetPackages = null, string targetFramework = "net9.0")
         {
             if (nugetPackages != null && nugetPackages.Count > 0)
             {
@@ -609,7 +609,7 @@ namespace uhigh.Net.CodeGen
         /// <param name="nugetPackages">The NuGet packages</param>
         /// <param name="targetFramework">The target framework</param>
         /// <returns>A task containing the bool</returns>
-        public async Task<bool> CompileToExecutable(string csharpCode, string outputPath, string? rootNamespace = null, string? className = null, string outputType = "Exe", List<string>? additionalAssemblies = null, List<PackageReference>? nugetPackages = null, string targetFramework = "net8.0")
+        public async Task<bool> CompileToExecutable(string csharpCode, string outputPath, string? rootNamespace = null, string? className = null, string outputType = "Exe", List<string>? additionalAssemblies = null, List<PackageReference>? nugetPackages = null, string targetFramework = "net9.0")
         {
             if (nugetPackages != null && nugetPackages.Count > 0)
             {
@@ -807,15 +807,15 @@ namespace uhigh.Net.CodeGen
         /// Creates the runtime config using the specified executable path
         /// </summary>
         /// <param name="executablePath">The executable path</param>
-        /// <param name="targetFramework">The target framework (e.g., "net8.0")</param>
-        private async Task CreateRuntimeConfigAsync(string executablePath, string targetFramework = "net8.0")
+        /// <param name="targetFramework">The target framework (e.g., "net9.0")</param>
+        private async Task CreateRuntimeConfigAsync(string executablePath, string targetFramework = "net9.0")
         {
             var runtimeConfigPath = Path.ChangeExtension(executablePath, ".runtimeconfig.json");
 
-            // Parse target framework version from string like "net8.0"
+            // Parse target framework version from string like "net9.0"
             var tfm = targetFramework;
-            var version = "8.0.0"; // Default to 8.0.0
-            
+            var version = "9.0.0"; // Default to 9.0.0
+
             if (targetFramework.StartsWith("net"))
             {
                 var versionPart = targetFramework.Substring(3);
@@ -861,7 +861,7 @@ namespace uhigh.Net.CodeGen
         /// <param name="packages">The package references</param>
         /// <param name="targetFramework">The target framework</param>
         /// <returns>List of assembly paths</returns>
-        public static List<string> ResolveNuGetAssemblies(List<PackageReference>? packages, string targetFramework = "net8.0")
+        public static List<string> ResolveNuGetAssemblies(List<PackageReference>? packages, string targetFramework = "net9.0")
         {
             var assemblies = new List<string>();
             if (packages == null || packages.Count == 0)

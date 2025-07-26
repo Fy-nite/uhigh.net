@@ -23,7 +23,7 @@ This document describes the .ub package management system for μHigh projects.
   "version": "1.0.0",
   "description": "Package description",
   "author": "Author name",
-  "targetFramework": "net8.0",
+  "targetFramework": "net9.0",
   "outputType": "Library",
   "rootNamespace": "PackageName",
   "sourceFiles": ["main.uh", "utils.uh"],

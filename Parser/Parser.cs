@@ -1930,8 +1930,12 @@ namespace uhigh.Net.Parser
                 }
             }
 
+            // Fix: Accept string tokens as valid string literals in expressions
             if (Match(TokenType.String))
+            {
+                // Remove any unterminated string error reporting here; let the lexer handle it
                 return new LiteralExpression { Value = Previous().Value, Type = TokenType.String };
+            }
 
             if (Match(TokenType.InterpolatedStringStart))
             {

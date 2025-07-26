@@ -335,7 +335,7 @@ namespace uhigh.Net.CodeGen
             }
             else
             {
-                _output.Append(" : Object"); // All Vala classes inherit from Object
+                _output.Append(" : GLib.Object"); // All Vala classes inherit from GLib.Object
             }
 
             _output.AppendLine(" {");

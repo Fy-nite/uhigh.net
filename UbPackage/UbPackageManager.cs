@@ -1,7 +1,7 @@
 using System.IO.Compression;
 using System.Text;
 using uhigh.Net.Diagnostics;
-using System.Formats.Tar; // Add this for TAR support
+
 
 namespace uhigh.Net.UbPackage
 {
@@ -23,7 +23,7 @@ namespace uhigh.Net.UbPackage
         }
 
         /// <summary>
-        /// Creates a .ub package from a μHigh project using tar.gz compression
+        /// Creates a .ub package from a μHigh project using zip compression
         /// </summary>
         /// <param name="projectPath">Path to the .uhighproj file</param>
         /// <param name="outputPath">Path where to create the .ub file</param>
@@ -61,20 +61,15 @@ namespace uhigh.Net.UbPackage
                     Directory.CreateDirectory(outputDir);
                 }
 
-                // Create tar archive in memory
-                using var tarStream = new MemoryStream();
-                using (var tarWriter = new TarWriter(tarStream, leaveOpen: true))
+                using (var zipStream = File.Create(outputPath))
+                using (var zip = new ZipArchive(zipStream, ZipArchiveMode.Create))
                 {
                     // Add manifest
-                    var manifestBytes = Encoding.UTF8.GetBytes(manifest.ToJson());
-                    using (var manifestStream = new MemoryStream(manifestBytes))
+                    var manifestEntry = zip.CreateEntry(ManifestFileName);
+                    using (var manifestStream = manifestEntry.Open())
+                    using (var writer = new StreamWriter(manifestStream, Encoding.UTF8))
                     {
-                        var manifestEntry = new PaxTarEntry(TarEntryType.RegularFile, ManifestFileName)
-                        {
-                            DataStream = manifestStream,
-                            ModificationTime = DateTimeOffset.Now
-                        };
-                        tarWriter.WriteEntry(manifestEntry);
+                        await writer.WriteAsync(manifest.ToJson());
                     }
 
                     // Add source files
@@ -92,17 +87,16 @@ namespace uhigh.Net.UbPackage
 
                         // Use relative path in archive
                         var archivePath = sourceFile.Replace('\\', '/');
-                        tarWriter.WriteEntry(archivePath, fullSourcePath);
+                        var entry = zip.CreateEntry(archivePath);
+                        using (var entryStream = entry.Open())
+                        using (var fileStream = File.OpenRead(fullSourcePath))
+                        {
+                            await fileStream.CopyToAsync(entryStream);
+                        }
 
                         _diagnostics?.ReportInfo($"Added source file: {archivePath}");
                     }
                 }
-
-                // Compress tar to gzip
-                tarStream.Position = 0;
-                using var outStream = File.Create(outputPath);
-                using var gzipStream = new GZipStream(outStream, CompressionLevel.Optimal);
-                await tarStream.CopyToAsync(gzipStream);
 
                 _diagnostics?.ReportInfo($"Package created successfully: {outputPath}");
                 return true;
@@ -115,7 +109,7 @@ namespace uhigh.Net.UbPackage
         }
 
         /// <summary>
-        /// Extracts a .ub package (tar.gz) to a directory
+        /// Extracts a .ub package (zip) to a directory
         /// </summary>
         /// <param name="packagePath">Path to the .ub file</param>
         /// <param name="extractPath">Directory to extract to</param>
@@ -137,26 +131,28 @@ namespace uhigh.Net.UbPackage
                     Directory.CreateDirectory(extractPath);
                 }
 
-                using var fileStream = File.OpenRead(packagePath);
-                using var gzipStream = new GZipStream(fileStream, CompressionMode.Decompress);
-                using var tarReader = new TarReader(gzipStream);
-
-                TarEntry entry;
-                while ((entry = tarReader.GetNextEntry()) != null)
+                using (var zip = ZipFile.OpenRead(packagePath))
                 {
-                    var destPath = Path.Combine(extractPath, entry.Name);
-                    var destDir = Path.GetDirectoryName(destPath);
-
-                    if (!string.IsNullOrEmpty(destDir) && !Directory.Exists(destDir))
+                    foreach (var entry in zip.Entries)
                     {
-                        Directory.CreateDirectory(destDir);
+                        var destPath = Path.Combine(extractPath, entry.FullName);
+                        var destDir = Path.GetDirectoryName(destPath);
+
+                        if (!string.IsNullOrEmpty(destDir) && !Directory.Exists(destDir))
+                        {
+                            Directory.CreateDirectory(destDir);
+                        }
+
+                        if (!string.IsNullOrEmpty(entry.Name))
+                        {
+                            using (var entryStream = entry.Open())
+                            using (var destStream = File.Create(destPath))
+                            {
+                                await entryStream.CopyToAsync(destStream);
+                            }
+                            _diagnostics?.ReportInfo($"Extracted: {entry.FullName}");
+                        }
                     }
-
-                    using var entryStream = entry.DataStream;
-                    using var destStream = File.Create(destPath);
-                    await entryStream.CopyToAsync(destStream);
-
-                    _diagnostics?.ReportInfo($"Extracted: {entry.Name}");
                 }
 
                 _diagnostics?.ReportInfo($"Package extracted successfully to: {extractPath}");
@@ -170,7 +166,7 @@ namespace uhigh.Net.UbPackage
         }
 
         /// <summary>
-        /// Reads the manifest from a .ub package (tar.gz)
+        /// Reads the manifest from a .ub package (zip)
         /// </summary>
         /// <param name="packagePath">Path to the .ub file</param>
         /// <returns>Package manifest or null if not found/invalid</returns>
@@ -183,19 +179,17 @@ namespace uhigh.Net.UbPackage
                     return null;
                 }
 
-                using var fileStream = File.OpenRead(packagePath);
-                using var gzipStream = new GZipStream(fileStream, CompressionMode.Decompress);
-                using var tarReader = new TarReader(gzipStream);
-
-                TarEntry entry;
-                while ((entry = tarReader.GetNextEntry()) != null)
+                using (var zip = ZipFile.OpenRead(packagePath))
                 {
-                    if (entry.Name == ManifestFileName)
+                    var manifestEntry = zip.GetEntry(ManifestFileName);
+                    if (manifestEntry != null)
                     {
-                        using var manifestStream = entry.DataStream;
-                        using var reader = new StreamReader(manifestStream, Encoding.UTF8);
-                        var manifestJson = await reader.ReadToEndAsync();
-                        return PackageManifest.FromJson(manifestJson);
+                        using (var manifestStream = manifestEntry.Open())
+                        using (var reader = new StreamReader(manifestStream, Encoding.UTF8))
+                        {
+                            var manifestJson = await reader.ReadToEndAsync();
+                            return PackageManifest.FromJson(manifestJson);
+                        }
                     }
                 }
 

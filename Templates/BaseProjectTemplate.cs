@@ -96,7 +96,7 @@ namespace uhigh.Net.Templates
             {
                 { "description", "Project description" },
                 { "author", "Project author" },
-                { "targetFramework", "Target framework (default: net8.0)" }
+                { "targetFramework", "Target framework (default: net9.0)" }
             };
         }
         

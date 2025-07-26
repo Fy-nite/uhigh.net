@@ -20,7 +20,7 @@ namespace uhigh.Net.Tests
                 Version = "1.2.3",
                 Description = "Test package description",
                 Author = "Test Author",
-                TargetFramework = "net8.0",
+                TargetFramework = "net9.0",
                 OutputType = "Library",
                 SourceFiles = new List<string> { "main.uh", "utils.uh" }
             };
@@ -38,7 +38,7 @@ namespace uhigh.Net.Tests
             Assert.AreEqual("TestPackage", deserialized.Name, "Name should match");
             Assert.AreEqual("1.2.3", deserialized.Version, "Version should match");
             Assert.AreEqual(2, deserialized.SourceFiles.Count, "Should have 2 source files");
-            Assert.AreEqual("net8.0", deserialized.TargetFramework, "Target framework should match");
+            Assert.AreEqual("net9.0", deserialized.TargetFramework, "Target framework should match");
         }
 
         [Test]
@@ -72,7 +72,7 @@ namespace uhigh.Net.Tests
                 Version = "2.0.0",
                 Description = "Test project",
                 Author = "Test Author",
-                Target = "net8.0",
+                Target = "net9.0",
                 OutputType = "Exe",
                 SourceFiles = new List<string> { "Program.uh" }
             };
@@ -102,7 +102,7 @@ namespace uhigh.Net.Tests
                 Version = "1.5.0",
                 Description = "Test library",
                 Author = "Test Author",
-                TargetFramework = "net8.0",
+                TargetFramework = "net9.0",
                 OutputType = "Library",
                 SourceFiles = new List<string> { "lib.uh" }
             };
