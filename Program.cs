@@ -1105,7 +1105,7 @@ public class EntryPoint
         try
         {
             var compiler = new Compiler(options.Verbose, options.StdLibPath);
-            string fileToRun;
+            string? fileToRun;
 
             // Determine what file to run
             if (string.IsNullOrEmpty(options.ProjectFile))
