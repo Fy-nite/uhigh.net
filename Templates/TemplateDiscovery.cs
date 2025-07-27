@@ -29,7 +29,7 @@ namespace uhigh.Net.Templates
         /// Discovers and loads all templates from built-in and addon sources
         /// </summary>
         /// <param name="addonPaths">Additional paths to search for templates</param>
-        public async Task DiscoverTemplatesAsync(params string[] addonPaths)
+        public void DiscoverTemplatesAsync(params string[] addonPaths)
         {
             _templates.Clear();
             
@@ -39,7 +39,7 @@ namespace uhigh.Net.Templates
             // Load templates from addon directories
             foreach (var addonPath in addonPaths)
             {
-                await LoadTemplatesFromDirectoryAsync(addonPath);
+                LoadTemplatesFromDirectoryAsync(addonPath);
             }
             
             _diagnostics?.ReportInfo($"Discovered {_templates.Count} project templates");
@@ -105,7 +105,7 @@ namespace uhigh.Net.Templates
         /// Loads templates from a directory containing compiled assemblies
         /// </summary>
         /// <param name="directoryPath">Path to the directory</param>
-        private async Task LoadTemplatesFromDirectoryAsync(string directoryPath)
+        private void LoadTemplatesFromDirectoryAsync(string directoryPath)
         {
             try
             {
@@ -120,7 +120,7 @@ namespace uhigh.Net.Templates
                 
                 foreach (var dllFile in dllFiles)
                 {
-                    await LoadTemplatesFromAssemblyAsync(dllFile);
+                    LoadTemplatesFromAssemblyAsync(dllFile);
                 }
             }
             catch (Exception ex)
@@ -133,7 +133,7 @@ namespace uhigh.Net.Templates
         /// Loads templates from a specific assembly file
         /// </summary>
         /// <param name="assemblyPath">Path to the assembly file</param>
-        private async Task LoadTemplatesFromAssemblyAsync(string assemblyPath)
+        private void LoadTemplatesFromAssemblyAsync(string assemblyPath)
         {
             try
             {
@@ -171,7 +171,7 @@ namespace uhigh.Net.Templates
             }
             catch (ReflectionTypeLoadException ex)
             {
-                var loaderExceptions = string.Join("; ", ex.LoaderExceptions.Select(e => e.Message));
+                var loaderExceptions = string.Join("; ", ex.LoaderExceptions.Select(e => e?.Message));
                 _diagnostics?.ReportWarning($"Failed to load types from assembly {assemblyPath}: {loaderExceptions}");
             }
             catch (FileLoadException ex)

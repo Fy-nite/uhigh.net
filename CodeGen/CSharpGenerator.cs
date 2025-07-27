@@ -45,7 +45,7 @@ namespace uhigh.Net.CodeGen
         /// <summary>
         /// The type resolver
         /// </summary>
-        private ReflectionTypeResolver _typeResolver; // Add this field
+        private ReflectionTypeResolver? _typeResolver; // Add this field
 
         /// <summary>
         /// The config
@@ -1349,16 +1349,18 @@ namespace uhigh.Net.CodeGen
                     GenerateExpression(binExpr.Right);
                     break;
                 case UnaryExpression unaryExpr:
+                    if (unaryExpr.Operand == null) { throw new Exception("unaryExpr.Operand is null"); }
+                    if (unaryExpr.Operator == null) { throw new Exception("unaryExpr.Operator is null"); }
                     if (unaryExpr.IsPostfix)
                     {
                         // Postfix operators (i++, i--)
                         GenerateExpression(unaryExpr.Operand);
-                        _output.Append(ConvertOperator(unaryExpr.Operator));
+                        _output.Append(ConvertOperator((TokenType)unaryExpr.Operator));
                     }
                     else
                     {
                         // Prefix operators (++i, --i, !expr, -expr)
-                        _output.Append(ConvertOperator(unaryExpr.Operator));
+                        _output.Append(ConvertOperator((TokenType)unaryExpr.Operator));
                         GenerateExpression(unaryExpr.Operand);
                     }
                     break;
@@ -1369,6 +1371,8 @@ namespace uhigh.Net.CodeGen
                     _output.Append(identifierExpr.Name);
                     break;
                 case AssignmentExpression assignExpr:
+                    if (assignExpr.Value == null) throw new Exception("assignExpr.Value is null");
+                    if (assignExpr.Target == null) throw new Exception("assignExpr.Target is null");
                     GenerateExpression(assignExpr.Target);
                     _output.Append($" {ConvertOperator(assignExpr.Operator)} ");
                     GenerateExpression(assignExpr.Value);
@@ -1679,7 +1683,7 @@ namespace uhigh.Net.CodeGen
             {
                 // Try to infer type from first element
                 var firstElem = arrayExpr.Elements[0];
-                string inferredType = null;
+                string? inferredType = null;
                 if (firstElem is LiteralExpression lit)
                 {
                     inferredType = lit.Value switch
@@ -2118,8 +2122,9 @@ namespace uhigh.Net.CodeGen
         /// </summary>
         /// <param name="type">The type</param>
         /// <returns>The string</returns>
-        private string GetCSharpTypeName(Type type)
+        private string GetCSharpTypeName(Type? type)
         {
+            if (type == null) return "null";
             // Handle special C# type names
             if (type == typeof(int)) return "int";
             if (type == typeof(double)) return "double";

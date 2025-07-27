@@ -82,7 +82,7 @@ namespace UhighLanguageServer
             _all.RemoveAt(index);
         }
 
-        public event EventHandler<TextDocumentChangedEventArgs> Changed;
+        public event EventHandler<TextDocumentChangedEventArgs>? Changed;
 
         protected virtual void OnChanged(TextDocumentItem document)
         {

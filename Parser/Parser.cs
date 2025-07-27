@@ -1328,6 +1328,10 @@ namespace uhigh.Net.Parser
                 if (Check(TokenType.If))
                 {
                     var elseIfStmt = ParseStatement(); // This will parse the "if" statement
+                    if (elseIfStmt == null)
+                    {
+                        throw new Exception("Else if statment is null");
+                    }
                     elseBranch = new List<Statement> { elseIfStmt };
                 }
                 else
@@ -2205,7 +2209,6 @@ namespace uhigh.Net.Parser
         private Expression ParseInterpolatedString()
         {
             var parts = new List<InterpolationPart>();
-            var currentText = "";
 
             // This is a simplified version - a full implementation would need
             // more sophisticated tokenization for interpolated strings

@@ -263,6 +263,7 @@ namespace uhigh.Net.Parser
         /// <returns>The inferred type</returns>
         private Type InferUnaryExpressionType(UnaryExpression unaryExpr)
         {
+            if (unaryExpr.Operand == null) { throw new Exception("unaryExpr.Operand is null"); }
             return unaryExpr.Operator switch
             {
                 TokenType.Not => typeof(bool),

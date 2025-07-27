@@ -143,7 +143,7 @@ namespace uhigh.Net.Testing
             var catClass = classes.First(c => c.Name == "cat");
             var feedMethod = catClass.Members.OfType<MethodDeclaration>().FirstOrDefault(m => m.Name == "feed");
             Assert.IsNotNull(feedMethod);
-            Assert.AreEqual(1, feedMethod.Parameters.Count);
+            Assert.AreEqual(1, feedMethod!.Parameters.Count);
             Assert.AreEqual("meow", feedMethod.Parameters[0].Type);
         }
 
@@ -876,7 +876,7 @@ namespace uhigh.Net.Testing
             Assert.IsNotNull(returnStmt.Value);
             Assert.IsTrue(returnStmt.Value is BinaryExpression);
 
-            var binaryExpr = (BinaryExpression)returnStmt.Value;
+            var binaryExpr = (BinaryExpression)returnStmt.Value!;
             Assert.AreEqual(TokenType.Plus, binaryExpr.Operator);
             Assert.IsTrue(binaryExpr.Left is LiteralExpression);
             Assert.IsTrue(binaryExpr.Right is IdentifierExpression);

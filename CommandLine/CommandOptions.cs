@@ -29,9 +29,9 @@ namespace uhigh.Net.CommandLine
         public string? Directory { get; set; }
         public string? Description { get; set; }
         public string? Author { get; set; }
-        public string OutputType { get; set; } = "Exe";
-        public string TargetFramework { get; set; } = "net9.0";
-        public string Template { get; set; } = "console";
+        public string? OutputType { get; set; } = "Exe";
+        public string? TargetFramework { get; set; } = "net9.0";
+        public string? Template { get; set; } = "console";
         public Dictionary<string, string> TemplateParameters { get; set; } = new();
         public string Backend { get; set; } = "csharp";
 
@@ -156,7 +156,7 @@ namespace uhigh.Net.CommandLine
     /// </summary>
     public class PackOptions : BaseCommandOptions
     {
-        public string ProjectFile { get; set; } = "";
+        public string? ProjectFile { get; set; } = "";
         public string? OutputFile { get; set; }
     }
 
@@ -174,7 +174,7 @@ namespace uhigh.Net.CommandLine
     /// </summary>
     public class InstallUbPackageOptions : BaseCommandOptions
     {
-        public string ProjectFile { get; set; } = "";
+        public string? ProjectFile { get; set; } = "";
         public string PackageFile { get; set; } = "";
         public string? PackageCachePath { get; set; }
     }
@@ -184,7 +184,7 @@ namespace uhigh.Net.CommandLine
     /// </summary>
     public class ListUbPackagesOptions : BaseCommandOptions
     {
-        public string ProjectFile { get; set; } = "";
+        public string? ProjectFile { get; set; } = "";
     }
 
     /// <summary>

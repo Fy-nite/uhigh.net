@@ -4,7 +4,7 @@ using System.Text;
 
 namespace UhighLanguageServer
 {
-    class srv
+    class Srv
     {
         public static async Task StartServerAsync(bool useWebSocket = true, int wsPort = 5000)
         {

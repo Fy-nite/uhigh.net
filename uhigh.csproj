@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Version>1.1.6</Version>
@@ -18,7 +18,7 @@
     <PackageProjectUrl>https://github.com/fy-nite/uhigh.net</PackageProjectUrl>
     <RepositoryUrl>https://github.com/fy-nite/uhigh.net</RepositoryUrl>
     <Configurations>Debug;Release;debug lsp</Configurations>
-    <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <GenerateDocumentationFile>False</GenerateDocumentationFile>
     <PublishAot>False</PublishAot>
     <SignAssembly>False</SignAssembly>
     <Title>Micro-high</Title>

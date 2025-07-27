@@ -204,6 +204,7 @@ namespace uhigh.Net.NuGet
                         };
         
                         using var process = Process.Start(psi);
+                        if (process == null) { throw new Exception("Process is null"); }
                         var output = await process.StandardOutput.ReadToEndAsync();
                         var error = await process.StandardError.ReadToEndAsync();
                         await process.WaitForExitAsync();
@@ -223,7 +224,7 @@ namespace uhigh.Net.NuGet
                     }
                 }
 
-        private async Task<bool> DownloadPackageDirectlyAsync(PackageReference package, string packageDir = null)
+        private async Task<bool> DownloadPackageDirectlyAsync(PackageReference package, string? packageDir = null)
         {
             try
             {

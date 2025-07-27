@@ -669,6 +669,8 @@ namespace uhigh.Net.CodeGen
                     _output.Append(")");
                     break;
                 case AssignmentExpression assignExpr:
+                    if (assignExpr.Value == null) throw new Exception("assignExpr.Value is null");
+                    if (assignExpr.Target == null) throw new Exception("assignExpr.Target is null");
                     GenerateExpression(assignExpr.Target);
                     _output.Append($" {ConvertOperator(assignExpr.Operator)} ");
                     GenerateExpression(assignExpr.Value);

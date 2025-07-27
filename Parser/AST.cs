@@ -23,7 +23,7 @@ namespace uhigh.Net.Parser
         /// <summary>
         /// Gets or sets the value of the value
         /// </summary>
-        public object Value { get; set; } = null!;
+        public object? Value { get; set; } = null;
         /// <summary>
         /// Gets or sets the value of the type
         /// </summary>
@@ -112,11 +112,11 @@ namespace uhigh.Net.Parser
         /// <summary>
         /// Gets or sets the value of the operator
         /// </summary>
-        public TokenType Operator { get; set; }
+        public TokenType? Operator { get; set; }
         /// <summary>
         /// Gets or sets the value of the operand
         /// </summary>
-        public Expression Operand { get; set; } = null!;
+        public Expression? Operand { get; set; } = null;
         /// <summary>
         /// Gets or sets whether this is a postfix operation (e.g., i++ vs ++i)
         /// </summary>
@@ -224,7 +224,7 @@ namespace uhigh.Net.Parser
         /// <summary>
         /// Gets or sets the value of the target
         /// </summary>
-        public Expression Target { get; set; } = null!;
+        public Expression? Target { get; set; } = null;
         /// <summary>
         /// Gets or sets the value of the operator
         /// </summary>
@@ -232,7 +232,7 @@ namespace uhigh.Net.Parser
         /// <summary>
         /// Gets or sets the value of the value
         /// </summary>
-        public Expression Value { get; set; } = null!;
+        public Expression? Value { get; set; } = null;
     }
 
     /// <summary>
