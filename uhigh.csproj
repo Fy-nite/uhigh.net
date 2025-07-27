@@ -75,13 +75,4 @@
       <PackagePath>\</PackagePath>
     </None>
   </ItemGroup>
-  
-  <ItemGroup>
-    <EditorConfigFiles Remove="D:\uhigh.net\Properties\.editorconfig" />
-  </ItemGroup>
-  
-  <ItemGroup>
-    <None Include="D:\uhigh.net\Properties\.editorconfig" />
-  </ItemGroup>
-
 </Project>
