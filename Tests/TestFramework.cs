@@ -70,7 +70,7 @@ namespace uhigh.Net.Testing
     public static class TestRunnerConfig
     {
         public static int multithreaded_max_tests = Environment.ProcessorCount - 1;
-        public static bool multithreaded = true;
+        public static bool multithreaded = false;
     }
 
     public class TestRunner
@@ -169,30 +169,23 @@ namespace uhigh.Net.Testing
         {
             while (true)
             {
+                TestRunnerData? data = null;
                 bool is_test_to_run = false;
-
-                while (!is_test_to_run) {
-                    lock (run_test_lock) {
-                        if (to_run_tests.Count == 0) {
-                            continue;
-                        } else {
-                            is_test_to_run = true;
+                lock (run_test_lock)
+                {
+                    if (to_run_tests.Count != 0)
+                    {
+                        data = to_run_tests.First();
+                        if (data.is_exit == true)
+                        {
+                            return;
                         }
-                    }
-                    if (!is_test_to_run) {
-                        Thread.Sleep(10); // Small delay to avoid busy waiting
+                        to_run_tests.RemoveAt(0);
+                        is_test_to_run = true;
                     }
                 }
-                TestRunnerData data;
-                lock (run_test_lock) {
-                    data = to_run_tests.First();
-                    if (data.is_exit == true) {
-                        return;
-                    }
-                    to_run_tests.RemoveAt(0);
-
-                }
-                data.Run();
+                if (is_test_to_run) data!.Run();
+                else Thread.Sleep(10);
             }
         }
         public static List<TestSuiteResult> RunAllTests() { return RunAllTests(new List<string>()); }

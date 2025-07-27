@@ -139,9 +139,9 @@ namespace uhigh.Net.Testing
             var lexer = new Lexer.Lexer(source, diagnostics);
             var tokens = lexer.Tokenize();
             
-            Assert.IsTrue(tokens.Any(t => t.Value == "List<string>"));
-            Assert.IsTrue(tokens.Any(t => t.Type == TokenType.Less));
-            Assert.IsTrue(tokens.Any(t => t.Type == TokenType.Greater));
+            Assert.IsTrue(tokens.Any(t => t.Value == "List<string>"), $"Expected List<string> token but it was not found. Tokens: [{String.Join(", ", tokens)}]");
+            Assert.IsTrue(tokens.Any(t => t.Type == TokenType.Less), $"Expected Token of type Less but it was not found. {tokens}");
+            Assert.IsTrue(tokens.Any(t => t.Type == TokenType.Greater), $"Expected Token of type Greater but it was not found. {tokens}");
         }
         
         [Test]

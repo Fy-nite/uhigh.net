@@ -17,10 +17,10 @@ namespace uhigh.Net.Testing
         /// <returns>The program</returns>
         private Program ParseSource(string source)
         {
-            var diagnostics = new uhigh.Net.Diagnostics.DiagnosticsReporter();
-            var lexer = new uhigh.Net.Lexer.Lexer(source, diagnostics);
+            var diagnostics = new DiagnosticsReporter();
+            var lexer = new Lexer.Lexer(source, diagnostics);
             var tokens = lexer.Tokenize();
-            var parser = new uhigh.Net.Parser.Parser(tokens, diagnostics);
+            var parser = new Parser.Parser(tokens, diagnostics);
             return parser.Parse();
         }
 
@@ -525,6 +525,7 @@ namespace uhigh.Net.Testing
         [Test]
         public void TestMatchExpressionAssignment()
         {
+            Console.WriteLine("---------------------------------------------------");
             var program = ParseSource(@"
                 var message: string
                 message = status match {
@@ -533,6 +534,7 @@ namespace uhigh.Net.Testing
                     _ => ""Error""
                 }");
 
+            Console.WriteLine("---------------------------------------------------");
             Assert.AreEqual(2, program.Statements.Count);
             Assert.IsTrue(program.Statements[0] is VariableDeclaration);
             Assert.IsTrue(program.Statements[1] is ExpressionStatement);
@@ -925,7 +927,7 @@ namespace uhigh.Net.Testing
         [Test]
         public void TestProjectCompilation()
         {
-            var projectPath = Path.Combine(Environment.CurrentDirectory, "testing", "uh", "simple-project.uhighproj");
+            var projectPath = Path.Combine(Environment.CurrentDirectory, "Tests", "uh", "simple-project.uhighproj");
 
             // Ensure the test files exist
             Assert.IsTrue(File.Exists(projectPath), $"Project file should exist at {projectPath}");
