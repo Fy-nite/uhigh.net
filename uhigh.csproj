@@ -77,11 +77,11 @@
   </ItemGroup>
   
   <ItemGroup>
-    <EditorConfigFiles Remove="D:\uhigh.net\Properties\.editorconfig" />
+    <EditorConfigFiles Remove="Properties\.editorconfig" />
   </ItemGroup>
   
   <ItemGroup>
-    <None Include="D:\uhigh.net\Properties\.editorconfig" />
+    <None Include="Properties\.editorconfig" />
   </ItemGroup>
 
 </Project>
