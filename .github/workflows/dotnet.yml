@@ -24,4 +24,4 @@ jobs:
         path: |
           bin/Debug/net8.0
     - name: Test
-      run: dotnet ./bin/Debug/net8.0/uhigh.dll test
+      run: dotnet ./bin/Debug/net9.0/uhigh.dll test
