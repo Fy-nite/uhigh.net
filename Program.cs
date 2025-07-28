@@ -620,7 +620,6 @@ public class EntryPoint
             listTestsOption,
             skipFileOption
         };
-
         command.SetHandler((verbose, stdLibPath, listTests, skipFile) =>
         {
             var options = new TestOptions
@@ -630,7 +629,8 @@ public class EntryPoint
                 ListTests = listTests,
                 SkipFile = skipFile
             };
-            Environment.ExitCode = HandleTestCommand(options);
+            var ExitCode = HandleTestCommand(options);
+            return Task.FromResult(ExitCode);
         }, verboseOption, stdLibOption, listTestsOption, skipFileOption);
 
         return command;
@@ -1507,7 +1507,7 @@ public class EntryPoint
             uhigh.Net.Testing.TestRunner.PrintResults(testSuites);
 
             var totalFailed = testSuites.Sum(s => s.Counts.Failed);
-            return totalFailed == 0 ? 0 : 1;
+            return totalFailed;
         }
         catch (Exception ex)
         {

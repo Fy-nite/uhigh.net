@@ -5,6 +5,7 @@ A simple, modern language that compiles to C# and runs on .NET. μHigh offers ac
 ## Quick Start
 
 **Install:**
+There are three ways to install uhigh. There are stable releases on the [releases page](https://github.com/Fy-nite/uhigh.net/releases), Most recent builds are avaliable with the [actions](https://github.com/Fy-nite/uhigh.net/actions), or you can build from source with the following commands
 ```bash
 git clone https://github.com/fy-nite/uhigh.net
 cd uhigh.net
