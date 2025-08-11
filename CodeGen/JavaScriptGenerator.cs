@@ -657,6 +657,8 @@ namespace uhigh.Net.CodeGen
                     _output.Append("]");
                     break;
                 case AssignmentExpression assignExpr:
+                    if (assignExpr.Value == null) throw new Exception("assignExpr.Value is null");
+                    if (assignExpr.Target == null) throw new Exception("assignExpr.Target is null");
                     GenerateExpression(assignExpr.Target);
                     _output.Append($" {ConvertOperator(assignExpr.Operator)} ");
                     GenerateExpression(assignExpr.Value);
@@ -735,16 +737,19 @@ namespace uhigh.Net.CodeGen
                     }
                     break;
                 case UnaryExpression unaryExpr:
+                    if (unaryExpr.Operand == null) { throw new Exception("unaryExpr.Operand is null"); }
+                    if (unaryExpr.Operator == null) { throw new Exception("unaryExpr.Operator is null"); }
+                    TokenType _operator = (TokenType)unaryExpr.Operator;
                     if (unaryExpr.Operator == TokenType.Increment || unaryExpr.Operator == TokenType.Decrement)
                     {
                         // Prefix increment/decrement
-                        _output.Append(ConvertOperator(unaryExpr.Operator));
+                        _output.Append(ConvertOperator(_operator));
                         GenerateExpression(unaryExpr.Operand);
                     }
                     else
                     {
                         // Other unary operators (not, minus)
-                        _output.Append(ConvertOperator(unaryExpr.Operator));
+                        _output.Append(ConvertOperator(_operator));
                         if (NeedsParentheses(unaryExpr.Operand))
                         {
                             _output.Append("(");

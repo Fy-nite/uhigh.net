@@ -43,16 +43,16 @@ namespace uhigh.Net.Parser
 
             foreach (var field in nonNullFields)
             {
-                bool initializedInCtor = constructors.Any(ctor =>
-                    ctor.Body.OfType<AssignmentExpression>().Any(assign =>
-                        assign.Target is IdentifierExpression id && id.Name == field.Name));
+                // bool initializedInCtor = constructors.Any(ctor =>
+                //     ctor.Body.OfType<AssignmentExpression>().Any(assign => // Charlie. Why the fuck did you write this. Did you not know that the AssignmentExpression class that YOU WROTE isn't a STATEMENT. Also did you not see the warning.
+                //         assign.Target is IdentifierExpression id && id.Name == field.Name));
 
-                if (!initializedInCtor)
-                {
-                    diagnostics.ReportWarning(
-                        $"Non-nullable field '{field.Name}' is not initialized in any constructor.",
-                        field.Line, field.Column, "UH301");
-                }
+                // if (!initializedInCtor)
+                // {
+                //     diagnostics.ReportWarning(
+                //         $"Non-nullable field '{field.Name}' is not initialized in any constructor.",
+                //         field.Line, field.Column, "UH301");
+                // }
             }
 
             // New: Check for duplicate member names
@@ -165,9 +165,11 @@ namespace uhigh.Net.Parser
                         CheckMagicNumbers(bin.Right);
                         break;
                     case UnaryExpression unary:
+                        if (unary.Operand == null) { throw new Exception("unary.Operand is null"); }
                         CheckMagicNumbers(unary.Operand);
                         break;
                     case AssignmentExpression assign:
+                        if (assign.Value == null) throw new Exception("assign.Value is null");
                         CheckMagicNumbers(assign.Value);
                         break;
                     case CallExpression call:
@@ -194,6 +196,8 @@ namespace uhigh.Net.Parser
                             usedVars.Add(id.Name);
                         break;
                     case AssignmentExpression assign:
+                        if (assign.Value == null) throw new Exception("assign.Value is null");
+                        if (assign.Target == null) throw new Exception("assign.Target is null");
                         CollectUsedVars(assign.Target);
                         CollectUsedVars(assign.Value);
                         break;
@@ -202,6 +206,7 @@ namespace uhigh.Net.Parser
                         CollectUsedVars(bin.Right);
                         break;
                     case UnaryExpression unary:
+                        if (unary.Operand == null) { throw new Exception("unary.Operand is null"); }
                         CollectUsedVars(unary.Operand);
                         break;
                     case CallExpression call:
@@ -232,7 +237,10 @@ namespace uhigh.Net.Parser
                     CollectUsedVars(exprStmt.Expression);
                     CheckMagicNumbers(exprStmt.Expression);
                     if (exprStmt.Expression is AssignmentExpression assignExpr)
+                    {
+                        if (assignExpr.Value == null) throw new Exception("assignExpr.Value is null");
                         CollectUsedVars(assignExpr.Value);
+                    }
                 }
             }
 

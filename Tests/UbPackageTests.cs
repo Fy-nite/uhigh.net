@@ -12,7 +12,7 @@ namespace uhigh.Net.Tests
     public class UbPackageTests
     {
         [Test]
-        public static async Task TestPackageManifestSerialization()
+        public static void TestPackageManifestSerialization()
         {
             var manifest = new PackageManifest
             {
@@ -35,14 +35,14 @@ namespace uhigh.Net.Tests
 
             var deserialized = PackageManifest.FromJson(json);
             Assert.IsNotNull(deserialized, "Deserialized manifest should not be null");
-            Assert.AreEqual("TestPackage", deserialized.Name, "Name should match");
+            Assert.AreEqual("TestPackage", deserialized!.Name, "Name should match");
             Assert.AreEqual("1.2.3", deserialized.Version, "Version should match");
             Assert.AreEqual(2, deserialized.SourceFiles.Count, "Should have 2 source files");
             Assert.AreEqual("net9.0", deserialized.TargetFramework, "Target framework should match");
         }
 
         [Test]
-        public static async Task TestPackageManifestValidation()
+        public static void TestPackageManifestValidation()
         {
             var validManifest = new PackageManifest
             {
@@ -64,7 +64,7 @@ namespace uhigh.Net.Tests
         }
 
         [Test]
-        public static async Task TestPackageManifestFromProject()
+        public static void TestPackageManifestFromProject()
         {
             var project = new uhighProject
             {
@@ -94,7 +94,7 @@ namespace uhigh.Net.Tests
         }
 
         [Test]
-        public static async Task TestProjectFromPackageManifest()
+        public static void TestProjectFromPackageManifest()
         {
             var manifest = new PackageManifest
             {
@@ -153,7 +153,7 @@ namespace uhigh.Net.Tests
                 // Read manifest from package
                 var manifest = await packageManager.ReadManifestAsync(packagePath);
                 Assert.IsNotNull(manifest, "Manifest should not be null");
-                Assert.AreEqual("TestProject", manifest.Name, "Package name should match");
+                Assert.AreEqual("TestProject", manifest!.Name, "Package name should match");
                 Assert.AreEqual("1.0.0", manifest.Version, "Package version should match");
 
                 // Extract package

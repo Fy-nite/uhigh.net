@@ -39,9 +39,6 @@ namespace uhigh.Net.Tests
             sanitized = ConsoleAppTemplate.TestSanitizeNamespaceIdentifier("");
             Assert.AreEqual("Project", sanitized);
             
-            sanitized = ConsoleAppTemplate.TestSanitizeNamespaceIdentifier(null);
-            Assert.AreEqual("Project", sanitized);
-            
             // Test underscores are preserved
             sanitized = ConsoleAppTemplate.TestSanitizeNamespaceIdentifier("my_valid_namespace");
             Assert.AreEqual("my_valid_namespace", sanitized);

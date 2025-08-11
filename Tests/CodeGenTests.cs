@@ -234,10 +234,10 @@ namespace uhigh.Net.Testing
             Assert.IsTrue(result.Contains("public static void test(int a, double b, string c, bool d)"));
         }
         //TODO: fix this test in the parser
-        /// <summary>
-        /// Tests that test match expression
-        /// this is currently broken in the parser, so it will not work
-        /// </summary>
+        // /// <summary>
+        // /// Tests that test match expression
+        // /// this is currently broken in the parser, so it will not work
+        // /// </summary>
         // [Test]
         // public void TestMatchExpression()
         // {
@@ -369,7 +369,7 @@ namespace uhigh.Net.Testing
             
             var csharpInfo = generators.FirstOrDefault(g => g.Name.Contains("C#"));
             Assert.IsNotNull(csharpInfo);
-            Assert.IsTrue(csharpInfo.SupportedFeatures.Contains("classes"));
+            Assert.IsTrue(csharpInfo!.SupportedFeatures.Contains("classes"));
         }
 
         /// <summary>

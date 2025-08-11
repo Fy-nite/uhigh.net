@@ -497,6 +497,8 @@ namespace uhigh.Net
                     break;
 
                 case AssignmentExpression assign:
+                    if (assign.Value == null) throw new Exception("assign.Value is null");
+                    if (assign.Target == null) throw new Exception("assign.Target is null");
                     Console.Write($"{indent}");
                     PrintASTNode(assign.Target, 0);
                     Console.Write($" {assign.Operator} ");

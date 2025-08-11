@@ -540,7 +540,9 @@ using Set = std::set<T>;
                     GenerateExpression(binExpr.Right);
                     break;
                 case UnaryExpression unaryExpr:
-                    _output.Append(ConvertOperator(unaryExpr.Operator));
+                    if (unaryExpr.Operand == null) { throw new Exception("unaryExpr.Operand is null"); }
+                    if (unaryExpr.Operator == null) { throw new Exception("unaryExpr.Operator is null"); }
+                    _output.Append(ConvertOperator((TokenType)unaryExpr.Operator));
                     GenerateExpression(unaryExpr.Operand);
                     break;
                 case LiteralExpression litExpr:
@@ -550,6 +552,8 @@ using Set = std::set<T>;
                     _output.Append(identifierExpr.Name);
                     break;
                 case AssignmentExpression assignExpr:
+                    if (assignExpr.Value == null) throw new Exception("assignExpr.Value is null");
+                    if (assignExpr.Target == null) throw new Exception("assignExpr.Target is null");
                     GenerateExpression(assignExpr.Target);
                     _output.Append($" {ConvertOperator(assignExpr.Operator)} ");
                     GenerateExpression(assignExpr.Value);

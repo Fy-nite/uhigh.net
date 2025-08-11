@@ -2,11 +2,8 @@ using System.CommandLine;
 using System.CommandLine.Parsing;
 using uhigh.Net;
 using uhigh.Net.CommandLine;
-using uhigh.Net.UbPackage;
 using uhigh.Net.Templates;
 using uhigh.Net.Diagnostics;
-using System.CommandLine;
-using System.CommandLine.Parsing;
 using System.CommandLine.Invocation;
 
 
@@ -196,7 +193,7 @@ public class EntryPoint
             stdLibOption
         };
 
-        command.SetHandler(async (verbose, stdLibPath) =>
+        command.SetHandler((verbose, stdLibPath) =>
         {
             var options = new CreateOptions
             {
@@ -205,7 +202,7 @@ public class EntryPoint
                 StdLibPath = stdLibPath
             };
             
-            Environment.ExitCode = await HandleListTemplatesCommand(options);
+            Environment.ExitCode = HandleListTemplatesCommand(options);
         }, verboseOption, stdLibOption);
 
         return command;
@@ -933,6 +930,10 @@ public class EntryPoint
         try
         {
 
+            if (options.Template == null)
+            {
+                throw new Exception("Empty Template");
+            }
             var compiler = new Compiler(options.Verbose, options.StdLibPath);
             
             // Initialize template discovery
@@ -940,7 +941,7 @@ public class EntryPoint
             
             // Discover templates from built-in and addons folder
             var addonsPath = Path.Combine(AppContext.BaseDirectory, "addons", "templates");
-            await templateDiscovery.DiscoverTemplatesAsync(addonsPath);
+            templateDiscovery.DiscoverTemplatesAsync(addonsPath);
             
             // Get the requested template
             var template = templateDiscovery.GetTemplate(options.Template);
@@ -994,7 +995,7 @@ public class EntryPoint
     /// </summary>
     /// <param name="options">The options</param>
     /// <returns>A task containing the int</returns>
-    private static async Task<int> HandleListTemplatesCommand(CreateOptions options)
+    private static int HandleListTemplatesCommand(CreateOptions options)
     {
         try
         {
@@ -1003,7 +1004,7 @@ public class EntryPoint
             
             // Discover templates from built-in and addons folder
             var addonsPath = Path.Combine(AppContext.BaseDirectory, "addons", "templates");
-            await templateDiscovery.DiscoverTemplatesAsync(addonsPath);
+            templateDiscovery.DiscoverTemplatesAsync(addonsPath);
             
             Console.WriteLine("Available μHigh Project Templates:");
             Console.WriteLine("====================================");
@@ -1290,6 +1291,10 @@ public class EntryPoint
     {
         try
         {
+            if (options.ProjectFile == null)
+            {
+                throw new Exception("Project file cannot be null");
+            }
             Console.WriteLine($"Installing packages for project: {options.ProjectFile}");
 
             var project = await uhigh.Net.ProjectFile.LoadAsync(options.ProjectFile);
@@ -1370,6 +1375,7 @@ public class EntryPoint
     {
         try
         {
+            if (options.ProjectFile == null) {throw new Exception("Project File cannot be null");}
             var project = await uhigh.Net.ProjectFile.LoadAsync(options.ProjectFile);
             if (project == null)
             {
@@ -1407,6 +1413,7 @@ public class EntryPoint
     {
         try
         {
+            if (options.ProjectFile == null) {throw new Exception("Project File cannot be null");}
             var project = await uhigh.Net.ProjectFile.LoadAsync(options.ProjectFile);
             if (project == null)
             {
@@ -1464,7 +1471,7 @@ public class EntryPoint
     private static async Task<int> HandleLspCommand(LspOptions options)
     {
         // For now, redirect to the simple LSP test
-        await UhighLanguageServer.srv.StartServerAsync();
+        await UhighLanguageServer.Srv.StartServerAsync();
         return 0;
     }
 

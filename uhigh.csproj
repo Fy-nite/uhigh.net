@@ -18,7 +18,7 @@
     <PackageProjectUrl>https://github.com/fy-nite/uhigh.net</PackageProjectUrl>
     <RepositoryUrl>https://github.com/fy-nite/uhigh.net</RepositoryUrl>
     <Configurations>Debug;Release;debug lsp</Configurations>
-    <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <GenerateDocumentationFile>False</GenerateDocumentationFile>
     <PublishAot>False</PublishAot>
     <SignAssembly>False</SignAssembly>
     <Title>Micro-high</Title>

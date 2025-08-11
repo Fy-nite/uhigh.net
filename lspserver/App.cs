@@ -10,7 +10,7 @@ namespace UhighLanguageServer
 {
     public class App : ServiceConnection
     {
-        private Uri _workerSpaceRoot;
+        private Uri? _workerSpaceRoot;
         private int _maxNumberOfProblems = 1000;
         private TextDocumentManager _documents;
         private uhigh.Net.Parser.ReflectionTypeResolver _typeResolver;
@@ -27,7 +27,7 @@ namespace UhighLanguageServer
             _methodResolver = new uhigh.Net.Parser.ReflectionMethodResolver(diagnostics);
         }
 
-        private void Documents_Changed(object sender, TextDocumentChangedEventArgs e)
+        private void Documents_Changed(object? sender, TextDocumentChangedEventArgs e)
         {
             ValidateTextDocument(e.Document);
         }
@@ -240,7 +240,20 @@ namespace UhighLanguageServer
             Logger.Instance.Log("We received an file change event");
         }
 
-        protected override Result<CompletionResult, ResponseError> Completion(CompletionParams @params)
+        private TextEdit tedit(string text, Position pos)
+        {
+            return new TextEdit
+            {
+                newText = "func ",
+                range = new LanguageServer.Parameters.Range
+                {
+                    start = pos,
+                    end = pos
+                }
+            };
+        }
+
+        protected override Result<CompletionResult, ResponseError> Completion(CompletionParams _params)
         {
             // μHigh keywords (static)
             var keywordItems = new[]
@@ -251,7 +264,7 @@ namespace UhighLanguageServer
                     kind = CompletionItemKind.Keyword,
                     detail = "Function declaration",
                     documentation = "Defines a function",
-                    insertText = "func ",
+                    textEdit = tedit("func ", _params.position),
                     data = 1001
                 },
                 new CompletionItem
@@ -260,7 +273,7 @@ namespace UhighLanguageServer
                     kind = CompletionItemKind.Keyword,
                     detail = "Variable declaration",
                     documentation = "Declares a variable",
-                    insertText = "var ",
+                    textEdit = tedit("var ", _params.position),
                     data = 1002
                 },
                 new CompletionItem
@@ -269,7 +282,7 @@ namespace UhighLanguageServer
                     kind = CompletionItemKind.Keyword,
                     detail = "Class declaration",
                     documentation = "Declares a class",
-                    insertText = "class ",
+                    textEdit = tedit("class ", _params.position),
                     data = 1003
                 },
                 new CompletionItem
@@ -278,7 +291,7 @@ namespace UhighLanguageServer
                     kind = CompletionItemKind.Keyword,
                     detail = "If statement",
                     documentation = "Conditional statement",
-                    insertText = "if ",
+                    textEdit = tedit("if ", _params.position),
                     data = 1004
                 },
                 new CompletionItem
@@ -287,7 +300,7 @@ namespace UhighLanguageServer
                     kind = CompletionItemKind.Keyword,
                     detail = "While loop",
                     documentation = "Loop while condition is true",
-                    insertText = "while ",
+                    textEdit = tedit("while ", _params.position),
                     data = 1005
                 },
                 new CompletionItem
@@ -296,7 +309,7 @@ namespace UhighLanguageServer
                     kind = CompletionItemKind.Keyword,
                     detail = "For loop",
                     documentation = "For or for-in loop",
-                    insertText = "for ",
+                    textEdit = tedit("for ", _params.position),
                     data = 1006
                 },
                 new CompletionItem
@@ -305,7 +318,7 @@ namespace UhighLanguageServer
                     kind = CompletionItemKind.Keyword,
                     detail = "Return statement",
                     documentation = "Returns a value from a function",
-                    insertText = "return ",
+                    textEdit = tedit("return ", _params.position),
                     data = 1007
                 }
             };
@@ -320,7 +333,7 @@ namespace UhighLanguageServer
                     kind = CompletionItemKind.Class,
                     detail = "Type",
                     documentation = $"Type: {typeName}",
-                    insertText = typeName,
+                    textEdit = tedit(typeName, _params.position),
                     data = 2000 + idx
                 });
 
@@ -334,7 +347,7 @@ namespace UhighLanguageServer
                     kind = CompletionItemKind.Method,
                     detail = "Method",
                     documentation = $"Method: {methodName}",
-                    insertText = methodName + "(",
+                    textEdit = tedit(methodName + "(", _params.position),
                     data = 3000 + idx
                 });
 
