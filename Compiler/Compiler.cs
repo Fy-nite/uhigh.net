@@ -25,22 +25,29 @@ namespace uhigh.Net
         private readonly string _targetLanguage;
 
         /// <summary>
+        /// The flag to treat type errors as warnings
+        /// </summary>
+        private readonly bool _typeErrorsAsWarnings;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="Compiler"/> class
         /// </summary>
         /// <param name="verboseMode">The verbose mode</param>
         /// <param name="stdLibPath">The std lib path</param>
         /// <param name="targetLanguage">The target language</param>
-        public Compiler(bool verboseMode = false, string? stdLibPath = null, string? targetLanguage = "csharp")
+        /// <param name="typeErrorsAsWarnings">Treat type errors as warnings</param>
+        public Compiler(bool verboseMode = false, string? stdLibPath = null, string? targetLanguage = "csharp", bool typeErrorsAsWarnings = false)
         {
             _verboseMode = verboseMode;
             _stdLibPath = stdLibPath ?? Path.Combine(AppContext.BaseDirectory, "stdlib");
             _targetLanguage = targetLanguage ?? "csharp";
+            _typeErrorsAsWarnings = typeErrorsAsWarnings;
             
             // Load plugins if available
             var pluginDir = Path.Combine(AppContext.BaseDirectory, "plugins");
             if (Directory.Exists(pluginDir))
             {
-                var diagnostics = new DiagnosticsReporter(_verboseMode);
+                var diagnostics = new DiagnosticsReporter(_verboseMode, null, false, _typeErrorsAsWarnings);
                 CodeGeneratorRegistry.LoadPlugins(pluginDir, diagnostics);
             }
         }
@@ -53,7 +60,7 @@ namespace uhigh.Net
         /// <returns>A task containing the bool</returns>
         public async Task<bool> CompileFile(string sourceFile, string? outputFile = null)
         {
-            var diagnostics = new DiagnosticsReporter(_verboseMode, sourceFile);
+            var diagnostics = new DiagnosticsReporter(_verboseMode, sourceFile, false, _typeErrorsAsWarnings);
 
             try
             {
@@ -101,7 +108,7 @@ namespace uhigh.Net
         /// <returns>A task containing the bool</returns>
         public async Task<bool> CompileToExecutable(string sourceFile, string outputFile)
         {
-            var diagnostics = new DiagnosticsReporter(_verboseMode, sourceFile);
+            var diagnostics = new DiagnosticsReporter(_verboseMode, sourceFile, false, _typeErrorsAsWarnings);
 
             try
             {
@@ -141,7 +148,7 @@ namespace uhigh.Net
         /// <returns>A task containing the bool</returns>
         public async Task<bool> CompileAndRunInMemory(string sourceFile)
         {
-            var diagnostics = new DiagnosticsReporter(_verboseMode, sourceFile);
+            var diagnostics = new DiagnosticsReporter(_verboseMode, sourceFile, false, _typeErrorsAsWarnings);
 
             try
             {
@@ -186,7 +193,7 @@ namespace uhigh.Net
         /// <returns>The string</returns>
         public string CompileToCS(string source, DiagnosticsReporter? diagnostics = null, string? rootNamespace = null, string? className = null)
         {
-            diagnostics ??= new DiagnosticsReporter(_verboseMode);
+            diagnostics ??= new DiagnosticsReporter(_verboseMode, null, false, _typeErrorsAsWarnings);
 
             try
             {
@@ -238,7 +245,7 @@ namespace uhigh.Net
         /// <returns>The program</returns>
         public Program CompileToAST(string source, DiagnosticsReporter? diagnostics = null)
         {
-            diagnostics ??= new DiagnosticsReporter(_verboseMode);
+            diagnostics ??= new DiagnosticsReporter(_verboseMode, null, false, _typeErrorsAsWarnings);
 
             try
             {
@@ -283,7 +290,7 @@ namespace uhigh.Net
         /// <returns>A task containing the bool</returns>
         public async Task<bool> PrintAST(string sourceFile)
         {
-            var diagnostics = new DiagnosticsReporter(_verboseMode, sourceFile);
+            var diagnostics = new DiagnosticsReporter(_verboseMode, sourceFile, false, _typeErrorsAsWarnings);
 
             try
             {
@@ -300,6 +307,44 @@ namespace uhigh.Net
                 Console.WriteLine("===========================");
                 Console.WriteLine();
                 PrintASTNode(ast, 0);
+
+                diagnostics.PrintSummary();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                diagnostics.ReportFatal($"Failed to print AST: {ex.Message}", exception: ex);
+                diagnostics.PrintSummary();
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Prints the AST using a custom AST printer.
+        /// </summary>
+        /// <param name="sourceFile">The source file</param>
+        /// <param name="printer">The AST printer (optional, uses DefaultASTPrinter if null)</param>
+        /// <returns>A task containing the bool</returns>
+        public async Task<bool> PrintASTWithPrinter(string sourceFile, uhigh.Net.Parser.IASTPrinter? printer = null)
+        {
+            var diagnostics = new DiagnosticsReporter(_verboseMode, sourceFile, false, _typeErrorsAsWarnings);
+
+            try
+            {
+                var source = await File.ReadAllTextAsync(sourceFile);
+                var ast = CompileToAST(source, diagnostics);
+
+                if (diagnostics.HasErrors)
+                {
+                    diagnostics.PrintSummary();
+                    return false;
+                }
+
+                Console.WriteLine("Abstract Syntax Tree (AST):");
+                Console.WriteLine("===========================");
+                Console.WriteLine();
+
+                (printer ?? new uhigh.Net.Parser.DefaultASTPrinter()).Print(ast, 0);
 
                 diagnostics.PrintSummary();
                 return true;
@@ -672,7 +717,7 @@ namespace uhigh.Net
         /// <returns>A task containing the bool</returns>
         public async Task<bool> SaveCSharpCode(string sourceFile, string outputFolder)
         {
-            var diagnostics = new DiagnosticsReporter(_verboseMode, sourceFile);
+            var diagnostics = new DiagnosticsReporter(_verboseMode, sourceFile, false, _typeErrorsAsWarnings);
 
             try
             {
@@ -770,7 +815,7 @@ namespace uhigh.Net
         /// <returns>A task containing the bool</returns>
         public async Task<bool> CompileProject(string projectPath, string? outputFile = null)
         {
-            var diagnostics = new DiagnosticsReporter(_verboseMode, projectPath);
+            var diagnostics = new DiagnosticsReporter(_verboseMode, projectPath, false, _typeErrorsAsWarnings);
             var overallTimer = Stopwatch.StartNew();
 
             try
@@ -878,7 +923,7 @@ namespace uhigh.Net
                                 diagnostics.ReportInfo($"Read {source.Length} characters from {Path.GetFileName(fullSourcePath)}");
 
                                 // Use a diagnostics reporter with the actual source file path
-                                var fileDiagnostics = new DiagnosticsReporter(_verboseMode, fullSourcePath);
+                                var fileDiagnostics = new DiagnosticsReporter(_verboseMode, fullSourcePath, false, _typeErrorsAsWarnings);
 
                                 // Use project.Backend for preprocessing defines
                                 var ast = CompileToAST(source, fileDiagnostics, Path.GetFileName(fullSourcePath), project.Backend);
@@ -1167,7 +1212,7 @@ namespace uhigh.Net
         /// <returns>A task containing the bool</returns>
         public async Task<bool> SaveProjectAsCSharp(string projectPath, string outputFolder)
         {
-            var diagnostics = new DiagnosticsReporter(_verboseMode, projectPath);
+            var diagnostics = new DiagnosticsReporter(_verboseMode, projectPath, false, _typeErrorsAsWarnings);
 
             try
             {
@@ -1391,7 +1436,7 @@ namespace uhigh.Net
         /// <returns>A task containing the bool</returns>
         public async Task<bool> SaveCSharpCodeFromProject(string projectPath, string outputFolder)
         {
-            var diagnostics = new DiagnosticsReporter(_verboseMode, projectPath);
+            var diagnostics = new DiagnosticsReporter(_verboseMode, projectPath, false, _typeErrorsAsWarnings);
 
             try
             {
@@ -1542,7 +1587,7 @@ namespace uhigh.Net
 
         internal async Task<bool> CompileProjectAndRun(string projectFile)
         {
-            var diagnostics = new DiagnosticsReporter(_verboseMode, projectFile);
+            var diagnostics = new DiagnosticsReporter(_verboseMode, projectFile, false, _typeErrorsAsWarnings);
 
             try
             {
@@ -1649,7 +1694,7 @@ namespace uhigh.Net
         /// <returns>A task containing the bool</returns>
         public async Task<bool> CompileToTargetFile(string sourceFile, string targetLanguage, string? outputFile = null)
         {
-            var diagnostics = new DiagnosticsReporter(_verboseMode, sourceFile);
+            var diagnostics = new DiagnosticsReporter(_verboseMode, sourceFile, false, _typeErrorsAsWarnings);
 
             try
             {

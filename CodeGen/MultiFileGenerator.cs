@@ -729,7 +729,7 @@ namespace uhigh.Net.CodeGen
             };
         }
 
-        // Example: Add a method to map μHigh method calls to C# equivalents
+     
         private string MapMethod(string methodName, string targetType)
         {
             // Compose key as "Method_on_type"

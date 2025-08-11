@@ -47,15 +47,16 @@ Task("Test")
     .IsDependentOn("Build")
     .Does(() =>
 {
-    // If you have tests, adjust the path accordingly
-    var testProjects = GetFiles("./tests/**/*.csproj");
-    foreach(var testProject in testProjects)
-    {
-        DotNetTest(testProject.FullPath, new DotNetTestSettings {
-            Configuration = configuration,
-            NoBuild = true
-        });
-    }
+
+    // just run the test command 
+    // for the compiler it's dotnet run test
+
+    // run tests
+    StartProcess("dotnet run test", new ProcessSettings {
+        RedirectStandardOutput = true,
+        RedirectStandardError = true
+    });
+
     Information("Tests executed.");
 });
 
@@ -74,5 +75,11 @@ Task("Pack")
 Task("Default")
     .IsDependentOn("Build");
 
+Task("All")
+    .IsDependentOn("Clean")
+    .IsDependentOn("Restore")
+    .IsDependentOn("Build")
+    .IsDependentOn("Test")
+    .IsDependentOn("Pack");
 // Run target
 RunTarget(target);

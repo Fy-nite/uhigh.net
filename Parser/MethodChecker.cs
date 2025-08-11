@@ -336,11 +336,15 @@ namespace uhigh.Net.Parser
         /// Initializes a new instance of the <see cref="MethodChecker"/> class
         /// </summary>
         /// <param name="diagnostics">The diagnostics</param>
-        public MethodChecker(DiagnosticsReporter diagnostics)
+        /// <param name="treatTypeErrorsAsWarnings">if set to <c>true</c> [treat type errors as warnings].</param>
+        public MethodChecker(DiagnosticsReporter diagnostics, bool treatTypeErrorsAsWarnings = false)
         {
             _diagnostics = diagnostics;
             _reflectionResolver = new ReflectionMethodResolver(diagnostics);
-            _typeResolver = new ReflectionTypeResolver(diagnostics);
+            _typeResolver = new ReflectionTypeResolver(diagnostics)
+            {
+                TreatTypeErrorsAsWarnings = treatTypeErrorsAsWarnings
+            };
             RegisterBuiltInMethods();
         }
 

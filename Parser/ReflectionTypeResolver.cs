@@ -34,6 +34,11 @@ namespace uhigh.Net.Parser
         private ReflectionAttributeResolver? _attributeResolver; // Add this
 
         /// <summary>
+        /// If true, type errors are reported as warnings instead of errors
+        /// </summary>
+        public bool TreatTypeErrorsAsWarnings { get; set; } = false;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="ReflectionTypeResolver"/> class
         /// </summary>
         /// <param name="diagnostics">The diagnostics</param>
@@ -99,6 +104,14 @@ namespace uhigh.Net.Parser
 
             // Scan current assembly for custom types
             ScanAssembly(Assembly.GetExecutingAssembly());
+
+            // NEW: Scan all DLLs in 'packages' and 'bin' directories if they exist
+            var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            var packagesDir = System.IO.Path.Combine(baseDir, "packages");
+            var binDir = System.IO.Path.Combine(baseDir, "bin");
+
+            ScanAssembliesInDirectory(packagesDir);
+            ScanAssembliesInDirectory(binDir);
 
             _diagnostics.ReportInfo($"Discovered {_discoveredTypes.Count} types and {_discoveredMethods.Values.Sum(m => m.Count)} methods via reflection");
         }
@@ -329,6 +342,15 @@ namespace uhigh.Net.Parser
             // }
 
             type = null!;
+            // Report error or warning if type not found
+            if (TreatTypeErrorsAsWarnings)
+            {
+                _diagnostics.ReportWarning($"Unknown type: {typeName}");
+            }
+            else
+            {
+                _diagnostics.ReportError($"Unknown type: {typeName}", 0, 0, "UH202");
+            }
             return false;
         }
 
@@ -800,6 +822,58 @@ namespace uhigh.Net.Parser
         public void ClearTypeParameters()
         {
             _typeParameterNames.Clear();
+        }
+
+        /// <summary>
+        /// Scans all assemblies in the specified directory (recursively)
+        /// </summary>
+        /// <param name="directoryPath">The directory path</param>
+        public void ScanAssembliesInDirectory(string directoryPath)
+        {
+            if (!System.IO.Directory.Exists(directoryPath))
+                return;
+
+            var dllFiles = System.IO.Directory.GetFiles(directoryPath, "*.dll", System.IO.SearchOption.AllDirectories);
+            foreach (var dll in dllFiles)
+            {
+                try
+                {
+                    var assembly = Assembly.LoadFrom(dll);
+                    ScanAssemblyWithReferences(assembly);
+                }
+                catch (Exception ex)
+                {
+                    _diagnostics.ReportWarning($"Failed to load assembly {dll}: {ex.Message}", 0, 0, "UH303");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Scans the assembly and all referenced assemblies recursively
+        /// </summary>
+        /// <param name="assembly">The assembly</param>
+        private void ScanAssemblyWithReferences(Assembly assembly)
+        {
+            ScanAssembly(assembly);
+
+            foreach (var reference in assembly.GetReferencedAssemblies())
+            {
+                try
+                {
+                    var refAssembly = AppDomain.CurrentDomain.GetAssemblies()
+                        .FirstOrDefault(a => a.GetName().FullName == reference.FullName)
+                        ?? Assembly.Load(reference);
+
+                    if (!_scannedAssemblies.Contains(refAssembly))
+                    {
+                        ScanAssemblyWithReferences(refAssembly);
+                    }
+                }
+                catch
+                {
+                    // Ignore missing referenced assemblies
+                }
+            }
         }
     }
 }

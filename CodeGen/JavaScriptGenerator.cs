@@ -481,7 +481,7 @@ namespace uhigh.Net.CodeGen
             _output.AppendLine("}");
         }
 
-        // Add this helper function for method name mapping
+
         private static string GetLanguageMethodName(string methodName, string objectType)
         {
             // Simple mapping for arrays and maps

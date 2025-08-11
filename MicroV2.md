@@ -943,7 +943,7 @@ Requests a block of memory from the runtime's heap.
 STATE buffer_ptr <PTR>
 ; Request 1024 bytes
 MNI Memory.allocate 1024 R1
-MOV buffer_ptr R1 ; Store the resulting pointer
+MOV buffer_ptr R1      ; Store the resulting pointer
 
 ; Check for allocation failure
 CMP R1 0
@@ -1035,171 +1035,171 @@ This document details additional instructions for the MicroASM language.
 
 ## Bitwise Operations
 
-### AND (Bitwise AND)
-
-```
-AND dest src
-```
-
-Performs a bitwise AND operation between the source and destination, storing the result in the destination.
-**Flags Affected:** ZF, SF (CF and OF are cleared)
-Example: `AND R1 R2` - R1 = R1 & R2
-
-### OR (Bitwise OR)
-
-```
-OR dest src
+```assembly
+AND R1 R2        ; R1 = R1 & R2
+OR R1 R2         ; R1 = R1 | R2
+XOR R1 R2        ; R1 = R1 ^ R2
+NOT R1           ; R1 = ~R1
 ```
 
-Performs a bitwise OR operation between the source and destination, storing the result in the destination.
-**Flags Affected:** ZF, SF (CF and OF are cleared)
-Example: `OR R1 R2` - R1 = R1 | R2
-
-### XOR (Bitwise XOR)
-
-```
-XOR dest src
-```
-
-Performs a bitwise XOR operation between the source and destination, storing the result in the destination.
-**Flags Affected:** ZF, SF (CF and OF are cleared)
-Example: `XOR R1 R2` - R1 = R1 ^ R2
-
-### NOT (Bitwise NOT)
-
-```
-NOT dest
-```
-
-Inverts all bits in the destination register.
-**Flags Affected:** None
-Example: `NOT R1` - R1 = ~R1
-
-### SHL (Shift Left)
-
-```
-SHL dest count
-```
-
-Shifts the bits in the destination register/memory left by the specified count. The last bit shifted out is placed in CF.
-**Flags Affected:** CF, ZF, SF (OF behavior depends on count)
-Example: `SHL R1 R2` - R1 = R1 << R2
-
-### SHR (Shift Right)
-
-```
-SHR dest count
-```
-
-Shifts the bits in the destination register/memory right by the specified count (logical shift: fills with 0). The last bit shifted out is placed in CF.
-**Flags Affected:** CF, ZF, SF (OF behavior depends on count)
-Example: `SHR R1 R2` - R1 = R1 >> R2
-
-
-### SAR (Shift Arithmetic Right)
-
-```
-SAR dest count
-```
-
-Shifts the bits in the destination register/memory right by the specified count (arithmetic shift: fills with sign bit). The last bit shifted out is placed in CF.
-**Flags Affected:** CF, ZF, SF (OF behavior depends on count)
-Example: `SAR R1 R2` - R1 = R1 >> R2 (arithmetic)
-
-
-## Memory Addressing Extensions
-
-### MOVADDR (Move from Address with Offset)
-
-```
-MOVADDR dest src offset
-```
-
-Copies a value from the memory address calculated as src+offset to the destination register.
-Example: `MOVADDR R1 R2 R3` - R1 = Memory[R2 + R3]
-
-### MOVTO (Move to Address with Offset)
-
-```
-MOVTO dest offset src
-```
-
-Copies a value from the source register to the memory address calculated as dest+offset.
-Example: `MOVTO R1 R2 R3` - Memory[R1 + R2] = R3
-
-
-### Direct Address (`$<number>`)
-
-Using a `$` prefix followed by an immediate numeric value attempts to access that specific, hardcoded memory address.
+### Shift Operations
 
 ```assembly
-MOV R1 $1000         ; Attempts to read QWORD from address 1000 into R1
-MOV $2000 R2         ; Attempts to write QWORD from R2 into address 2000
+SHL R1 R2        ; R1 = R1 << R2
+SHR R1 R2        ; R1 = R1 >> R2 (logical)
+SAR R1 R2        ; R1 = R1 >> R2 (arithmetic)
 ```
 
-**⚠️ EXTREME WARNING: Use With Caution (or preferably, not at all!) ⚠️**
-
-Directly accessing hardcoded memory addresses is **highly discouraged** and **extremely dangerous** in MicroASM (and most modern contexts).
-
-*   **No Guarantees:** You have absolutely no guarantee that the address (`$1000`, `$2000`, etc.) is valid, mapped, writable, or won't conflict with program code, the stack, runtime data, or other essential memory regions.
-*   **Portability Nightmare:** Addresses are specific to a particular runtime instance and memory layout. Code using direct addresses is **not portable**.
-*   **Likely Crashes:** Incorrect usage will almost certainly lead to crashes, memory corruption, or completely unpredictable behavior. Think of it like juggling chainsaws blindfolded – maybe you can, but why would you?
-
-**Prefer safer alternatives:** Use labels defined with data directives (`DB`, `DQ`, `RESB`, etc.), `STATE` variables, stack-relative addressing (`[RBP - offset]`), or pointers obtained from the runtime (`MNI Memory.allocate`, `SYSCALL mmap`).
-
-Use `$address` only if you are absolutely certain you know the exact memory layout provided by a specific, non-portable runtime environment and understand the severe risks involved.
-
-### Register Indirect (`$<register>`)
-
-Using a `$` prefix followed by a register name accesses the memory address *stored within* that register. This is the **standard and safe** way to use pointers. The register should contain a valid memory address (e.g., from a label, `STATE <PTR>`, or memory allocation).
+### Memory Operations
 
 ```assembly
-STATE buffer_ptr <PTR>
-LBL my_string DB "Data", 0
-
-MOV R1 buffer_ptr    ; R1 holds address from allocator
-MOV R2 my_string     ; R2 holds address of static string data
-MOV R3 $R1           ; Read value from address in R1
-MOV [$R2+1] 'A'      ; Write 'A' to address in R2 + 1 (modifies string)
+COPY R1 R2 R3    ; Copy R3 bytes from address R2 to address R1
+FILL R1 R2 R3    ; Fill R3 bytes at address R1 with value R2
+MOVADDR R1 R2 R3 ; R1 = Memory[R2 + R3]
+MOVTO R1 R2 R3   ; Memory[R1 + R2] = R3
 ```
 
-## Stack Frame Management
+### Floating-Point Instructions
 
-### ENTER (Create Stack Frame)
-
-```
-ENTER framesize
-```
-
-Creates a standard stack frame for a procedure. Typically equivalent to:
-1.  `PUSH RBP` (Save caller's frame pointer)
-2.  `MOV RBP, RSP` (Set current frame pointer)
-3.  `SUB RSP, framesize` (Allocate space for local variables)
-
--   `framesize`: An immediate value specifying the number of bytes to allocate for local variables on the stack. Must be non-negative.
-
-Example: `ENTER 64` - Creates a stack frame, allocating 64 bytes for locals.
-
-### LEAVE (Destroy Stack Frame)
-
-```
-LEAVE
-```
-
-Destroys the current stack frame created by `ENTER`, preparing for a `RET`. Typically equivalent to:
-1.  `MOV RSP, RBP` (Deallocate local variables)
-2.  `POP RBP` (Restore caller's frame pointer)
-
-Example: `LEAVE`
-
-**Function Prologue/Epilogue Example:**
 ```assembly
-LBL my_function SCOPE
-    ENTER 16      ; Setup stack frame, 16 bytes for locals
-    ; ... function body, use [RBP - offset] for locals ...
-    MOV R1 [RBP - 8] ; Access a local variable
-    ; ...
-    LEAVE         ; Restore stack
+FMOV FPR1 FPR0   ; FPR1 = FPR0
+FADD FPR1 FPR0   ; FPR1 = FPR1 + FPR0
+FSUB FPR2 FPR1   ; FPR2 = FPR2 - FPR1
+FMUL FPR3 2.0    ; FPR3 = FPR3 * 2.0
+FDIV FPR4 FPR3   ; FPR4 = FPR4 / FPR3
+```
+
+## Example Programs
+
+### Hello World
+
+```assembly
+lbl _start
+mov RSP 65536 ; init stack
+mov RBP 0 ; init base pointer
+DB $200 "Starting Program\n"
+out 1 $200
+call #main
+hlt
+
+lbl main
+mov RAX 1
+mov RBX 2
+add RAX RBX
+out 1 RAX ; outputs 3
+cout 1 10 ; \n
+ret ; Can use ret here because #main was called from _start and _start handles the hlt.
+```
+
+### Memory Allocation Example
+
+```assembly
+lbl main
+MALLOC rax 15 ; allocate 14 bytes
+CMP rax 0 ; Err codes are negative
+jl #error
+
+MOVTO rax 0 72   ; H
+MOVTO rax 1 101  ; e
+MOVTO rax 2 108  ; l
+MOVTO rax 3 108  ; l
+MOVTO rax 4 111  ; o
+MOVTO rax 5 44   ; ,
+MOVTO rax 6 32   ;  
+MOVTO rax 7 87   ; W
+MOVTO rax 8 111  ; o
+MOVTO rax 9 114  ; r
+MOVTO rax 10 108 ; l
+MOVTO rax 11 100 ; d
+MOVTO rax 12 33  ; !
+MOVTO rax 13 10  ; \n
+MOVTO rax 14 0   ; null terminator
+
+out 1 $rax
+
+FREE rax rax ; Free the 15 bytes and set rax to zero (if free success else rax = the error code)
+
+hlt
+
+lbl error
+DB $100 "Error while allocating memory: "
+out 1 $100
+out 1 rax
+cout 1 10 ; \n
+```
+
+### Bitwise and Shift Operations Example
+
+```assembly
+lbl main
+mov rax, 5          ; 101 in binary
+mov rbx, 3          ; 011 in binary
+
+; Bitwise Operations
+and rax, rbx        ; rax = rax & rbx  (Result: 001 in rax)
+mov rcx, rax        ; Copy result to rcx
+or rax, rbx         ; rax = rax | rbx   (Result: 111 in rax)
+xor rax, rbx        ; rax = rax ^ rbx   (Result: 100 in rax)
+not rax             ; rax = ~rax         (Result: Invert bits in rax)
+
+; Shift Operations
+shl rax, 1          ; rax = rax << 1    (Result: Shift bits left in rax)
+shr rax, 1          ; rax = rax >> 1    (Result: Shift bits right in rax)
+sar rax, 1          ; rax = rax >> 1    (Arithmetic shift right in rax)
+
+hlt
+```
+
+### Memory Operations Example
+
+```assembly
+lbl main
+mov rsi, 1000       ; Source address
+mov rdi, 2000       ; Destination address
+mov rdx, 64         ; Number of bytes
+
+; Memory Operations
+copy rsi, rdi, rdx  ; Copy 64 bytes from 1000 to 2000
+fill rdi, 0xFF, rdx  ; Fill 64 bytes at 2000 with 0xFF
+
+mov rax, [rsi]      ; Move value at address rsi to rax
+mov [rdi], rax      ; Move value in rax to address rdi
+
+mov rax, rsi + rdx  ; Move address rsi + rdx to rax
+mov rbx, rdi + rdx  ; Move address rdi + rdx to rbx
+
+mov rax, [rax]      ; Dereference pointer in rax
+mov rbx, [rbx]      ; Dereference pointer in rbx
+
+hlt
+```
+
+### Floating-Point Instructions Example
+
+```assembly
+lbl main
+movsd xmm0, qword ptr [data]  ; Load double from memory to xmm0
+mulsd xmm0, xmm1              ; xmm0 = xmm0 * xmm1
+divsd xmm0, xmm2              ; xmm0 = xmm0 / xmm2
+adds xmm0, 1.5                 ; xmm0 = xmm0 + 1.5
+subs xmm0, xmm3               ; xmm0 = xmm0 - xmm3
+cvtsd2si rax, xmm0            ; Convert double in xmm0 to signed integer in rax
+cvtss2sd xmm0, xmm1           ; Convert float in xmm1 to double in xmm0
+
+lbl pi
+dq 3.141592653589793
+
+lbl data
+dq 1.0, 2.0, 3.0, 4.0
+```
+
+## Notes
+
+- Register values often contain memory addresses for MNI functions that work with strings or complex data
+- For MNI functions, check the documentation to understand whether a register should contain a direct value or a memory address
+- All numeric values are treated as 64-bit integers unless specified otherwise
+- String operations assume null-terminated strings
+- Always free allocated memory to prevent memory leaks
     RET           ; Return to caller
 ENDSCOPE
 ```

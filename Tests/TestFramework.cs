@@ -185,6 +185,9 @@ namespace uhigh.Net.Testing
                 }
                 TestRunnerData data;
                 lock (run_test_lock) {
+                    if (to_run_tests.Count == 0) {
+                        continue; // No tests to run
+                    }
                     data = to_run_tests.First();
                     if (data.is_exit == true) {
                         return;

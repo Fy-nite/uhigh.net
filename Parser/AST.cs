@@ -1302,5 +1302,69 @@ namespace uhigh.Net.Parser
         public Expression? ResourceExpression { get; set; }
         public List<Statement> Body { get; set; } = new();
     }
+
+    /// <summary>
+    /// Interface for modular AST printers.
+    /// Implement this to provide custom AST printing logic.
+    /// </summary>
+    public interface IASTPrinter
+    {
+        /// <summary>
+        /// Prints the AST node to the output.
+        /// </summary>
+        /// <param name="node">The AST node</param>
+        /// <param name="depth">The indentation depth</param>
+        void Print(ASTNode node, int depth = 0);
+    }
+
+    /// <summary>
+    /// Default AST printer implementation.
+    /// </summary>
+    public class DefaultASTPrinter : IASTPrinter
+    {
+        public void Print(ASTNode node, int depth = 0)
+        {
+            // Use the same logic as Compiler.PrintASTNode, but modular
+            var indent = new string(' ', depth * 2);
+            var nodeType = node.GetType().Name;
+
+            void PrintBlockStart(string header)
+            {
+                Console.WriteLine($"{indent}{header} {{");
+            }
+            void PrintBlockEnd()
+            {
+                Console.WriteLine($"{indent}}}");
+            }
+
+            switch (node)
+            {
+                case Program program:
+                    PrintBlockStart("Program");
+                    foreach (var statement in program.Statements)
+                    {
+                        Print(statement, depth + 1);
+                    }
+                    PrintBlockEnd();
+                    break;
+
+                case Statement statement:
+                    Console.WriteLine($"{indent}{nodeType}: {statement}");
+                    break;
+
+                case Expression expression:
+                    Console.WriteLine($"{indent}{nodeType}: {expression}");
+                    break;
+
+                case ASTNode astNode:
+                    Console.WriteLine($"{indent}{nodeType}");
+                    break;
+
+                default:
+                    Console.WriteLine($"{indent}{nodeType} (unknown type)");
+                    break;
+            }
+        }
+    }
 }
 
