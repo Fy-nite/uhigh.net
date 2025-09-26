@@ -59,6 +59,27 @@ namespace uhigh.Net.CodeGen
             return unsupportedFeatures.Count == 0;
         }
 
+        private List<string> GetAllClassNames(IEnumerable<Statement> statements)
+        {
+            var classNames = new List<string>();
+            foreach (var stmt in statements)
+            {
+                if (stmt is ClassDeclaration classDecl)
+                {
+                    if (!classNames.Contains(classDecl.Name))
+                        classNames.Add(classDecl.Name);
+                }
+                else if (stmt is NamespaceDeclaration nsDecl)
+                {
+                    // Recursively collect from namespace members
+                    classNames.AddRange(GetAllClassNames(nsDecl.Members));
+                }
+                Console.WriteLine($"Found class: {stmt.GetType().Name} { (stmt is ClassDeclaration cd ? cd.Name : "") }");
+                Console.WriteLine($"Found Namespace: {stmt.GetType().Name} { (stmt is NamespaceDeclaration nd ? nd.Name : "") }");
+            }
+            return classNames;
+        }
+
         public string Generate(Program program, DiagnosticsReporter? diagnostics = null, string? rootNamespace = null, string? className = null)
         {
             _diagnostics = diagnostics ?? new DiagnosticsReporter();
@@ -79,6 +100,17 @@ namespace uhigh.Net.CodeGen
             {
                 _output.AppendLine();
                 _output.AppendLine("main();");
+            }
+            
+            // Collect all class names for export (including those in namespaces)
+            var classNames = GetAllClassNames(program.Statements).Distinct().ToList();
+            Console.WriteLine($"Classes to export: {string.Join(", ", classNames)}");
+            if (classNames.Count > 0)
+            {
+                _output.AppendLine();
+                _output.Append("export { ");
+                _output.Append(string.Join(", ", classNames));
+                _output.AppendLine(" };");
             }
 
             _diagnostics.ReportInfo($"JavaScript code generation completed. Generated {_output.ToString().Split('\n').Length} lines");
@@ -119,7 +151,30 @@ namespace uhigh.Net.CodeGen
                 _output.AppendLine();
                 _output.AppendLine("main();");
             }
+            // because of the way we handle classes and functions in javascript, we 
+            // need to export them all at the end of the file
+            _diagnostics.ReportInfo($"Combined JavaScript code generation completed. Generated {_output.ToString().Split('\n').Length} lines");
+            List<string> exports = new();   
+            foreach (var program in programs)
+            {
+                foreach (var stmt in program.Statements)
+                {
+                    if (stmt is ClassDeclaration classDecl)
+                    {
+                       if (!exports.Contains(classDecl.Name))
+                           exports.Add(classDecl.Name);
+                    }
+                  
 
+                }
+            }
+            if (exports.Count > 0)
+            {
+                _output.AppendLine();
+                _output.Append("export { ");
+                _output.Append(string.Join(", ", exports));
+                _output.AppendLine(" };");
+            }
             return _output.ToString();
         }
 

@@ -13,7 +13,7 @@ pwsh -c ./install.ps1
 ```
 
 **Hello World:**
-```uhigh
+```csharp
 func main() {
     print("Hello, μHigh!")
 }
@@ -77,7 +77,7 @@ uhigh test
 
 μHigh combines familiar syntax with modern features:
 
-```uhigh
+```csharp
 var name = "World"
 const PI = 3.14159
 
@@ -108,7 +108,7 @@ Console.WriteLine("Direct .NET access")
 ## Examples
 
 **Basic:**
-```uhigh
+```csharp
 func main() {
     var name = input("What's your name? ")
     print("Nice to meet you, " + name + "!")
@@ -116,7 +116,7 @@ func main() {
 ```
 
 **Class:**
-```uhigh
+```csharp
 public class Person {
     private field name: string
     public var Age: int 
