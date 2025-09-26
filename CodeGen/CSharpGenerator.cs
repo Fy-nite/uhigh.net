@@ -506,6 +506,16 @@ namespace uhigh.Net.CodeGen
                             GenerateFunctionDeclaration(funcDecl);
                         }
                     }
+                    else if (statement is VariableDeclaration)
+                    {
+                        // Skip variable declarations at class level - they belong in Main method
+                        continue;
+                    }
+                    else if (statement is ExpressionStatement)
+                    {
+                        // Skip expression statements at class level - they belong in Main method
+                        continue;
+                    }
                     else
                     {
                         GenerateStatement(statement);
@@ -1400,7 +1410,18 @@ namespace uhigh.Net.CodeGen
                     {
                         var functionName = funcIdExpr.Name;
                         
-                        // Handle μHigh built-in method mappings
+                        // Handle μHigh method mappings for C#
+                        if (functionName.StartsWith("_"))
+                        {
+                            var mapped = GenerateCSharpMappedMethod(functionName, callExpr.Arguments);
+                            if (mapped != null)
+                            {
+                                _output.Append(mapped);
+                                break;
+                            }
+                        }
+                        
+                        // Handle μHigh built-in method mappings (legacy)
                         if (IsBuiltInMethod(functionName) && callExpr.Arguments.Count > 0)
                         {
                             GenerateMappedMethodCall(functionName, callExpr.Arguments);
@@ -2280,6 +2301,146 @@ namespace uhigh.Net.CodeGen
                     _output.Append(")");
                     break;
             }
+        }
+
+        /// <summary>
+        /// Generates C# code for μHigh method mappings (prefixed with _)
+        /// </summary>
+        /// <param name="fnName">The mapped function name</param>
+        /// <param name="args">The function arguments</param>
+        /// <returns>Generated C# code or null if not a mapped method</returns>
+        private string? GenerateCSharpMappedMethod(string fnName, List<Expression> args)
+        {
+            switch (fnName)
+            {
+                case "_add_to":
+                    // Add_to(collection, element) => collection.Add(element)
+                    if (args.Count == 2)
+                    {
+                        var sb = new StringBuilder();
+                        sb.Append(GenerateExpressionToString(args[0]));
+                        sb.Append(".Add(");
+                        sb.Append(GenerateExpressionToString(args[1]));
+                        sb.Append(")");
+                        return sb.ToString();
+                    }
+                    break;
+                case "_remove_from":
+                    // Remove_from(collection, element_or_index) => collection.Remove(element_or_index)
+                    if (args.Count == 2)
+                    {
+                        var sb = new StringBuilder();
+                        sb.Append(GenerateExpressionToString(args[0]));
+                        sb.Append(".Remove(");
+                        sb.Append(GenerateExpressionToString(args[1]));
+                        sb.Append(")");
+                        return sb.ToString();
+                    }
+                    break;
+                case "_length_of":
+                    // Length_of(collection_or_string) => .Count for collections, .Length for strings
+                    if (args.Count == 1)
+                    {
+                        var sb = new StringBuilder();
+                        sb.Append(GenerateExpressionToString(args[0]));
+                        sb.Append(".Count"); // Could be .Length for strings - heuristic needed
+                        return sb.ToString();
+                    }
+                    break;
+                case "_index_of":
+                    // Index_of(collection, index_or_key) => collection[index_or_key]
+                    if (args.Count == 2)
+                    {
+                        var sb = new StringBuilder();
+                        sb.Append(GenerateExpressionToString(args[0]));
+                        sb.Append("[");
+                        sb.Append(GenerateExpressionToString(args[1]));
+                        sb.Append("]");
+                        return sb.ToString();
+                    }
+                    break;
+                case "_substring_of":
+                    // Substring_of(string, start, len) => string.Substring(start, len)
+                    if (args.Count == 3)
+                    {
+                        var sb = new StringBuilder();
+                        sb.Append(GenerateExpressionToString(args[0]));
+                        sb.Append(".Substring(");
+                        sb.Append(GenerateExpressionToString(args[1]));
+                        sb.Append(", ");
+                        sb.Append(GenerateExpressionToString(args[2]));
+                        sb.Append(")");
+                        return sb.ToString();
+                    }
+                    break;
+                case "_toUpper":
+                    // ToUpper(string) => string.ToUpper()
+                    if (args.Count == 1)
+                    {
+                        var sb = new StringBuilder();
+                        sb.Append(GenerateExpressionToString(args[0]));
+                        sb.Append(".ToUpper()");
+                        return sb.ToString();
+                    }
+                    break;
+                case "_toLower":
+                    // ToLower(string) => string.ToLower()
+                    if (args.Count == 1)
+                    {
+                        var sb = new StringBuilder();
+                        sb.Append(GenerateExpressionToString(args[0]));
+                        sb.Append(".ToLower()");
+                        return sb.ToString();
+                    }
+                    break;
+                case "_contains_in":
+                    // Contains_in(collection_or_string, element_or_substring)
+                    if (args.Count == 2)
+                    {
+                        var sb = new StringBuilder();
+                        sb.Append(GenerateExpressionToString(args[0]));
+                        sb.Append(".Contains(");
+                        sb.Append(GenerateExpressionToString(args[1]));
+                        sb.Append(")");
+                        return sb.ToString();
+                    }
+                    break;
+                case "_print":
+                    // Print(value) => Console.WriteLine(value)
+                    if (args.Count == 1)
+                    {
+                        var sb = new StringBuilder();
+                        sb.Append("Console.WriteLine(");
+                        sb.Append(GenerateExpressionToString(args[0]));
+                        sb.Append(")");
+                        return sb.ToString();
+                    }
+                    break;
+                case "_length":
+                    // Length(string) => string.Length
+                    if (args.Count == 1)
+                    {
+                        var sb = new StringBuilder();
+                        sb.Append(GenerateExpressionToString(args[0]));
+                        sb.Append(".Length");
+                        return sb.ToString();
+                    }
+                    break;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Helper to generate expression as string without modifying the main output
+        /// </summary>
+        private string GenerateExpressionToString(Expression expr)
+        {
+            var originalOutput = _output.ToString();
+            var originalLength = _output.Length;
+            GenerateExpression(expr);
+            var result = _output.ToString().Substring(originalLength);
+            _output.Remove(originalLength, result.Length);
+            return result;
         }
 
         // Add this helper method to identify utility methods

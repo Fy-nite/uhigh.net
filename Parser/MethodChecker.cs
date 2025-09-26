@@ -864,6 +864,44 @@ namespace uhigh.Net.Parser
 
             try
             {
+                // Check for built-in types first - these are NOT user-defined
+                var lowerTypeName = typeName.ToLowerInvariant();
+                switch (lowerTypeName)
+                {
+                    case "int":
+                    case "int32":
+                    case "string":
+                    case "str":
+                    case "bool":
+                    case "boolean":
+                    case "double":
+                    case "float":
+                    case "decimal":
+                    case "object":
+                    case "void":
+                        return false; // Built-in types are not user-defined
+                }
+
+                // Check for built-in array types
+                if (lowerTypeName.EndsWith("[]"))
+                {
+                    var elementType = lowerTypeName.Substring(0, lowerTypeName.Length - 2);
+                    switch (elementType)
+                    {
+                        case "int":
+                        case "int32":
+                        case "string":
+                        case "str":
+                        case "bool":
+                        case "boolean":
+                        case "double":
+                        case "float":
+                        case "decimal":
+                        case "object":
+                            return false; // Built-in array types are not user-defined
+                    }
+                }
+
                 // Check exact match first
                 if (_classes.ContainsKey(typeName))
                     return true;

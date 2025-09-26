@@ -1054,21 +1054,33 @@ public class EntryPoint
         try
         {
             var compiler = new Compiler(options.Verbose, options.StdLibPath, "csharp", options.TypeErrorsAsWarnings);
+            bool success;
 
+            // Load the project file (async)
+            var project = await uhigh.Net.ProjectFile.LoadAsync(options.ProjectFile);
+            if (project == null)
+            {
+                WriteError($"Failed to load project: {options.ProjectFile}");
+                return 1;
+            }
+
+            // Clear all previous defines and set preprocessor symbol for backend
+            uhigh.Net.Preprocessor.Preprocessor.ClearDefines();
+            uhigh.Net.Preprocessor.Preprocessor.SetTargetLanguage(project.Backend);
+
+            // Continue with build logic
             if (!File.Exists(options.ProjectFile))
             {
                 WriteError($"Project file '{options.ProjectFile}' not found");
                 return 1;
             }
 
-            bool success;
             if (!string.IsNullOrEmpty(options.SaveCSharpTo))
             {
-                Console.WriteLine($"Generating C# files to: {options.SaveCSharpTo}");
-                success = await compiler.SaveCSharpCodeFromProject(options.ProjectFile, options.SaveCSharpTo);
+                success = await compiler.SaveCSharpCode(options.ProjectFile, options.SaveCSharpTo);
                 if (success)
                 {
-                    Console.WriteLine("Each μHigh source file has been converted to a separate C# file.");
+                    Console.WriteLine($"Saved C# code to {options.SaveCSharpTo}");
                 }
             }
             else

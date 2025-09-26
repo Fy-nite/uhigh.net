@@ -1,0 +1,5 @@
+// Test explicit types
+var name: string = "Alice"
+var age: int = 25
+var height: float = 5.8
+var isActive: bool = true

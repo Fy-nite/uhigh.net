@@ -244,7 +244,37 @@ namespace uhigh.Net.Parser
         /// <returns>The bool</returns>
         public bool TryResolveType(string typeName, out Type type)
         {
-            // Check user-defined types first (if provided)
+            // Handle built-in types FIRST to avoid namespace prefixing
+            switch (typeName.ToLowerInvariant())
+            {
+                case "int":
+                case "int32":
+                    type = typeof(int);
+                    return true;
+                case "string":
+                case "str":
+                    type = typeof(string);
+                    return true;
+                case "bool":
+                case "boolean":
+                    type = typeof(bool);
+                    return true;
+                case "double":
+                case "float":
+                    type = typeof(double);
+                    return true;
+                case "decimal":
+                    type = typeof(decimal);
+                    return true;
+                case "object":
+                    type = typeof(object);
+                    return true;
+                case "void":
+                    type = typeof(void);
+                    return true;
+            }
+
+            // Check user-defined types (if provided)
             if (UserTypeResolver != null)
             {
                 var userType = UserTypeResolver(typeName);
@@ -255,7 +285,7 @@ namespace uhigh.Net.Parser
                 }
             }
 
-            // Handle array syntax first (e.g., string[], int[])
+            // Handle array syntax (e.g., string[], int[])
             if (typeName.EndsWith("[]"))
             {
                 var elementTypeName = typeName.Substring(0, typeName.Length - 2);
@@ -294,38 +324,6 @@ namespace uhigh.Net.Parser
             {
                 type = match.Value;
                 return true;
-            }
-
-
-            // base generic types like System.Int32, System.String, etc.
-            switch (typeName.ToLowerInvariant())
-            {
-                case "int":
-                case "int32":
-                    type = typeof(int);
-                    return true;
-                case "string":
-                case "str":
-                    type = typeof(string);
-                    return true;
-                case "bool":
-                case "boolean":
-                    type = typeof(bool);
-                    return true;
-                case "double":
-                case "float":
-                    type = typeof(double);
-                    return true;
-                case "decimal":
-                    type = typeof(decimal);
-                    return true;
-                case "object":
-                    type = typeof(object);
-                    return true;
-                
-                case "void":
-                    type = typeof(void);
-                    return true;
             }
 
             // partial matching is broken for now.

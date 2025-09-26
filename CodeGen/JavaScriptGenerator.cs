@@ -586,7 +586,18 @@ namespace uhigh.Net.CodeGen
                     {
                         var functionName = funcIdExpr.Name;
                         
-                        // Handle μHigh built-in method mappings
+                        // Handle μHigh method mappings for JavaScript
+                        if (functionName.StartsWith("_"))
+                        {
+                            var mapped = GenerateJavaScriptMappedMethod(functionName, callExpr.Arguments);
+                            if (mapped != null)
+                            {
+                                _output.Append(mapped);
+                                break;
+                            }
+                        }
+                        
+                        // Handle μHigh built-in method mappings (legacy)
                         if (IsBuiltInMethod(functionName) && callExpr.Arguments.Count > 0)
                         {
                             GenerateMappedMethodCall(functionName, callExpr.Arguments);
@@ -1106,6 +1117,148 @@ namespace uhigh.Net.CodeGen
             _indentLevel--;
             Indent();
             _output.AppendLine("}");
+        }
+
+        /// <summary>
+        /// Generates JavaScript code for μHigh method mappings (prefixed with _)
+        /// </summary>
+        /// <param name="fnName">The mapped function name</param>
+        /// <param name="args">The function arguments</param>
+        /// <returns>Generated JavaScript code or null if not a mapped method</returns>
+        private string? GenerateJavaScriptMappedMethod(string fnName, List<Expression> args)
+        {
+            switch (fnName)
+            {
+                case "_add_to":
+                    // Add_to(collection, element) => collection.push(element)
+                    if (args.Count == 2)
+                    {
+                        var sb = new StringBuilder();
+                        sb.Append(GenerateExpressionToString(args[0]));
+                        sb.Append(".push(");
+                        sb.Append(GenerateExpressionToString(args[1]));
+                        sb.Append(")");
+                        return sb.ToString();
+                    }
+                    break;
+                case "_remove_from":
+                    // Remove_from(collection, element_or_index) => collection.splice(element_or_index, 1)
+                    if (args.Count == 2)
+                    {
+                        var sb = new StringBuilder();
+                        sb.Append(GenerateExpressionToString(args[0]));
+                        sb.Append(".splice(");
+                        sb.Append(GenerateExpressionToString(args[1]));
+                        sb.Append(", 1)");
+                        return sb.ToString();
+                    }
+                    break;
+                case "_length_of":
+                    // Length_of(collection_or_string) => .length
+                    if (args.Count == 1)
+                    {
+                        var sb = new StringBuilder();
+                        sb.Append(GenerateExpressionToString(args[0]));
+                        sb.Append(".length");
+                        return sb.ToString();
+                    }
+                    break;
+                case "_index_of":
+                    // Index_of(collection, index_or_key) => collection[index_or_key]
+                    if (args.Count == 2)
+                    {
+                        var sb = new StringBuilder();
+                        sb.Append(GenerateExpressionToString(args[0]));
+                        sb.Append("[");
+                        sb.Append(GenerateExpressionToString(args[1]));
+                        sb.Append("]");
+                        return sb.ToString();
+                    }
+                    break;
+                case "_substring_of":
+                    // Substring_of(string, start, len) => string.substring(start, start+len)
+                    if (args.Count == 3)
+                    {
+                        var sb = new StringBuilder();
+                        sb.Append(GenerateExpressionToString(args[0]));
+                        sb.Append(".substring(");
+                        sb.Append(GenerateExpressionToString(args[1]));
+                        sb.Append(", ");
+                        sb.Append(GenerateExpressionToString(args[1]));
+                        sb.Append(" + ");
+                        sb.Append(GenerateExpressionToString(args[2]));
+                        sb.Append(")");
+                        return sb.ToString();
+                    }
+                    break;
+                case "_toUpper":
+                    // ToUpper(string) => string.toUpperCase()
+                    if (args.Count == 1)
+                    {
+                        var sb = new StringBuilder();
+                        sb.Append(GenerateExpressionToString(args[0]));
+                        sb.Append(".toUpperCase()");
+                        return sb.ToString();
+                    }
+                    break;
+                case "_toLower":
+                    // ToLower(string) => string.toLowerCase()
+                    if (args.Count == 1)
+                    {
+                        var sb = new StringBuilder();
+                        sb.Append(GenerateExpressionToString(args[0]));
+                        sb.Append(".toLowerCase()");
+                        return sb.ToString();
+                    }
+                    break;
+                case "_contains_in":
+                    // Contains_in(collection_or_string, element_or_substring) => .includes(...)
+                    if (args.Count == 2)
+                    {
+                        var sb = new StringBuilder();
+                        sb.Append(GenerateExpressionToString(args[0]));
+                        sb.Append(".includes(");
+                        sb.Append(GenerateExpressionToString(args[1]));
+                        sb.Append(")");
+                        return sb.ToString();
+                    }
+                    break;
+                case "_print":
+                    // Print(value) => console.log(value)
+                    if (args.Count == 1)
+                    {
+                        var sb = new StringBuilder();
+                        sb.Append("console.log(");
+                        sb.Append(GenerateExpressionToString(args[0]));
+                        sb.Append(")");
+                        return sb.ToString();
+                    }
+                    break;
+                case "_length":
+                    // Length(string) => string.length
+                    if (args.Count == 1)
+                    {
+                        var sb = new StringBuilder();
+                        sb.Append(GenerateExpressionToString(args[0]));
+                        sb.Append(".length");
+                        return sb.ToString();
+                    }
+                    break;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Helper to generate expression as string without modifying the main output
+        /// </summary>
+        private string GenerateExpressionToString(Expression expr)
+        {
+            var originalOutput = _output.ToString();
+            var originalLength = _output.Length;
+            GenerateExpression(expr);
+            var result = _output.ToString().Substring(originalLength);
+            _output.Remove(originalLength, result.Length);
+            return result;
         }
 
         // Helper to check for top-level main function

@@ -1,0 +1,21 @@
+// Comprehensive test for explicit types
+
+// Basic types with explicit declarations
+var name: string = "Alice"
+var age: int = 25
+var height: float = 5.8
+var isActive: bool = true
+var score: double = 98.5
+
+// Test with computed values
+var doubled: int = age * 2
+var greeting: string = "Hello, " + name
+var isAdult: bool = age >= 18
+
+print("Name: " + name)
+print("Age: " + age.ToString())
+print("Height: " + height.ToString())
+print("Active: " + isActive.ToString())
+print("Double age: " + doubled.ToString())
+print("Greeting: " + greeting)
+print("Is Adult: " + isAdult.ToString())

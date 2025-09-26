@@ -7,7 +7,8 @@
             "request": "launch",
             "program": "${workspaceFolder}/bin/Debug/net9.0/uhigh.dll", 
             "args": [
-                "Examples/array.uh",
+                "build",
+                "..\\MicroMacroAssembly\\MicroMacroAssembly.uhighproj"
             ],
             "cwd": "${workspaceFolder}",
             "console": "integratedTerminal",
