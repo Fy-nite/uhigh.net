@@ -947,31 +947,7 @@ namespace uhigh.Net.Parser
 
             if (Match(TokenType.Colon))
             {
-                // Handle type tokens properly
-                if (Check(TokenType.StringType))
-                {
-                    type = "string";
-                    Advance();
-                }
-                else if (Check(TokenType.Int))
-                {
-                    type = "int";
-                    Advance();
-                }
-                else if (Check(TokenType.Float))
-                {
-                    type = "float";
-                    Advance();
-                }
-                else if (Check(TokenType.Bool))
-                {
-                    type = "bool";
-                    Advance();
-                }
-                else
-                {
-                    type = ParseTypeName();
-                }
+                type = ParseTypeName();
             }
 
             if (Match(TokenType.Assign))
@@ -995,31 +971,7 @@ namespace uhigh.Net.Parser
 
             if (Match(TokenType.Colon))
             {
-                // Handle type tokens properly
-                if (Check(TokenType.StringType))
-                {
-                    type = "string";
-                    Advance();
-                }
-                else if (Check(TokenType.Int))
-                {
-                    type = "int";
-                    Advance();
-                }
-                else if (Check(TokenType.Float))
-                {
-                    type = "float";
-                    Advance();
-                }
-                else if (Check(TokenType.Bool))
-                {
-                    type = "bool";
-                    Advance();
-                }
-                else
-                {
-                    type = ParseTypeName();
-                }
+                type = ParseTypeName();
             }
 
             // Check for property accessors { get; set; } or { get = ...; set = ...; }
@@ -1221,7 +1173,7 @@ namespace uhigh.Net.Parser
 
             if (Match(TokenType.Colon))
             {
-                type = Consume(TokenType.Identifier, "Expected type name").Value;
+                type = ParseTypeName();
             }
 
             if (Match(TokenType.Assign))

@@ -72,6 +72,14 @@ namespace uhigh.Net.CommandLine
                 throw new Exception($"Multiple .uhighproj files found in {directory}. Please specify one.");
             return null;
         }
+
+        /// <summary>
+        /// Creates the global '--type-errors-as-warnings' option
+        /// </summary>
+        public static Option<bool> CreateTypeErrorsAsWarningsOption()
+        {
+            return new Option<bool>("--type-errors-as-warnings", "Treat type errors as warnings instead of errors");
+        }
     }
 
     /// <summary>
@@ -81,5 +89,9 @@ namespace uhigh.Net.CommandLine
     {
         public bool Verbose { get; set; }
         public string? StdLibPath { get; set; }
+        /// <summary>
+        /// Treat type errors as warnings
+        /// </summary>
+        public bool TypeErrorsAsWarnings { get; set; }
     }
 }

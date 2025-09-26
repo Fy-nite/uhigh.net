@@ -639,22 +639,6 @@ namespace uhigh.Net.CodeGen
                     ? OutputKind.DynamicallyLinkedLibrary
                     : OutputKind.ConsoleApplication;
 
-                // Adjust output path extension based on output type
-                if (outputType.Equals("Library", StringComparison.OrdinalIgnoreCase))
-                {
-                    outputPath = Path.ChangeExtension(outputPath, ".dll");
-                }
-                else
-                {
-                    outputPath = Path.ChangeExtension(outputPath, ".exe");
-                }
-
-                // Create build directory
-                var buildDir = Path.Combine(Path.GetDirectoryName(outputPath)!, "build");
-                Directory.CreateDirectory(buildDir);
-
-                var finalPath = Path.Combine(buildDir, Path.GetFileName(outputPath));
-
                 var compilation = CSharpCompilation.Create(
                     Path.GetFileNameWithoutExtension(outputPath),
                     new[] { syntaxTree },
@@ -663,7 +647,7 @@ namespace uhigh.Net.CodeGen
                         outputKind,
                         mainTypeName: outputKind == OutputKind.ConsoleApplication && sourceInfo.HasMainMethod ? mainTypeName : null));
 
-                var emitResult = compilation.Emit(finalPath);
+                var emitResult = compilation.Emit(outputPath);
 
                 if (!emitResult.Success)
                 {
@@ -680,21 +664,21 @@ namespace uhigh.Net.CodeGen
                 }
 
                 // Copy required assemblies to build directory
-                await CopyRequiredAssemblies(buildDir, additionalAssemblies);
+                await CopyRequiredAssemblies(Path.GetDirectoryName(outputPath)!, additionalAssemblies);
 
                 // Create runtime configuration file only for executables
                 if (outputKind == OutputKind.ConsoleApplication)
                 {
-                    await CreateRuntimeConfigAsync(finalPath, targetFramework);
-                    Console.WriteLine($"Executable created: {finalPath}");
-                    Console.WriteLine($"Run with: dotnet \"{finalPath}\"");
+                    await CreateRuntimeConfigAsync(outputPath, targetFramework);
+                    Console.WriteLine($"Executable created: {outputPath}");
+                    Console.WriteLine($"Run with: dotnet \"{outputPath}\"");
                 }
                 else
                 {
-                    Console.WriteLine($"Library created: {finalPath}");
+                    Console.WriteLine($"Library created: {outputPath}");
                 }
 
-                Console.WriteLine($"Build directory: {buildDir}");
+                Console.WriteLine($"Build directory: {Path.GetDirectoryName(outputPath)!}");
 
                 return true;
             }

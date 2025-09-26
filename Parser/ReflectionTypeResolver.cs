@@ -34,6 +34,11 @@ namespace uhigh.Net.Parser
         private ReflectionAttributeResolver? _attributeResolver; // Add this
 
         /// <summary>
+        /// If true, type errors are reported as warnings instead of errors
+        /// </summary>
+        public bool TreatTypeErrorsAsWarnings { get; set; } = false;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="ReflectionTypeResolver"/> class
         /// </summary>
         /// <param name="diagnostics">The diagnostics</param>
@@ -99,6 +104,14 @@ namespace uhigh.Net.Parser
 
             // Scan current assembly for custom types
             ScanAssembly(Assembly.GetExecutingAssembly());
+
+            // NEW: Scan all DLLs in 'packages' and 'bin' directories if they exist
+            var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            var packagesDir = System.IO.Path.Combine(baseDir, "packages");
+            var binDir = System.IO.Path.Combine(baseDir, "bin");
+
+            ScanAssembliesInDirectory(packagesDir);
+            ScanAssembliesInDirectory(binDir);
 
             _diagnostics.ReportInfo($"Discovered {_discoveredTypes.Count} types and {_discoveredMethods.Values.Sum(m => m.Count)} methods via reflection");
         }
@@ -231,7 +244,37 @@ namespace uhigh.Net.Parser
         /// <returns>The bool</returns>
         public bool TryResolveType(string typeName, out Type type)
         {
-            // Check user-defined types first (if provided)
+            // Handle built-in types FIRST to avoid namespace prefixing
+            switch (typeName.ToLowerInvariant())
+            {
+                case "int":
+                case "int32":
+                    type = typeof(int);
+                    return true;
+                case "string":
+                case "str":
+                    type = typeof(string);
+                    return true;
+                case "bool":
+                case "boolean":
+                    type = typeof(bool);
+                    return true;
+                case "double":
+                case "float":
+                    type = typeof(double);
+                    return true;
+                case "decimal":
+                    type = typeof(decimal);
+                    return true;
+                case "object":
+                    type = typeof(object);
+                    return true;
+                case "void":
+                    type = typeof(void);
+                    return true;
+            }
+
+            // Check user-defined types (if provided)
             if (UserTypeResolver != null)
             {
                 var userType = UserTypeResolver(typeName);
@@ -242,7 +285,7 @@ namespace uhigh.Net.Parser
                 }
             }
 
-            // Handle array syntax first (e.g., string[], int[])
+            // Handle array syntax (e.g., string[], int[])
             if (typeName.EndsWith("[]"))
             {
                 var elementTypeName = typeName.Substring(0, typeName.Length - 2);
@@ -283,38 +326,6 @@ namespace uhigh.Net.Parser
                 return true;
             }
 
-
-            // base generic types like System.Int32, System.String, etc.
-            switch (typeName.ToLowerInvariant())
-            {
-                case "int":
-                case "int32":
-                    type = typeof(int);
-                    return true;
-                case "string":
-                case "str":
-                    type = typeof(string);
-                    return true;
-                case "bool":
-                case "boolean":
-                    type = typeof(bool);
-                    return true;
-                case "double":
-                case "float":
-                    type = typeof(double);
-                    return true;
-                case "decimal":
-                    type = typeof(decimal);
-                    return true;
-                case "object":
-                    type = typeof(object);
-                    return true;
-                
-                case "void":
-                    type = typeof(void);
-                    return true;
-            }
-
             // partial matching is broken for now.
 
             // // Try partial matching for common types if nothing else worked
@@ -329,6 +340,15 @@ namespace uhigh.Net.Parser
             // }
 
             type = null!;
+            // Report error or warning if type not found
+            if (TreatTypeErrorsAsWarnings)
+            {
+                _diagnostics.ReportWarning($"Unknown type: {typeName}");
+            }
+            else
+            {
+                _diagnostics.ReportError($"Unknown type: {typeName}", 0, 0, "UH202");
+            }
             return false;
         }
 
@@ -800,6 +820,58 @@ namespace uhigh.Net.Parser
         public void ClearTypeParameters()
         {
             _typeParameterNames.Clear();
+        }
+
+        /// <summary>
+        /// Scans all assemblies in the specified directory (recursively)
+        /// </summary>
+        /// <param name="directoryPath">The directory path</param>
+        public void ScanAssembliesInDirectory(string directoryPath)
+        {
+            if (!System.IO.Directory.Exists(directoryPath))
+                return;
+
+            var dllFiles = System.IO.Directory.GetFiles(directoryPath, "*.dll", System.IO.SearchOption.AllDirectories);
+            foreach (var dll in dllFiles)
+            {
+                try
+                {
+                    var assembly = Assembly.LoadFrom(dll);
+                    ScanAssemblyWithReferences(assembly);
+                }
+                catch (Exception ex)
+                {
+                    _diagnostics.ReportWarning($"Failed to load assembly {dll}: {ex.Message}", 0, 0, "UH303");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Scans the assembly and all referenced assemblies recursively
+        /// </summary>
+        /// <param name="assembly">The assembly</param>
+        private void ScanAssemblyWithReferences(Assembly assembly)
+        {
+            ScanAssembly(assembly);
+
+            foreach (var reference in assembly.GetReferencedAssemblies())
+            {
+                try
+                {
+                    var refAssembly = AppDomain.CurrentDomain.GetAssemblies()
+                        .FirstOrDefault(a => a.GetName().FullName == reference.FullName)
+                        ?? Assembly.Load(reference);
+
+                    if (!_scannedAssemblies.Contains(refAssembly))
+                    {
+                        ScanAssemblyWithReferences(refAssembly);
+                    }
+                }
+                catch
+                {
+                    // Ignore missing referenced assemblies
+                }
+            }
         }
     }
 }

@@ -2,17 +2,17 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Version>1.1.5</Version>
+    <Version>1.8</Version>
     <!-- Global Tool Configuration -->
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>uhigh</ToolCommandName>
     
     <!-- Package Metadata -->
     <PackageId>uhigh</PackageId>
-    <PackageVersion>1.1.5</PackageVersion>
+    <PackageVersion>1.8</PackageVersion>
     <Authors>charlie-san, Finite</Authors>
     <Description>Micro-High on dotnet</Description>
     <PackageProjectUrl>https://github.com/fy-nite/uhigh.net</PackageProjectUrl>
@@ -26,8 +26,8 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryType>git</RepositoryType>
     <NeutralLanguage>en-AU</NeutralLanguage>
-    <AssemblyVersion>1.0.0.1</AssemblyVersion>
-    <FileVersion>1.0.0.1</FileVersion>
+    <AssemblyVersion>1.1.7</AssemblyVersion>
+    <FileVersion>1.1.7</FileVersion>
     <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
     <IncludeSymbols>True</IncludeSymbols>
     <SymbolPackageFormat>symbols.nupkg</SymbolPackageFormat>
@@ -77,11 +77,11 @@
   </ItemGroup>
   
   <ItemGroup>
-    <EditorConfigFiles Remove="D:\uhigh.net\Properties\.editorconfig" />
+    <EditorConfigFiles Remove="$(MSBuildThisFileDirectory)Properties\.editorconfig" />
   </ItemGroup>
   
   <ItemGroup>
-    <None Include="D:\uhigh.net\Properties\.editorconfig" />
+    <None Include="$(MSBuildThisFileDirectory)Properties\.editorconfig" />
   </ItemGroup>
 
 </Project>

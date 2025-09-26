@@ -5,7 +5,7 @@ namespace uhigh.Net.Templates.BuiltIn
     /// <summary>
     /// Template for creating console applications
     /// </summary>
-    public class ConsoleAppTemplate : BaseProjectTemplate
+    public partial class ConsoleAppTemplate : BaseProjectTemplate
     {
         /// <summary>
         /// Gets the name of the template
@@ -73,10 +73,11 @@ namespace uhigh.Net.Templates.BuiltIn
             {
                 var mainFilePath = Path.Combine(projectPath, "main.uh");
                 
+                var sanitizedNamespace = SanitizeNamespaceIdentifier(projectName);
                 var sourceCode = $@"// {projectName} - Console Application
 using System
 
-namespace {projectName}
+namespace {sanitizedNamespace}
 {{
     public class Program
     {{

@@ -8,6 +8,14 @@ namespace uhigh.Net.Preprocessor
         private static readonly HashSet<string> _defines = new HashSet<string>();
 
         /// <summary>
+        /// Clears all defined preprocessor symbols.
+        /// </summary>
+        public static void ClearDefines()
+        {
+            _defines.Clear();
+        }
+
+        /// <summary>
         /// Processes the given source code, applying preprocessor directives.
         /// </summary>
         /// <param name="source">The source code to process.</param>
@@ -16,8 +24,10 @@ namespace uhigh.Net.Preprocessor
         {
             var output = new StringBuilder();
             var lines = source.Split('\n');
-            var stack = new Stack<bool>();
+            // Stack of (parentInclude, branchTaken)
+            var condStack = new Stack<(bool parentInclude, bool branchTaken)>();
             bool include = true;
+            bool branchTaken = false;
 
             for (int i = 0; i < lines.Length; i++)
             {
@@ -42,49 +52,70 @@ namespace uhigh.Net.Preprocessor
                 else if (line.StartsWith("#ifdef "))
                 {
                     var symbol = line.Substring(7).Trim();
-                    stack.Push(include);
+                    condStack.Push((include, branchTaken));
                     include = include && _defines.Contains(symbol);
+                    branchTaken = include;
                 }
                 // #ifndef SYMBOL
                 else if (line.StartsWith("#ifndef "))
                 {
                     var symbol = line.Substring(8).Trim();
-                    stack.Push(include);
+                    condStack.Push((include, branchTaken));
                     include = include && !_defines.Contains(symbol);
+                    branchTaken = include;
                 }
                 // #if SYMBOL
                 else if (line.StartsWith("#if "))
                 {
                     var symbol = line.Substring(4).Trim();
-                    stack.Push(include);
+                    condStack.Push((include, branchTaken));
                     include = include && _defines.Contains(symbol);
+                    branchTaken = include;
                 }
                 // #elif SYMBOL
                 else if (line.StartsWith("#elif "))
                 {
-                    if (stack.Count > 0)
+                    if (condStack.Count > 0)
                     {
-                        var prev = stack.Pop();
-                        stack.Push(prev);
-                        var symbol = line.Substring(6).Trim();
-                        include = prev && _defines.Contains(symbol);
+                        var (parentInclude, prevBranchTaken) = condStack.Peek();
+                        if (!prevBranchTaken && parentInclude)
+                        {
+                            var symbol = line.Substring(6).Trim();
+                            include = parentInclude && _defines.Contains(symbol);
+                            branchTaken = include;
+                        }
+                        else
+                        {
+                            include = false;
+                        }
                     }
                 }
                 // #else
                 else if (line.StartsWith("#else"))
                 {
-                    if (stack.Count > 0)
+                    if (condStack.Count > 0)
                     {
-                        var prev = stack.Pop();
-                        stack.Push(prev);
-                        include = prev && !include;
+                        var (parentInclude, prevBranchTaken) = condStack.Peek();
+                        if (!prevBranchTaken && parentInclude)
+                        {
+                            include = parentInclude;
+                            branchTaken = true;
+                        }
+                        else
+                        {
+                            include = false;
+                        }
                     }
                 }
                 // #endif
                 else if (line.StartsWith("#endif"))
                 {
-                    if (stack.Count > 0)
-                        include = stack.Pop();
+                    if (condStack.Count > 0)
+                    {
+                        var (parentInclude, _) = condStack.Pop();
+                        include = parentInclude;
+                        branchTaken = false;
+                    }
                 }
                 // #error MESSAGE
                 else if (line.StartsWith("#error "))
@@ -118,8 +149,18 @@ namespace uhigh.Net.Preprocessor
                 "cpp" or "c++" => "CPP",
                 "llvm" => "LLVM",
                 "vala" => "VALA",
+                "java" or "java8" or "java11" or "java17" or "java21" => "JAVA",
+                "python" or "py" => "PYTHON",
                 _ => target.ToUpperInvariant()
             };
+        }
+
+        /// <summary>
+        /// Sets the preprocessor symbol for the target language (for conditional compilation).
+        /// </summary>
+        public static void SetTargetLanguage(string target)
+        {
+            _defines.Add(TargetLanguageToDefine(target));
         }
     }
 }

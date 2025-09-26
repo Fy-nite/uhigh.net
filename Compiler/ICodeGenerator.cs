@@ -192,6 +192,8 @@ namespace uhigh.Net.CodeGen
             Register(new LLVMGeneratorFactory());
             Register(new CppGeneratorFactory());
             Register(new ValaGeneratorFactory()); // Add Vala generator
+            Register(new MicroAsmGeneratorFactory()); // Add MicroASM generator
+            Register(new uhigh.Net.CodeGen.JavaGeneratorFactory()); // Add Java generator
         }
 
         /// <summary>

@@ -20,10 +20,45 @@ namespace uhigh.Net.CodeGen
                 "csharp" => GenerateCSharpTypeMappings(),
                 "js" or "javascript" => GenerateJavaScriptTypeMappings(),
                 "cpp" or "c++" => GenerateCppTypeMappings(),
+                "java" => GenerateJavaTypeMappings(),
                 "python" => GeneratePythonTypeMappings(),
                 "rust" => GenerateRustTypeMappings(),
                 "llvm" => GenerateLLVMTypeMappings(),
                 _ => new Dictionary<string, string>()
+            };
+        }
+        private static Dictionary<string, string> GenerateJavaTypeMappings()
+        {
+            return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "int", "int" },
+                { "long", "long" },
+                { "float", "float" },
+                { "double", "double" },
+                { "decimal", "double" },
+                { "byte", "byte" },
+                { "sbyte", "byte" },
+                { "short", "short" },
+                { "ushort", "short" },
+                { "uint", "int" },
+                { "ulong", "long" },
+                { "bool", "boolean" },
+                { "string", "String" },
+                { "char", "char" },
+                { "Guid", "String" },
+                { "object", "Object" },
+                { "array", "ArrayList<Object>" },
+                { "array<T>", "ArrayList<T>" },
+                { "Dictionary<K,V>", "HashMap<K,V>" },
+                { "Set<T>", "HashSet<T>" },
+                { "Tuple<T1,T2>", "Object[]" },
+                { "enum", "enum" },
+                { "void", "void" },
+                { "DateTime", "Date" },
+                { "any", "Object" },
+                { "Func<T>", "Function<T>" },
+                { "Lambda<T>", "Function<T>" },
+                { "Observable<T>", "Observable<T>" }
             };
         }
 
@@ -150,7 +185,37 @@ namespace uhigh.Net.CodeGen
                 "csharp" => GenerateCSharpMethodMappings(),
                 "js" or "javascript" => GenerateJavaScriptMethodMappings(),
                 "cpp" or "c++" => GenerateCppMethodMappings(),
+                "java" => GenerateJavaMethodMappings(),
                 _ => new Dictionary<string, string>()
+            };
+        }
+        private static Dictionary<string, string> GenerateJavaMethodMappings()
+        {
+            return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "Add_to_array", "add" },
+                { "Add_to_set", "add" },
+                { "Add_to_dict", "put" },
+                { "Remove_from_array", "remove" },
+                { "Remove_from_set", "remove" },
+                { "Remove_from_dict", "remove" },
+                { "Length_of_array", "size" },
+                { "Length_of_set", "size" },
+                { "Length_of_dict", "size" },
+                { "Length_of_string", "length" },
+                { "Index_of_array", "get" },
+                { "Index_of_dict", "get" },
+                { "Substring_of", "substring" },
+                { "ToUpper", "toUpperCase" },
+                { "ToLower", "toLowerCase" },
+                { "Contains_in_array", "contains" },
+                { "Contains_in_set", "contains" },
+                { "Contains_in_dict", "containsKey" },
+                { "Contains_in_string", "contains" },
+                { "IndexOf_in_array", "indexOf" },
+                { "IndexOf_in_string", "indexOf" },
+                { "Join", "String.join" },
+                { "ToString_of", "toString" }
             };
         }
 

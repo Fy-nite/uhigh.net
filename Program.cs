@@ -44,12 +44,16 @@ public class EntryPoint
     {
         var rootCommand = new RootCommand("μHigh compiler and toolchain");
 
+        // Global options
+        var typeErrorsAsWarningsOption = CommonOptions.CreateTypeErrorsAsWarningsOption();
+        rootCommand.AddGlobalOption(typeErrorsAsWarningsOption);
+
         // Add all subcommands
-        rootCommand.AddCommand(CreateCompileCommand());
+        rootCommand.AddCommand(CreateCompileCommand(typeErrorsAsWarningsOption));
         rootCommand.AddCommand(CreateCreateCommand());
         rootCommand.AddCommand(CreateListTemplatesCommand());
-        rootCommand.AddCommand(CreateBuildCommand());
-        rootCommand.AddCommand(CreateRunCommand());
+        rootCommand.AddCommand(CreateBuildCommand(typeErrorsAsWarningsOption));
+        rootCommand.AddCommand(CreateRunCommand(typeErrorsAsWarningsOption));
         rootCommand.AddCommand(CreateInfoCommand());
         rootCommand.AddCommand(CreateAddFileCommand());
         rootCommand.AddCommand(CreateAddPackageCommand());
@@ -57,10 +61,10 @@ public class EntryPoint
         rootCommand.AddCommand(CreateSearchPackagesCommand());
         rootCommand.AddCommand(CreateListPackagesCommand());
         rootCommand.AddCommand(CreateRestorePackagesCommand());
-        rootCommand.AddCommand(CreateAstCommand());
+        rootCommand.AddCommand(CreateAstCommand(typeErrorsAsWarningsOption));
         rootCommand.AddCommand(CreateLspCommand());
         rootCommand.AddCommand(CreateTestCommand());
-        rootCommand.AddCommand(CreateReplCommand());
+        rootCommand.AddCommand(CreateReplCommand(typeErrorsAsWarningsOption));
 
         
         // Add .ub package commands
@@ -79,7 +83,7 @@ public class EntryPoint
     /// <summary>
     /// Creates the compile command
     /// </summary>
-    private static Command CreateCompileCommand()
+    private static Command CreateCompileCommand(Option<bool> typeErrorsAsWarningsOption)
     {
         var sourceFileArg = CommonOptions.CreateSourceFileArgument();
         var verboseOption = CommonOptions.CreateVerboseOption();
@@ -100,7 +104,7 @@ public class EntryPoint
             targetOption
         };
 
-        command.SetHandler(async (sourceFile, verbose, stdLibPath, saveCsTo, output, runInMemory, target) =>
+        command.SetHandler(async (sourceFile, verbose, stdLibPath, saveCsTo, output, runInMemory, target, typeErrorsAsWarnings) =>
         {
             var options = new CompileOptions
             {
@@ -110,10 +114,11 @@ public class EntryPoint
                 SaveCSharpTo = saveCsTo,
                 OutputFile = output,
                 RunInMemory = runInMemory,
-                Target = target
+                Target = target,
+                TypeErrorsAsWarnings = typeErrorsAsWarnings
             };
             Environment.ExitCode = await HandleCompileCommand(options);
-        }, sourceFileArg, verboseOption, stdLibOption, saveCsOption, outputOption, runInMemoryOption, targetOption);
+        }, sourceFileArg, verboseOption, stdLibOption, saveCsOption, outputOption, runInMemoryOption, targetOption, typeErrorsAsWarningsOption);
 
         return command;
     }
@@ -209,7 +214,7 @@ public class EntryPoint
     /// <summary>
     /// Creates the build command
     /// </summary>
-    private static Command CreateBuildCommand()
+    private static Command CreateBuildCommand(Option<bool> typeErrorsAsWarningsOption)
     {
         var projectFileArg = CommonOptions.CreateProjectFileArgument();
         var verboseOption = CommonOptions.CreateVerboseOption();
@@ -226,7 +231,7 @@ public class EntryPoint
             outputOption
         };
 
-        command.SetHandler(async (projectFile, verbose, stdLibPath, saveCsTo, output) =>
+        command.SetHandler(async (projectFile, verbose, stdLibPath, saveCsTo, output, typeErrorsAsWarnings) =>
         {
             // If projectFile is null, try to find one in current directory
             if (string.IsNullOrEmpty(projectFile))
@@ -254,10 +259,11 @@ public class EntryPoint
                 Verbose = verbose,
                 StdLibPath = stdLibPath,
                 SaveCSharpTo = saveCsTo,
-                OutputFile = output
+                OutputFile = output,
+                TypeErrorsAsWarnings = typeErrorsAsWarnings
             };
             Environment.ExitCode = await HandleBuildCommand(options);
-        }, projectFileArg, verboseOption, stdLibOption, saveCsOption, outputOption);
+        }, projectFileArg, verboseOption, stdLibOption, saveCsOption, outputOption, typeErrorsAsWarningsOption);
 
         return command;
     }
@@ -272,7 +278,7 @@ public class EntryPoint
     /// <summary>
     /// Creates the run command
     /// </summary>
-    private static Command CreateRunCommand()
+    private static Command CreateRunCommand(Option<bool> typeErrorsAsWarningsOption)
     {
         var projectFileArg = new Argument<string?>("project-file", () => null, "Path to the μHigh project file or source file (optional - will auto-detect .uhighproj if not specified)");
         var verboseOption = CommonOptions.CreateVerboseOption();
@@ -287,36 +293,18 @@ public class EntryPoint
             saveCsOption
         };
 
-        command.SetHandler(async (projectFile, verbose, stdLibPath, saveCsTo) =>
+        command.SetHandler(async (projectFile, verbose, stdLibPath, saveCsTo, typeErrorsAsWarnings) =>
         {
-            if (string.IsNullOrEmpty(projectFile))
-            {
-                try
-                {
-                    projectFile = CommonOptions.FindProjectFile();
-                }
-                catch (Exception ex)
-                {
-                    WriteError(ex.Message);
-                    Environment.ExitCode = 1;
-                    return;
-                }
-                if (string.IsNullOrEmpty(projectFile))
-                {
-                    WriteError("No .uhighproj file found in current directory.");
-                    Environment.ExitCode = 1;
-                    return;
-                }
-            }
             var options = new RunOptions
             {
                 ProjectFile = projectFile!,
                 Verbose = verbose,
                 StdLibPath = stdLibPath,
-                SaveCSharpTo = saveCsTo
+                SaveCSharpTo = saveCsTo,
+                TypeErrorsAsWarnings = typeErrorsAsWarnings
             };
             Environment.ExitCode = await HandleRunCommand(options);
-        }, projectFileArg, verboseOption, stdLibOption, saveCsOption);
+        }, projectFileArg, verboseOption, stdLibOption, saveCsOption, typeErrorsAsWarningsOption);
 
         return command;
     }
@@ -546,7 +534,7 @@ public class EntryPoint
     /// <summary>
     /// Creates the ast command
     /// </summary>
-    private static Command CreateAstCommand()
+    private static Command CreateAstCommand(Option<bool> typeErrorsAsWarningsOption)
     {
         var sourceFileArg = CommonOptions.CreateSourceFileArgument();
         var verboseOption = CommonOptions.CreateVerboseOption();
@@ -559,16 +547,17 @@ public class EntryPoint
             stdLibOption
         };
 
-        command.SetHandler(async (sourceFile, verbose, stdLibPath) =>
+        command.SetHandler(async (sourceFile, verbose, stdLibPath, typeErrorsAsWarnings) =>
         {
             var options = new AstOptions
             {
                 SourceFile = sourceFile,
                 Verbose = verbose,
-                StdLibPath = stdLibPath
+                StdLibPath = stdLibPath,
+                TypeErrorsAsWarnings = typeErrorsAsWarnings
             };
             Environment.ExitCode = await HandleAstCommand(options);
-        }, sourceFileArg, verboseOption, stdLibOption);
+        }, sourceFileArg, verboseOption, stdLibOption, typeErrorsAsWarningsOption);
 
         return command;
     }
@@ -623,7 +612,6 @@ public class EntryPoint
             listTestsOption,
             skipFileOption
         };
-
         command.SetHandler((verbose, stdLibPath, listTests, skipFile) =>
         {
             var options = new TestOptions
@@ -633,7 +621,8 @@ public class EntryPoint
                 ListTests = listTests,
                 SkipFile = skipFile
             };
-            Environment.ExitCode = HandleTestCommand(options);
+            var ExitCode = HandleTestCommand(options);
+            return Task.FromResult(ExitCode);
         }, verboseOption, stdLibOption, listTestsOption, skipFileOption);
 
         return command;
@@ -642,7 +631,7 @@ public class EntryPoint
     /// <summary>
     /// Creates the repl command
     /// </summary>
-    private static Command CreateReplCommand()
+    private static Command CreateReplCommand(Option<bool> typeErrorsAsWarningsOption)
     {
         var verboseOption = CommonOptions.CreateVerboseOption();
         var stdLibOption = CommonOptions.CreateStdLibPathOption();
@@ -655,16 +644,17 @@ public class EntryPoint
             saveCsOption
         };
 
-        command.SetHandler(async (verbose, stdLibPath, saveCsTo) =>
+        command.SetHandler(async (verbose, stdLibPath, saveCsTo, typeErrorsAsWarnings) =>
         {
             var options = new ReplOptions
             {
                 Verbose = verbose,
                 StdLibPath = stdLibPath,
-                SaveCSharpTo = saveCsTo
+                SaveCSharpTo = saveCsTo,
+                TypeErrorsAsWarnings = typeErrorsAsWarnings
             };
             Environment.ExitCode = await HandleReplCommand(options);
-        }, verboseOption, stdLibOption, saveCsOption);
+        }, verboseOption, stdLibOption, saveCsOption, typeErrorsAsWarningsOption);
 
         return command;
     }
@@ -876,7 +866,7 @@ public class EntryPoint
     {
         try
         {
-            var compiler = new Compiler(options.Verbose, options.StdLibPath, options.Target);
+            var compiler = new Compiler(options.Verbose, options.StdLibPath, options.Target, options.TypeErrorsAsWarnings);
             bool success;
 
             if (!File.Exists(options.SourceFile))
@@ -889,7 +879,7 @@ public class EntryPoint
             if (!string.IsNullOrEmpty(options.Target) && options.Target.ToLower() != "csharp")
             {
                 var source = await File.ReadAllTextAsync(options.SourceFile);
-                var diagnostics = new uhigh.Net.Diagnostics.DiagnosticsReporter(options.Verbose, options.SourceFile);
+                var diagnostics = new uhigh.Net.Diagnostics.DiagnosticsReporter(options.Verbose, options.SourceFile, false, options.TypeErrorsAsWarnings);
                 var code = compiler.CompileToTarget(source, options.Target, diagnostics);
 
                 var outputFile = options.OutputFile;
@@ -1063,22 +1053,34 @@ public class EntryPoint
     {
         try
         {
-            var compiler = new Compiler(options.Verbose, options.StdLibPath);
+            var compiler = new Compiler(options.Verbose, options.StdLibPath, "csharp", options.TypeErrorsAsWarnings);
+            bool success;
 
+            // Load the project file (async)
+            var project = await uhigh.Net.ProjectFile.LoadAsync(options.ProjectFile);
+            if (project == null)
+            {
+                WriteError($"Failed to load project: {options.ProjectFile}");
+                return 1;
+            }
+
+            // Clear all previous defines and set preprocessor symbol for backend
+            uhigh.Net.Preprocessor.Preprocessor.ClearDefines();
+            uhigh.Net.Preprocessor.Preprocessor.SetTargetLanguage(project.Backend);
+
+            // Continue with build logic
             if (!File.Exists(options.ProjectFile))
             {
                 WriteError($"Project file '{options.ProjectFile}' not found");
                 return 1;
             }
 
-            bool success;
             if (!string.IsNullOrEmpty(options.SaveCSharpTo))
             {
-                Console.WriteLine($"Generating C# files to: {options.SaveCSharpTo}");
-                success = await compiler.SaveCSharpCodeFromProject(options.ProjectFile, options.SaveCSharpTo);
+                success = await compiler.SaveCSharpCode(options.ProjectFile, options.SaveCSharpTo);
                 if (success)
                 {
-                    Console.WriteLine("Each μHigh source file has been converted to a separate C# file.");
+                    Console.WriteLine($"Saved C# code to {options.SaveCSharpTo}");
                 }
             }
             else
@@ -1104,8 +1106,8 @@ public class EntryPoint
     {
         try
         {
-            var compiler = new Compiler(options.Verbose, options.StdLibPath);
-            string fileToRun;
+            var compiler = new Compiler(options.Verbose, options.StdLibPath, "csharp", options.TypeErrorsAsWarnings);
+            string? fileToRun;
 
             // Determine what file to run
             if (string.IsNullOrEmpty(options.ProjectFile))
@@ -1455,7 +1457,7 @@ public class EntryPoint
     {
         try
         {
-            var compiler = new Compiler(options.Verbose, options.StdLibPath);
+            var compiler = new Compiler(options.Verbose, options.StdLibPath, "csharp", options.TypeErrorsAsWarnings);
             var success = await compiler.PrintAST(options.SourceFile);
             return success ? 0 : 1;
         }
@@ -1500,7 +1502,7 @@ public class EntryPoint
             uhigh.Net.Testing.TestRunner.PrintResults(testSuites);
 
             var totalFailed = testSuites.Sum(s => s.Counts.Failed);
-            return totalFailed == 0 ? 0 : 1;
+            return totalFailed;
         }
         catch (Exception ex)
         {
@@ -1742,4 +1744,4 @@ public class EntryPoint
     }
 
 }
-
+      

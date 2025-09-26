@@ -336,11 +336,15 @@ namespace uhigh.Net.Parser
         /// Initializes a new instance of the <see cref="MethodChecker"/> class
         /// </summary>
         /// <param name="diagnostics">The diagnostics</param>
-        public MethodChecker(DiagnosticsReporter diagnostics)
+        /// <param name="treatTypeErrorsAsWarnings">if set to <c>true</c> [treat type errors as warnings].</param>
+        public MethodChecker(DiagnosticsReporter diagnostics, bool treatTypeErrorsAsWarnings = false)
         {
             _diagnostics = diagnostics;
             _reflectionResolver = new ReflectionMethodResolver(diagnostics);
-            _typeResolver = new ReflectionTypeResolver(diagnostics);
+            _typeResolver = new ReflectionTypeResolver(diagnostics)
+            {
+                TreatTypeErrorsAsWarnings = treatTypeErrorsAsWarnings
+            };
             RegisterBuiltInMethods();
         }
 
@@ -860,6 +864,44 @@ namespace uhigh.Net.Parser
 
             try
             {
+                // Check for built-in types first - these are NOT user-defined
+                var lowerTypeName = typeName.ToLowerInvariant();
+                switch (lowerTypeName)
+                {
+                    case "int":
+                    case "int32":
+                    case "string":
+                    case "str":
+                    case "bool":
+                    case "boolean":
+                    case "double":
+                    case "float":
+                    case "decimal":
+                    case "object":
+                    case "void":
+                        return false; // Built-in types are not user-defined
+                }
+
+                // Check for built-in array types
+                if (lowerTypeName.EndsWith("[]"))
+                {
+                    var elementType = lowerTypeName.Substring(0, lowerTypeName.Length - 2);
+                    switch (elementType)
+                    {
+                        case "int":
+                        case "int32":
+                        case "string":
+                        case "str":
+                        case "bool":
+                        case "boolean":
+                        case "double":
+                        case "float":
+                        case "decimal":
+                        case "object":
+                            return false; // Built-in array types are not user-defined
+                    }
+                }
+
                 // Check exact match first
                 if (_classes.ContainsKey(typeName))
                     return true;

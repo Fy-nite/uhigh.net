@@ -169,6 +169,10 @@ namespace uhigh.Net.Diagnostics
         /// The suppress output
         /// </summary>
         private readonly bool _suppressOutput;
+        /// <summary>
+        /// Treat type errors as warnings
+        /// </summary>
+        private readonly bool _typeErrorsAsWarnings;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DiagnosticsReporter"/> class
@@ -176,11 +180,13 @@ namespace uhigh.Net.Diagnostics
         /// <param name="verboseMode">The verbose mode</param>
         /// <param name="sourceFileName">The source file name</param>
         /// <param name="suppressOutput">The suppress output</param>
-        public DiagnosticsReporter(bool verboseMode = false, string? sourceFileName = null, bool suppressOutput = false)
+        /// <param name="typeErrorsAsWarnings">Treat type errors as warnings</param>
+        public DiagnosticsReporter(bool verboseMode = false, string? sourceFileName = null, bool suppressOutput = false, bool typeErrorsAsWarnings = false)
         {
             _verboseMode = verboseMode;
             _sourceFileName = sourceFileName;
             _suppressOutput = suppressOutput;
+            _typeErrorsAsWarnings = typeErrorsAsWarnings;
             LoadSourceLines();
         }
 
@@ -248,7 +254,8 @@ namespace uhigh.Net.Diagnostics
             if (frames != null)
             {
                 var relevantFrames = frames
-                    .Skip(2) // Skip this method and the immediate caller
+                    //TODO: Uncomment the next line if you want to skip this method and the immediate caller
+                    // .Skip(2) // Skip this method and the immediate caller
                     .Where(f => f.GetMethod() != null)
                     .Take(10) // Limit to 10 frames
                     .Select(f =>
@@ -286,6 +293,13 @@ namespace uhigh.Net.Diagnostics
         /// <param name="exception">The exception</param>
         public void ReportError(string message, int line = 0, int column = 0, string? code = null, Exception? exception = null)
         {
+            // If type errors should be warnings and code is a type error (UH2xx)
+            if (_typeErrorsAsWarnings && code != null && code.StartsWith("UH2"))
+            {
+                ReportWarning(message, line, column, code);
+                return;
+            }
+
             var location = line > 0 ? new SourceLocation(line, column, _sourceFileName) : null;
             var diagnostic = new Diagnostic(DiagnosticSeverity.Error, message, location, code, exception);
 
@@ -698,12 +712,13 @@ namespace uhigh.Net.Diagnostics
         public static void ReportParseError(this DiagnosticsReporter diagnostics, string message, Token token)
         {
             diagnostics.ReportTokenError($"Parse error: {message}", token, "UH100");
-        }        /// <summary>
-                 /// Reports the code gen warning using the specified diagnostics
-                 /// </summary>
-                 /// <param name="diagnostics">The diagnostics</param>
-                 /// <param name="message">The message</param>
-                 /// <param name="context">The context</param>
+        }
+        /// <summary>
+        /// Reports the code gen warning using the specified diagnostics
+        /// </summary>
+        /// <param name="diagnostics">The diagnostics</param>
+        /// <param name="message">The message</param>
+        /// <param name="context">The context</param>
         public static void ReportCodeGenWarning(this DiagnosticsReporter diagnostics, string message, string? context = null)
         {
             diagnostics.ReportWarning($"Code generation: {message}" + (context != null ? $" (Context: {context})" : ""), code: "UH200");

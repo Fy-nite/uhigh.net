@@ -7,7 +7,7 @@ namespace test
     public class meow {
         
         [Expect(10)] 
-        public static field ten: int = 0
+        public field ten: int = 0
     }
 
     public class Program
