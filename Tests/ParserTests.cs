@@ -143,7 +143,7 @@ namespace uhigh.Net.Testing
             var catClass = classes.First(c => c.Name == "cat");
             var feedMethod = catClass.Members.OfType<MethodDeclaration>().FirstOrDefault(m => m.Name == "feed");
             Assert.IsNotNull(feedMethod);
-            Assert.AreEqual(1, feedMethod.Parameters.Count);
+            Assert.AreEqual(1, feedMethod!.Parameters.Count);
             Assert.AreEqual("meow", feedMethod.Parameters[0].Type);
         }
 
@@ -250,6 +250,25 @@ namespace uhigh.Net.Testing
 
             var callExpr = (CallExpression)exprStmt.Expression;
             Assert.AreEqual(2, callExpr.Arguments.Count);
+        }
+
+        /// <summary>
+        /// Tests enum declaration parsing
+        /// </summary>
+        [Test]
+        public void TestEnumDeclarationParsing()
+        {
+            var program = ParseSource(@"public enum Color { Red, Green = 2, Blue }");
+
+            Assert.AreEqual(1, program.Statements.Count);
+            Assert.IsTrue(program.Statements[0] is EnumDeclaration);
+            var en = (EnumDeclaration)program.Statements[0];
+            Assert.AreEqual("Color", en.Name);
+            Assert.AreEqual(3, en.Members.Count);
+            Assert.AreEqual("Red", en.Members[0].Name);
+            Assert.IsNull(en.Members[0].Value);
+            Assert.AreEqual("Green", en.Members[1].Name);
+            Assert.IsNotNull(en.Members[1].Value);
         }
 
         /// <summary>

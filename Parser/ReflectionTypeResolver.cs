@@ -24,6 +24,14 @@ namespace uhigh.Net.Parser
         /// The scanned assemblies
         /// </summary>
         private readonly HashSet<Assembly> _scannedAssemblies = new();
+    /// <summary>
+    /// Fast cache by assembly simple/full name to avoid redundant scans
+    /// </summary>
+    private readonly HashSet<string> _scannedAssemblyNames = new(StringComparer.OrdinalIgnoreCase);
+    /// <summary>
+    /// Fast cache by assembly file path to avoid redundant LoadFrom scans
+    /// </summary>
+    private readonly HashSet<string> _scannedAssemblyPaths = new(StringComparer.OrdinalIgnoreCase);
         /// <summary>
         /// The generic type definitions
         /// </summary>
@@ -85,6 +93,12 @@ namespace uhigh.Net.Parser
             ScanAssembly(typeof(System.Collections.Generic.List<>).Assembly); // System.Collections.Generic.List
             ScanAssembly(typeof(System.Collections.Generic.HashSet<>).Assembly); // System.Collections.Generic.HashSet
 
+            // Also try to scan framework facade/runtime assemblies that often contain forwarders
+            TryScanAssemblyByName("netstandard");
+            TryScanAssemblyByName("System.Runtime");
+            TryScanAssemblyByName("System.Runtime.Extensions");
+            TryScanAssemblyByName("System.Private.CoreLib");
+
             // Try to scan uhigh.StdLib assembly more reliably
             try
             {
@@ -113,7 +127,41 @@ namespace uhigh.Net.Parser
             ScanAssembliesInDirectory(packagesDir);
             ScanAssembliesInDirectory(binDir);
 
+            // Finally, scan already loaded System.* assemblies to catch anything missed
+            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                var name = asm.GetName().Name;
+                if (!string.IsNullOrEmpty(name) && name.StartsWith("System."))
+                {
+                    ScanAssembly(asm);
+                }
+            }
+
             _diagnostics.ReportInfo($"Discovered {_discoveredTypes.Count} types and {_discoveredMethods.Values.Sum(m => m.Count)} methods via reflection");
+        }
+
+        /// <summary>
+        /// Attempts to load and scan an assembly by simple name (e.g., "netstandard").
+        /// </summary>
+        private void TryScanAssemblyByName(string assemblySimpleName)
+        {
+            try
+            {
+                // Early exit if already scanned by name
+                if (_scannedAssemblyNames.Contains(assemblySimpleName))
+                    return;
+
+                // Prefer already loaded instance to avoid duplicate loads
+                var loaded = AppDomain.CurrentDomain.GetAssemblies()
+                    .FirstOrDefault(a => string.Equals(a.GetName().Name, assemblySimpleName, StringComparison.OrdinalIgnoreCase));
+
+                var asm = loaded ?? Assembly.Load(assemblySimpleName);
+                ScanAssembly(asm);
+            }
+            catch
+            {
+                // Best-effort only
+            }
         }
 
         /// <summary>
@@ -122,10 +170,18 @@ namespace uhigh.Net.Parser
         /// <param name="assembly">The assembly</param>
         public void ScanAssembly(Assembly assembly)
         {
-            if (_scannedAssemblies.Contains(assembly))
+            var name = assembly.GetName();
+            var simpleName = name.Name ?? string.Empty;
+            var fullName = name.FullName ?? simpleName;
+
+            if (_scannedAssemblies.Contains(assembly) ||
+                _scannedAssemblyNames.Contains(simpleName) ||
+                _scannedAssemblyNames.Contains(fullName))
                 return;
 
             _scannedAssemblies.Add(assembly);
+            _scannedAssemblyNames.Add(simpleName);
+            _scannedAssemblyNames.Add(fullName);
 
             try
             {
@@ -836,7 +892,11 @@ namespace uhigh.Net.Parser
             {
                 try
                 {
+                    if (_scannedAssemblyPaths.Contains(dll))
+                        continue;
+
                     var assembly = Assembly.LoadFrom(dll);
+                    _scannedAssemblyPaths.Add(dll);
                     ScanAssemblyWithReferences(assembly);
                 }
                 catch (Exception ex)

@@ -45,7 +45,7 @@ namespace uhigh.Net.CodeGen
         /// <summary>
         /// The type resolver
         /// </summary>
-        private ReflectionTypeResolver _typeResolver; // Add this field
+    private ReflectionTypeResolver? _typeResolver; // Add this field
 
         /// <summary>
         /// The config
@@ -731,6 +731,9 @@ namespace uhigh.Net.CodeGen
                 case ClassDeclaration classDecl:
                     GenerateClassDeclaration(classDecl);
                     break;
+                case EnumDeclaration enumDecl:
+                    GenerateEnumDeclaration(enumDecl);
+                    break;
                 case MethodDeclaration methodDecl:
                     GenerateMethodDeclaration(methodDecl);
                     break;
@@ -790,6 +793,59 @@ namespace uhigh.Net.CodeGen
                     _diagnostics.ReportCodeGenWarning($"Unknown statement type: {statement.GetType().Name}");
                     break;
             }
+        }
+
+        /// <summary>
+        /// Generates a C# enum declaration
+        /// </summary>
+        /// <param name="enumDecl">The enum declaration node</param>
+        private void GenerateEnumDeclaration(EnumDeclaration enumDecl)
+        {
+            // Emit modifiers
+            Indent();
+            if (enumDecl.Modifiers.Count > 0)
+            {
+                _output.Append(string.Join(" ", enumDecl.Modifiers));
+                _output.Append(' ');
+            }
+            else
+            {
+                _output.Append("public ");
+            }
+
+            _output.Append("enum ");
+            _output.Append(enumDecl.Name);
+            if (!string.IsNullOrWhiteSpace(enumDecl.BaseType))
+            {
+                _output.Append(" : ");
+                _output.Append(ConvertType(enumDecl.BaseType!));
+            }
+            _output.AppendLine();
+            Indent();
+            _output.AppendLine("{");
+            _indentLevel++;
+
+            for (int i = 0; i < enumDecl.Members.Count; i++)
+            {
+                var member = enumDecl.Members[i];
+                Indent();
+                _output.Append(member.Name);
+                if (member.Value != null)
+                {
+                    _output.Append(" = ");
+                    GenerateExpression(member.Value);
+                }
+                if (i < enumDecl.Members.Count - 1)
+                {
+                    _output.Append(',');
+                }
+                _output.AppendLine();
+            }
+
+            _indentLevel--;
+            Indent();
+            _output.AppendLine("}");
+            _output.AppendLine();
         }
 
         /// <summary>
@@ -1700,7 +1756,7 @@ namespace uhigh.Net.CodeGen
             {
                 // Try to infer type from first element
                 var firstElem = arrayExpr.Elements[0];
-                string inferredType = null;
+                string? inferredType = null;
                 if (firstElem is LiteralExpression lit)
                 {
                     inferredType = lit.Value switch
@@ -2174,7 +2230,7 @@ namespace uhigh.Net.CodeGen
             // Array types
             if (type.IsArray)
             {
-                return GetCSharpTypeName(type.GetElementType()) + "[]";
+                return GetCSharpTypeName(type.GetElementType()!) + "[]";
             }
             // Use full name for other types
             return type.FullName ?? type.Name;

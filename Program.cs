@@ -1,5 +1,3 @@
-using System.CommandLine;
-using System.CommandLine.Parsing;
 using uhigh.Net;
 using uhigh.Net.CommandLine;
 using uhigh.Net.UbPackage;
@@ -171,9 +169,9 @@ public class EntryPoint
                 Directory = directory,
                 Description = description,
                 Author = author,
-                OutputType = outputType,
-                TargetFramework = targetFramework,
-                Template = template
+                OutputType = outputType!,
+                TargetFramework = targetFramework!,
+                Template = template!
             };
             
             Environment.ExitCode = await HandleCreateCommand(options);
@@ -329,7 +327,7 @@ public class EntryPoint
         {
             var options = new InfoOptions
             {
-                ProjectFile = projectFile,
+                ProjectFile = projectFile!,
                 Verbose = verbose,
                 StdLibPath = stdLibPath
             };
@@ -363,7 +361,7 @@ public class EntryPoint
         {
             var options = new AddFileOptions
             {
-                ProjectFile = projectFile,
+                ProjectFile = projectFile!,
                 SourceFile = sourceFile,
                 Verbose = verbose,
                 StdLibPath = stdLibPath,
@@ -399,7 +397,7 @@ public class EntryPoint
         {
             var options = new AddPackageOptions
             {
-                ProjectFile = projectFile,
+                ProjectFile = projectFile!,
                 PackageName = packageName,
                 Verbose = verbose,
                 StdLibPath = stdLibPath,
@@ -1475,8 +1473,10 @@ public class EntryPoint
     /// <returns>A task containing the int</returns>
     private static async Task<int> HandleLspCommand(LspOptions options)
     {
-        // For now, redirect to the simple LSP test
-        await UhighLanguageServer.srv.StartServerAsync();
+        // Honor --stdio (default true) and optional --port for websocket mode
+        bool useWebSocket = !options.UseStdio; // invert: stdio => false
+        int port = options.Port ?? 5000;
+        await UhighLanguageServer.srv.StartServerAsync(useWebSocket, port);
         return 0;
     }
 

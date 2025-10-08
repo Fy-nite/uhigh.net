@@ -6,24 +6,40 @@ namespace UhighLanguageServer
 {
     class srv
     {
-        public static async Task StartServerAsync(bool useWebSocket = true, int wsPort = 5000)
+        public static async Task StartServerAsync(bool useWebSocket = true, int wsPort = 5001)
         {
             if (!useWebSocket)
             {
                 Console.OutputEncoding = new UTF8Encoding();
+                Console.Error.WriteLine("[μHigh LSP] Starting in stdio mode...");
                 var app = new App(Console.OpenStandardInput(), Console.OpenStandardOutput());
                 Logger.Instance.Attach(app);
                 try
                 {
                     await Task.Run(() =>
                     {
-                        app.Listen();
+                        try {
+                            app.Listen();
+                        } catch (Exception ex) {
+                            Console.Error.WriteLine($"[μHigh LSP] Exception in app.Listen(): {ex}");
+                            throw;
+                        }
                         while (true) { System.Threading.Thread.Sleep(100); }
                     });
                 }
                 catch (AggregateException ex)
                 {
-                    Console.Error.WriteLine(ex.InnerExceptions[0]);
+                    Console.Error.WriteLine($"[μHigh LSP] AggregateException: {ex}");
+                    if (ex.InnerExceptions != null)
+                    {
+                        foreach (var inner in ex.InnerExceptions)
+                            Console.Error.WriteLine($"[μHigh LSP] Inner: {inner}");
+                    }
+                    Environment.Exit(-1);
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"[μHigh LSP] Fatal Exception: {ex}");
                     Environment.Exit(-1);
                 }
             }

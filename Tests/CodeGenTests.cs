@@ -177,6 +177,20 @@ namespace uhigh.Net.Testing
         }
 
         /// <summary>
+        /// Tests C# code generation for enums
+        /// </summary>
+        [Test]
+        public void TestEnumCodeGeneration()
+        {
+            var result = GenerateCSharp(@"public enum Color { Red, Green = 2, Blue }");
+
+            Assert.IsTrue(result.Contains("public enum Color"));
+            Assert.IsTrue(result.Contains("Red"));
+            Assert.IsTrue(result.Contains("Green = 2"));
+            Assert.IsTrue(result.Contains("Blue"));
+        }
+
+        /// <summary>
         /// Tests that test attribute skipping
         /// </summary>
         [Test]
@@ -233,11 +247,8 @@ namespace uhigh.Net.Testing
 
             Assert.IsTrue(result.Contains("public static void test(int a, double b, string c, bool d)"));
         }
-        //TODO: fix this test in the parser
-        /// <summary>
-        /// Tests that test match expression
-        /// this is currently broken in the parser, so it will not work
-        /// </summary>
+    // TODO: fix this test in the parser
+    // Summary: Tests match expression (currently broken in parser)
         // [Test]
         // public void TestMatchExpression()
         // {
@@ -369,7 +380,7 @@ namespace uhigh.Net.Testing
             
             var csharpInfo = generators.FirstOrDefault(g => g.Name.Contains("C#"));
             Assert.IsNotNull(csharpInfo);
-            Assert.IsTrue(csharpInfo.SupportedFeatures.Contains("classes"));
+            Assert.IsTrue(csharpInfo!.SupportedFeatures.Contains("classes"));
         }
 
         /// <summary>

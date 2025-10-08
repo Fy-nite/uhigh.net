@@ -226,6 +226,7 @@ namespace uhigh.Net.CodeGen
             {
                 NamespaceDeclaration nsDecl => $"{nsDecl.Name}.cs",
                 ClassDeclaration classDecl => $"{classDecl.Name}.cs",
+                EnumDeclaration enumDecl => $"{enumDecl.Name}.cs",
                 FunctionDeclaration funcDecl => "Functions.cs",
                 TypeAliasDeclaration typeAlias => "TypeAliases.cs",
                 ImportStatement => "Program.cs", // Imports go to main file
@@ -395,6 +396,9 @@ namespace uhigh.Net.CodeGen
                 case ClassDeclaration classDecl:
                     GenerateClass(output, classDecl, indentLevel);
                     break;
+                case EnumDeclaration enumDecl:
+                    GenerateEnum(output, enumDecl, indentLevel);
+                    break;
                 case MethodDeclaration methodDecl:
                     GenerateMethod(output, methodDecl, indentLevel);
                     break;
@@ -414,6 +418,73 @@ namespace uhigh.Net.CodeGen
                 default:
                     Indent(output, indentLevel);
                     output.AppendLine($"// TODO: Generate {statement.GetType().Name}");
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Generates a C# enum declaration to the output
+        /// </summary>
+        private void GenerateEnum(StringBuilder output, EnumDeclaration enumDecl, int indentLevel)
+        {
+            Indent(output, indentLevel);
+            if (enumDecl.Modifiers.Count > 0)
+            {
+                output.Append(string.Join(" ", enumDecl.Modifiers) + " ");
+            }
+            else
+            {
+                output.Append("public ");
+            }
+
+            output.Append("enum ");
+            output.Append(enumDecl.Name);
+            if (!string.IsNullOrWhiteSpace(enumDecl.BaseType))
+            {
+                output.Append(" : ");
+                output.Append(ConvertType(enumDecl.BaseType!));
+            }
+            output.AppendLine();
+            Indent(output, indentLevel);
+            output.AppendLine("{");
+
+            for (int i = 0; i < enumDecl.Members.Count; i++)
+            {
+                var member = enumDecl.Members[i];
+                Indent(output, indentLevel + 1);
+                output.Append(member.Name);
+                if (member.Value != null)
+                {
+                    output.Append(" = ");
+                    // Reuse simple literal/identifier printer for values
+                    WriteSimpleExpression(output, member.Value);
+                }
+                if (i < enumDecl.Members.Count - 1)
+                    output.Append(',');
+                output.AppendLine();
+            }
+
+            Indent(output, indentLevel);
+            output.AppendLine("}");
+            output.AppendLine();
+        }
+
+        private void WriteSimpleExpression(StringBuilder output, Expression expr)
+        {
+            switch (expr)
+            {
+                case LiteralExpression lit:
+                    output.Append(lit.Value is string s ? $"\"{s}\"" : lit.Value?.ToString());
+                    break;
+                case IdentifierExpression id:
+                    output.Append(id.Name);
+                    break;
+                case QualifiedIdentifierExpression qid:
+                    output.Append(qid.Name);
+                    break;
+                default:
+                    // Fallback: not aiming for full expression printer here
+                    output.Append("0");
                     break;
             }
         }
