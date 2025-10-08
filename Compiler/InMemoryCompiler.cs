@@ -99,21 +99,12 @@ namespace uhigh.Net.CodeGen
                 MetadataReference.CreateFromFile(typeof(System.Collections.IEnumerable).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(System.Collections.Generic.List<>).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(System.Linq.Enumerable).Assembly.Location),
-                // Note: Removed InMemoryCompiler assembly reference to avoid version conflicts
+                MetadataReference.CreateFromFile(Assembly.Load("netstandard").Location),
+                MetadataReference.CreateFromFile(Assembly.Load("System.Private.CoreLib").Location),
+         
             });
 
-            // Note: Removed μHigh compiler assembly references to avoid version conflicts
-            // This prevents .NET 9.0 dependencies from being included in generated assemblies
-            // // Add μHigh compiler assembly (uhigh.dll) if present
-            // var uhighDllPath = Path.Combine(AppContext.BaseDirectory, "uhigh.dll");
-            // if (File.Exists(uhighDllPath))
-            // {
-            //     try
-            //     {
-            //         references.Add(MetadataReference.CreateFromFile(uhighDllPath));
-            //     }
-            //     catch { /* ignore if already loaded or error */ }
-            // }
+
 
             // Add standard library references with caching
             var stdLibReferences = GetStandardLibraryReferences(stdLibPath);

@@ -1,16 +1,18 @@
 ﻿using LanguageServer;
 using LanguageServer.Client;
-using LanguageServer.Parameters;
+using LanguageServer.Parameters; // already required; avoid duplicate below
 using LanguageServer.Parameters.General;
 using LanguageServer.Parameters.TextDocument;
 using LanguageServer.Parameters.Workspace;
 using uhigh.Net.Lexer;
+// removed duplicate using LanguageServer.Parameters; (kept first occurrence)
+using System.Text.RegularExpressions;
 
 namespace UhighLanguageServer
 {
     public class App : ServiceConnection
     {
-        private Uri _workerSpaceRoot;
+    private Uri? _workerSpaceRoot;
         private int _maxNumberOfProblems = 1000;
         private TextDocumentManager _documents;
         private uhigh.Net.Parser.ReflectionTypeResolver _typeResolver;
@@ -25,6 +27,7 @@ namespace UhighLanguageServer
             var diagnostics = new uhigh.Net.Diagnostics.DiagnosticsReporter();
             _typeResolver = new uhigh.Net.Parser.ReflectionTypeResolver(diagnostics);
             _methodResolver = new uhigh.Net.Parser.ReflectionMethodResolver(diagnostics);
+            Logger.Instance.Log("[μHigh LSP] App constructed");
         }
 
         private void Documents_Changed(object sender, TextDocumentChangedEventArgs e)
@@ -34,6 +37,7 @@ namespace UhighLanguageServer
 
         protected override Result<InitializeResult, ResponseError<InitializeErrorData>> Initialize(InitializeParams @params)
         {
+            Logger.Instance.Log("[μHigh LSP] Initialize called");
             _workerSpaceRoot = @params.rootUri;
             var result = new InitializeResult
             {
@@ -43,7 +47,10 @@ namespace UhighLanguageServer
                     completionProvider = new CompletionOptions
                     {
                         resolveProvider = true
-                    }
+                    },
+                    hoverProvider = true,
+                    definitionProvider = true,
+                    codeActionProvider = true
                 }
             };
             return Result<InitializeResult, ResponseError<InitializeErrorData>>.Success(result);
@@ -51,24 +58,28 @@ namespace UhighLanguageServer
 
         protected override void DidOpenTextDocument(DidOpenTextDocumentParams @params)
         {
+            Logger.Instance.Log($"[μHigh LSP] DidOpenTextDocument: {@params.textDocument.uri}");
             _documents.Add(@params.textDocument);
             Logger.Instance.Log($"{@params.textDocument.uri} opened.");
         }
 
         protected override void DidChangeTextDocument(DidChangeTextDocumentParams @params)
         {
+            Logger.Instance.Log($"[μHigh LSP] DidChangeTextDocument: {@params.textDocument.uri}");
             _documents.Change(@params.textDocument.uri, @params.textDocument.version, @params.contentChanges);
             Logger.Instance.Log($"{@params.textDocument.uri} changed.");
         }
 
         protected override void DidCloseTextDocument(DidCloseTextDocumentParams @params)
         {
+            Logger.Instance.Log($"[μHigh LSP] DidCloseTextDocument: {@params.textDocument.uri}");
             _documents.Remove(@params.textDocument.uri);
             Logger.Instance.Log($"{@params.textDocument.uri} closed.");
         }
 
         protected override void DidChangeConfiguration(DidChangeConfigurationParams @params)
         {
+            Logger.Instance.Log("[μHigh LSP] DidChangeConfiguration called");
             _maxNumberOfProblems = @params?.settings?.languageServerExample?.maxNumberOfProblems ?? _maxNumberOfProblems;
             Logger.Instance.Log($"maxNumberOfProblems is set to {_maxNumberOfProblems}.");
             foreach (var document in _documents.All)
@@ -76,6 +87,107 @@ namespace UhighLanguageServer
                 ValidateTextDocument(document);
             }
         }
+
+        // -------------------------------
+        // Symbol Index (very naive pass)
+        // -------------------------------
+        private class SymbolInfo
+        {
+            public string Name { get; set; } = string.Empty;
+            public Uri Uri { get; set; } = null!;
+            public int Line { get; set; }
+            public int Column { get; set; }
+            public string Kind { get; set; } = "unknown"; // func, class, var
+            public string Signature { get; set; } = string.Empty;
+        }
+        private readonly Dictionary<string, List<SymbolInfo>> _symbolIndex = new();
+
+        private void RebuildSymbolIndex(TextDocumentItem document)
+        {
+            // Simple regex patterns: this is a stop-gap until parser exposes symbol table
+            // func declarations: func <name>(
+            var funcRegex = new Regex(@"\bfunc\s+([A-Za-z_][A-Za-z0-9_.]*)", RegexOptions.Compiled);
+            var classRegex = new Regex(@"\bclass\s+([A-Za-z_][A-Za-z0-9_]*)", RegexOptions.Compiled);
+            var varRegex = new Regex(@"\bvar\s+([A-Za-z_][A-Za-z0-9_]*)", RegexOptions.Compiled);
+
+            string[] lines = document.text.Replace("\r\n", "\n").Split('\n');
+            void AddMatch(Match m, string kind, string sig, int lineIdx)
+            {
+                if (!m.Success) return;
+                var name = m.Groups[1].Value;
+                if (!_symbolIndex.TryGetValue(name, out var list))
+                {
+                    list = new List<SymbolInfo>();
+                    _symbolIndex[name] = list;
+                }
+                list.Add(new SymbolInfo
+                {
+                    Name = name,
+                    Uri = document.uri,
+                    Line = lineIdx,
+                    Column = m.Index - lines[lineIdx].Length * 0, // approximate column within line
+                    Kind = kind,
+                    Signature = sig
+                });
+            }
+            // Clear entries belonging to this file
+            foreach (var kv in _symbolIndex.ToList())
+            {
+                _symbolIndex[kv.Key] = kv.Value.Where(v => v.Uri != document.uri).ToList();
+                if (_symbolIndex[kv.Key].Count == 0)
+                    _symbolIndex.Remove(kv.Key);
+            }
+            for (int i = 0; i < lines.Length; i++)
+            {
+                var line = lines[i];
+                foreach (Match m in funcRegex.Matches(line))
+                    AddMatch(m, "function", line.Trim(), i);
+                foreach (Match m in classRegex.Matches(line))
+                    AddMatch(m, "class", line.Trim(), i);
+                foreach (Match m in varRegex.Matches(line))
+                    AddMatch(m, "variable", line.Trim(), i);
+            }
+        }
+
+        private SymbolInfo? FindSymbolAtPosition(Uri uri, Position pos, string text)
+        {
+            var norm = text.Replace("\r\n", "\n");
+            var lines = norm.Split('\n');
+            if (pos.line < 0 || pos.line >= lines.Length) return null;
+            var line = lines[pos.line];
+            if (pos.character < 0 || pos.character > line.Length) return null;
+            // Expand to word boundaries
+            int start = (int)pos.character;
+            while (start > 0 && (char.IsLetterOrDigit(line[start - 1]) || line[start - 1] == '_' || line[start - 1]=='.')) start--;
+            int end = (int)pos.character;
+            while (end < line.Length && (char.IsLetterOrDigit(line[end]) || line[end] == '_' || line[end]=='.')) end++;
+            if (end <= start) return null;
+            var ident = line.Substring(start, end - start);
+            if (_symbolIndex.TryGetValue(ident, out var list))
+            {
+                // Prefer same file
+                var sameFile = list.FirstOrDefault(s => s.Uri == uri);
+                return sameFile ?? list.First();
+            }
+            return null;
+        }
+
+        protected override Result<Hover, ResponseError> Hover(TextDocumentPositionParams @params)
+        {
+            Logger.Instance.Log($"[μHigh LSP] Hover called at {(@params.textDocument.uri)} line={@params.position.line} char={@params.position.character}");
+            var doc = _documents.All.FirstOrDefault(d => d.uri == @params.textDocument.uri);
+            if (doc == null)
+                return Result<Hover, ResponseError>.Error(new ResponseError { message = "Document not found" });
+            var symbol = FindSymbolAtPosition(doc.uri, @params.position, doc.text);
+            var content = symbol == null
+                ? "`(no symbol)`"
+                : $"```uhigh\n{symbol.Signature}\n```\n**Kind:** {symbol.Kind}<br/>**Name:** `{symbol.Name}`";
+            return Result<Hover, ResponseError>.Success(new Hover
+            {
+                contents = new MarkupContent { kind = MarkupKind.Markdown, value = content }
+            });
+        }
+        // NOTE: Definition provider advertised; full implementation will require base class support. Stubbed for now if not invoked.
 
         private void ValidateTextDocument(TextDocumentItem document)
         {
@@ -85,6 +197,8 @@ namespace UhighLanguageServer
             var tokens = lexer.Tokenize();
             var parser = new uhigh.Net.Parser.Parser(tokens);
             var program = parser.Parse();
+            // After parsing attempt, rebuild symbol index for hover/definition
+            RebuildSymbolIndex(document);
             if (program == null)
             {
                 diagnostics.Add(new Diagnostic
@@ -242,6 +356,7 @@ namespace UhighLanguageServer
 
         protected override Result<CompletionResult, ResponseError> Completion(CompletionParams @params)
         {
+            #pragma warning disable CS0618 // Suppress deprecated insertText usage temporarily
             // μHigh keywords (static)
             var keywordItems = new[]
             {
@@ -344,6 +459,7 @@ namespace UhighLanguageServer
                 .Concat(methodItems)
                 .ToArray();
 
+            #pragma warning restore CS0618
             return Result<CompletionResult, ResponseError>.Success(allItems);
         }
 

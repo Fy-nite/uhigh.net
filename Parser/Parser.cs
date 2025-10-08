@@ -206,6 +206,26 @@ namespace uhigh.Net.Parser
                                         if (Check(TokenType.RightBrace)) Advance(); // Skip '}'
                                     }
                                 }
+                                else if (Check(TokenType.Enum))
+                                {
+                                    Advance(); // Skip 'enum'
+                                    var enumNameToken = Consume(TokenType.Identifier, "Expected enum name");
+                                    var fullEnumName = $"{namespaceName}.{enumNameToken.Value}";
+
+                                    // Register enum so it's recognized as a user-defined type
+                                    var tempEnumDecl = new EnumDeclaration
+                                    {
+                                        Name = fullEnumName,
+                                        Modifiers = modifiers,
+                                        Members = new List<EnumMember>()
+                                    };
+                                    var enumLocation = new SourceLocation(enumNameToken.Line, enumNameToken.Column);
+                                    _methodChecker.RegisterEnum(tempEnumDecl, enumLocation);
+
+                                    // Skip optional base type and enum body
+                                    // Move to the next '{' and skip the block
+                                    SkipToEndOfBlock();
+                                }
                                 else
                                 {
                                     Advance();
@@ -277,6 +297,30 @@ namespace uhigh.Net.Parser
 
                             if (Check(TokenType.RightBrace)) Advance(); // Skip '}'
                         }
+                    }
+                    else if (Check(TokenType.Enum))
+                    {
+                        Advance(); // Skip 'enum'
+                        var enumNameToken = Consume(TokenType.Identifier, "Expected enum name");
+
+                        // Handle qualified enum names (e.g., MyNs.MyEnum)
+                        var fullEnumName = enumNameToken.Value;
+                        while (Match(TokenType.Dot))
+                        {
+                            fullEnumName += "." + Consume(TokenType.Identifier, "Expected identifier after '.'").Value;
+                        }
+
+                        var tempEnumDecl = new EnumDeclaration
+                        {
+                            Name = fullEnumName,
+                            Modifiers = modifiers,
+                            Members = new List<EnumMember>()
+                        };
+                        var enumLocation = new SourceLocation(enumNameToken.Line, enumNameToken.Column);
+                        _methodChecker.RegisterEnum(tempEnumDecl, enumLocation);
+
+                        // Skip optional base type and enum body
+                        SkipToEndOfBlock();
                     }
                     else if (Check(TokenType.Func))
                     {
@@ -421,6 +465,23 @@ namespace uhigh.Net.Parser
                             classDecl.Attributes.AddRange(attributes);
                         }
                         return classDecl;
+                    }
+                    if (Match(TokenType.Enum))
+                    {
+                        var enumDecl = ParseEnumDeclaration(modifiers) as EnumDeclaration;
+                        // TODO: If/when EnumDeclaration supports attributes, attach them here
+                        return enumDecl;
+                    }
+                    if (Match(TokenType.Interface))
+                    {
+                        var ifaceDecl = ParseInterfaceDeclaration(modifiers) as InterfaceDeclaration;
+                        // TODO: attach attributes if supported on interfaces
+                        return ifaceDecl;
+                    }
+                    if (Match(TokenType.Generic))
+                    {
+                        var genClassDecl = ParseGenericClassDeclaration(modifiers, attributes) as ClassDeclaration;
+                        return genClassDecl;
                     }
                     // Add other declaration types as needed
 

@@ -29,6 +29,7 @@ namespace UhighLanguageServer
 
         private void Send(MessageType type, string message)
         {
+            Console.Error.WriteLine($"[μHigh LSP] {type}: {message}");
             this._proxy?.Window.LogMessage(new LogMessageParams
             {
                 type = type,

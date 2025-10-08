@@ -21,6 +21,8 @@ namespace uhigh.Net.Parser
         /// The loaded assemblies
         /// </summary>
         private readonly HashSet<Assembly> _loadedAssemblies = new();
+    // Cache assembly simple/full names to avoid redundant loads
+    private readonly HashSet<string> _loadedAssemblyNames = new(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ReflectionMethodResolver"/> class
@@ -95,17 +97,56 @@ namespace uhigh.Net.Parser
                     LoadAssembly(stdLibAssembly);
                 }
             }
+
+            // Ensure netstandard/runtime facades are included for method/type forwarding
+            TryLoadAssemblyByName("netstandard");
+            TryLoadAssemblyByName("System.Runtime");
+            TryLoadAssemblyByName("System.Runtime.Extensions");
+            TryLoadAssemblyByName("System.Private.CoreLib");
+
+            // Scan any already loaded System.* assemblies (best-effort)
+            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                var name = asm.GetName().Name;
+                if (!string.IsNullOrEmpty(name) && name.StartsWith("System."))
+                {
+                    LoadAssembly(asm);
+                }
+            }
         }
 
         /// <summary>
-        /// Loads the assembly using the specified assembly
+        /// Attempts to load an assembly by simple name and register its public types.
+        /// Best-effort: failures are ignored.
         /// </summary>
-        /// <param name="assembly">The assembly</param>
+        private void TryLoadAssemblyByName(string assemblySimpleName)
+        {
+            try
+            {
+                var asm = Assembly.Load(assemblySimpleName);
+                LoadAssembly(asm);
+            }
+            catch
+            {
+                // ignore - best effort
+            }
+        }
         public void LoadAssembly(Assembly assembly)
         {
-            if (_loadedAssemblies.Contains(assembly)) return;
+            var name = assembly.GetName();
+            var simple = name.Name ?? string.Empty;
+            var full = name.FullName ?? simple;
+
+            if (_loadedAssemblies.Contains(assembly) ||
+                _loadedAssemblyNames.Contains(simple) ||
+                _loadedAssemblyNames.Contains(full))
+            {
+                return;
+            }
 
             _loadedAssemblies.Add(assembly);
+            _loadedAssemblyNames.Add(simple);
+            _loadedAssemblyNames.Add(full);
 
             try
             {

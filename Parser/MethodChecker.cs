@@ -323,6 +323,8 @@ namespace uhigh.Net.Parser
         /// The classes
         /// </summary>
         private readonly Dictionary<string, ClassInfo> _classes = new();
+    // Track user-defined enums for type resolution
+    private readonly HashSet<string> _enums = new(StringComparer.Ordinal);
         /// <summary>
         /// The imported namespaces
         /// </summary>
@@ -851,6 +853,19 @@ namespace uhigh.Net.Parser
         }
 
         /// <summary>
+        /// Registers an enum so it is recognized as a user-defined type
+        /// </summary>
+        /// <param name="enumDecl">The enum declaration</param>
+        /// <param name="location">Optional source location</param>
+        public void RegisterEnum(EnumDeclaration enumDecl, SourceLocation? location = null)
+        {
+            if (string.IsNullOrWhiteSpace(enumDecl.Name)) return;
+
+            _enums.Add(enumDecl.Name);
+            _diagnostics.ReportInfo($"Registered enum: {enumDecl.Name}");
+        }
+
+        /// <summary>
         /// Checks if a type name is a user-defined class
         /// </summary>
         /// <param name="typeName">The type name</param>
@@ -902,38 +917,66 @@ namespace uhigh.Net.Parser
                     }
                 }
 
-                // Check exact match first
-                if (_classes.ContainsKey(typeName))
+                // Check exact match first (classes or enums)
+                if (_classes.ContainsKey(typeName) || _enums.Contains(typeName))
                     return true;
 
                 // Check if any registered class ends with this type name (for namespace.class scenario)
                 if (_classes.Keys.Any(key => key.EndsWith($".{typeName}") || key == typeName))
                     return true;
 
-                // --- Patch: Check imported namespaces for .NET types ---
-                foreach (var ns in _importedNamespaces)
+                // Check enums similarly by suffix
+                if (_enums.Any(e => e.EndsWith($".{typeName}") || e == typeName))
+                    return true;
+
+                // Silent resolution against imported/common namespaces without emitting diagnostics
+                // Handle generics: check base type against known generic definitions
+                bool IsGenericName(string tn) => tn.Contains('<') && tn.Contains('>');
+                string GetGenericBase(string tn)
                 {
-                    var fullTypeName = ns + "." + typeName;
-                    // Temporarily disable user type resolver to avoid recursion
-                    var prevUserTypeResolver = _typeResolver.UserTypeResolver;
-                    _typeResolver.UserTypeResolver = null;
-                    var found = _typeResolver.TryResolveType(fullTypeName, out var _);
-                    _typeResolver.UserTypeResolver = prevUserTypeResolver;
-                    if (found)
-                        return true;
+                    var idx = tn.IndexOf('<');
+                    return idx > 0 ? tn.Substring(0, idx) : tn;
                 }
 
-                // Also check common .NET namespaces for fallback
-                var commonNamespaces = new[] { "System", "System.Diagnostics", "System.Collections.Generic", "System.Linq" };
-                foreach (var ns in commonNamespaces)
+                // Helper: check if resolver already knows a type by exact name (case-insensitive)
+                bool ResolverHasType(string fullName)
                 {
-                    var fullTypeName = ns + "." + typeName;
-                    var prevUserTypeResolver = _typeResolver.UserTypeResolver;
-                    _typeResolver.UserTypeResolver = null;
-                    var found = _typeResolver.TryResolveType(fullTypeName, out var _);
-                    _typeResolver.UserTypeResolver = prevUserTypeResolver;
-                    if (found)
-                        return true;
+                    return _typeResolver.GetAllTypeNames().Any(n => string.Equals(n, fullName, StringComparison.OrdinalIgnoreCase));
+                }
+
+                // Helper: check generic base matches any registered generic type definition
+                bool ResolverHasGenericBase(string baseName)
+                {
+                    // Try both simple and fully qualified names
+                    if (_typeResolver.TryGetGenericTypeDefinition(baseName, out var _)) return true;
+                    var simple = baseName.Contains('.') ? baseName.Split('.').Last() : baseName;
+                    return _typeResolver.TryGetGenericTypeDefinition(simple, out var _);
+                }
+
+                IEnumerable<string> NamespacesToProbe()
+                {
+                    foreach (var ns in _importedNamespaces) yield return ns;
+                    foreach (var ns in new[] { "System", "System.Diagnostics", "System.Collections.Generic", "System.Linq" }) yield return ns;
+                }
+
+                if (IsGenericName(typeName))
+                {
+                    var baseName = GetGenericBase(typeName); // e.g., List
+                    foreach (var ns in NamespacesToProbe())
+                    {
+                        var candidate = ns + "." + baseName; // e.g., System.Collections.Generic.List
+                        if (ResolverHasGenericBase(candidate))
+                            return true;
+                    }
+                }
+                else
+                {
+                    foreach (var ns in NamespacesToProbe())
+                    {
+                        var candidate = ns + "." + typeName;
+                        if (ResolverHasType(candidate))
+                            return true;
+                    }
                 }
 
                 return false;
