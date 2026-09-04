@@ -3,13 +3,10 @@
 A simple, modern language that compiles to C# and runs on .NET. μHigh offers accessible syntax with full .NET power.
 
 > μHigh is no longer actively maintained.
-
 > This repository is preserved for historical and educational purposes. The compiler and several of its code-generation backends are incomplete or no longer functional, and there are currently no maintainers actively working on the project.
-
 > The repository may contain useful compiler infrastructure and experimental backends, but it should not be considered production-ready.
-
 > If you are interested in continuing μHigh, feel free to fork the repository and take ownership of development.
-
+> or if you want a fresher language that is constantly being updated, please check out [Contract](https://git.finite.ovh/contract) 
 ## Quick Start
 
 **Install:**
