@@ -1,0 +1,27 @@
+// ObjectIR v2 TextIR - Generated from μHigh
+// Generated at: 2026-04-09 11:49:45
+
+module UhighModule version 1.0.0
+
+public class Program {
+    static method Main() -> void {
+        call tests.testing()
+        pop
+        ret
+    }
+
+}
+
+public class tests {
+    static method testing() -> void {
+        ldstr "Hello, World!"
+        call Console.WriteLine(string)
+        pop
+        ldstr "This is a test function in the test namespace."
+        call Console.WriteLine(string)
+        pop
+        ret
+    }
+
+}
+

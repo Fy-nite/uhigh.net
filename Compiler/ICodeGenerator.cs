@@ -62,7 +62,7 @@ namespace uhigh.Net.CodeGen
         /// <param name="program">Program to validate</param>
         /// <param name="diagnostics">Diagnostics reporter</param>
         /// <returns>True if the program can be generated</returns>
-        bool CanGenerate(Program program, DiagnosticsReporter diagnostics);
+        public bool CanGenerate(Program program, DiagnosticsReporter diagnostics);
 
         /// <summary>
         /// Generates code from a single program AST
@@ -72,7 +72,7 @@ namespace uhigh.Net.CodeGen
         /// <param name="rootNamespace">Root namespace</param>
         /// <param name="className">Class name</param>
         /// <returns>Generated code</returns>
-        string Generate(Program program, DiagnosticsReporter? diagnostics = null, string? rootNamespace = null, string? className = null);
+        public string Generate(Program program, DiagnosticsReporter? diagnostics = null, string? rootNamespace = null, string? className = null);
 
         /// <summary>
         /// Generates code from multiple program ASTs
@@ -194,6 +194,7 @@ namespace uhigh.Net.CodeGen
             Register(new ValaGeneratorFactory()); // Add Vala generator
             Register(new MicroAsmGeneratorFactory()); // Add MicroASM generator
             Register(new uhigh.Net.CodeGen.JavaGeneratorFactory()); // Add Java generator
+            Register(new ObjectIRGeneratorFactory()); // Add ObjectIR generator
         }
 
         /// <summary>
@@ -322,6 +323,29 @@ namespace uhigh.Net.CodeGen
 
         public ICodeGenerator CreateGenerator() => _factory();
 
+        public bool CanHandle(CodeGeneratorConfig config) => true;
+    }
+
+    ///
+    /// Factory for ObjectIR generator
+    /// </summary>
+    /// <summary>
+    /// Factory for ObjectIR generator
+    /// </summary>
+    public class ObjectIRGeneratorFactory : ICodeGeneratorFactory
+    {
+        public string TargetName => "objectir"; 
+
+        public CodeGeneratorInfo GeneratorInfo => new()
+        {
+            Name = "ObjectIR Generator",
+            Description = "Generates an intermediate object representation (ObjectIR) from μHigh programs for advanced analysis and transformations",
+            Version = "1.0.0",
+            SupportedFeatures = new() { "classes", "functions", "generics", "match", "lambdas" },
+            RequiredDependencies = new() { "None (pure in-memory representation)" }
+        };
+
+        public ICodeGenerator CreateGenerator() => new ObjectIRGenerator();
         public bool CanHandle(CodeGeneratorConfig config) => true;
     }
 

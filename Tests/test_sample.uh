@@ -1,5 +1,10 @@
 namespace testing
 {
+    public class Program {
+        public static func Main(): void {
+            tests.testing()
+        }
+    }
     public class tests {
         public static func testing(): void {
             Console.WriteLine("Hello, World!")
